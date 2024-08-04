@@ -448,14 +448,14 @@ const Analytics: React.FC = () => {
             period={selectedPeriodOption}
           />
         </div>
-
+ {/*
         <div className="col-span-12 xl:col-span-6">
           <PortionChart
             title={'Fuel Cons by Eq Category'}
             category={category}
           />
         </div>
-       {/* <div className="col-span-12 xl:col-span-6">
+       <div className="col-span-12 xl:col-span-6">
            <PortionChart title={"Fuel Cons by Eq Class"} data/>
         </div>
 
