@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import LoaderLogo from '../../common/Loader/LoaderLogo';
 
+//---------------------------------------------------------------------------------------
+
 interface FuelConsPercentageChartProps {
   week?: number;
   data?: BarChartSchema[];
@@ -14,7 +16,12 @@ interface FuelConsPercentageChartProps {
 }
 
 // Define a type for the possible options
-type Option = 'This Week' | 'Last Week' | 'This Month' | 'Last Month' | 'Date Range';
+type Option =
+  | 'This Week'
+  | 'Last Week'
+  | 'This Month'
+  | 'Last Month'
+  | 'Date Range';
 
 const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
   data,
@@ -29,13 +36,13 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
   // Handler function to update the state when the selection changes
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedOption(event.target.value as Option);
-    onClickPeriode?.({ periode : event.target.value})
+    onClickPeriode?.({ periode: event.target.value });
   };
 
 
-  useEffect(()=>{
-      setSelectedOption(period)
-  },[period])
+  useEffect(() => {
+    setSelectedOption(period);
+  }, [period]);
 
   const options: ApexOptions = {
     subtitle: {
@@ -64,13 +71,13 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
       },
     },
     colors: [
-      function({ value , seriesIndex, w }) {
+      function ({ value, seriesIndex, w }) {
         if (value > 1) {
-          return '#FFB8C2'
+          return '#FFB8C2';
         } else {
-          return '#80CAEE'
+          return '#80CAEE';
         }
-      }
+      },
     ],
     chart: {
       id: new Date().toISOString(),
@@ -87,8 +94,9 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
       events: {
         dataPointSelection: (event, chartContext, opts) => {
           onClickChart?.({
-            x_value: opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex]
-              .x,
+            x_value:
+              opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex]
+                .x,
           });
         },
         // click: function (event, chartContext, opts) {
@@ -121,7 +129,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
       },
     },
     dataLabels: {
-    offsetY: 70,
+      offsetY: 70,
       enabled: true,
       style: {
         fontSize: '14px',
@@ -165,8 +173,6 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
     },
   };
 
-  
-
   const [chartContentData, setchartContentData] = useState<any>(null);
   const [stateTitle, setStateTitle] = useState<string>(title);
   const [state, setState] = useState({
@@ -182,7 +188,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
     sourceData.map((item) => {
       var newseri = {
         x: item.desc,
-        y: ((item.actual_fc/ item.plan_fc)).toPrecision(2),
+        y: (item.actual_fc / item.plan_fc).toPrecision(2),
         goals: [
           {
             name: 'Threshold',
@@ -250,6 +256,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
                 Date Range
               </option>
             </select>
+
             <span className="absolute top-1/2 right-3 z-10 -translate-y-1/2">
               <svg
                 width="10"
@@ -273,6 +280,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
           </div>
         </div>
       </div>
+      
 
       <div>
         <div className="-ml-5 -mb-9">

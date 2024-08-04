@@ -4,8 +4,13 @@ import TableHighestFC from '../../components/Tables/TableHighestFC';
 import PortionChart from '../../components/Charts/PortionChart';
 import FuelConsPercentageChart from '../../components/Charts/FuelConsPercentageChart.tsx';
 import { supabase } from '../../db/SupabaseClient.tsx';
-import { parseBarChartSchemaToEgi, parseBarChartSchemaToCn, parseBarChartSchemaToDate } from '../../types/BarChartSchemaParser.ts';
-
+import {
+  parseBarChartSchemaToEgi,
+  parseBarChartSchemaToCn,
+  parseBarChartSchemaToDate,
+} from '../../types/BarChartSchemaParser.ts';
+import Datepicker from 'tailwind-datepicker-react';
+import { datePickerOptions } from '.././../components/Charts/DatePickerComponent.tsx';
 import {
   getWeekNumber,
   getWeekStartAndEndDate,
@@ -38,67 +43,119 @@ const Analytics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedEgi, setSelectedEgi] = useState<string>('');
   const [selectedCn, setSelectedCn] = useState<string>('');
-  
+
   const [periode, setPeriode] = useState(
     getWeekStartAndEndDate(new Date().getFullYear(), getWeekNumber(new Date())),
   );
-  const [selectedPeriodOption, setSelectedPeriodOption] = useState('This Week')
+  const [selectedPeriodOption, setSelectedPeriodOption] = useState('This Week');
 
-  useEffect(() => {
-  }, []);
+  //---------------DATEPICKER
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [showFrom, setShowFrom] = useState<boolean>(false);
+  const [showTo, setShowTo] = useState<boolean>(false);
 
-  const handleClickEgiChart = (value: { x_value: string }) => {
-    console.log(value.x_value);
-    setSelectedEgi(value.x_value);
-    fetchDataByCnUsingCurrentPeriod(value.x_value)
+  const [dateFrom, setDateFrom] = useState<Date>(new Date());
+  const [dateTo, setDateTo] = useState<Date>(new Date());
+
+  const handleChangeFrom = (selectedDateFrom: Date) => {
+    setDateFrom(selectedDateFrom);
+  };
+  const handleCloseFrom = (stateFrom: boolean) => {
+    setShowFrom(stateFrom);
   };
 
-   const handleClickCnChart = (value: { x_value: string }) => {
-    console.log(value.x_value);
+  const handleChangeTo = (selectedDateTo: Date) => {
+    setDateTo(selectedDateTo)
+  };
+  const handleCloseTo = (stateTo: boolean) => {
+    setShowTo(stateTo);
+  };
+
+  const handleRenderByDate = (e)=> {
+      e.preventDefault();
+      setPeriode({ startDate: dateFrom, endDate: dateTo })
+      fetchDataByEgiUsingDateRange(periode.startDate, periode.endDate);
+  }
+
+  //--------------------------
+
+  useEffect(() => {}, []);
+
+  const handleClickEgiChart = (value: { x_value: string }) => {
+    
+    setSelectedEgi(value.x_value);
+    fetchDataByCnUsingCurrentPeriod(value.x_value);
+  };
+
+  const handleClickCnChart = (value: { x_value: string }) => {
+  
     setSelectedCn(value.x_value);
     fetchDailyFCByCnUsingCnAndCurrentPeriod(value.x_value);
-
   };
 
   const handleChangePeriode = (value: { periode: string }) => {
-    if (value.periode == 'This Week')  {
-      const thisWeek = getWeekNumber(new Date())
-      const thisWeekPeriode = getWeekStartAndEndDate(new Date().getFullYear(), thisWeek);
-      fetchDataByEgiUsingDateRange( thisWeekPeriode.startDate, thisWeekPeriode.endDate);
+    if (value.periode == 'This Week') {
+      const thisWeek = getWeekNumber(new Date());
+      const thisWeekPeriode = getWeekStartAndEndDate(
+        new Date().getFullYear(),
+        thisWeek,
+      );
+      fetchDataByEgiUsingDateRange(
+        thisWeekPeriode.startDate,
+        thisWeekPeriode.endDate,
+      );
       setPeriode(thisWeekPeriode);
       setSelectedPeriodOption(value.periode);
-
+      setShowDatePicker(false);
     } else if (value.periode == 'Last Week') {
-      const lastWeek = getWeekNumber(new Date())-1
-      const lastWeekPeriode = getWeekStartAndEndDate(new Date().getFullYear(), lastWeek);
-      fetchDataByEgiUsingDateRange( lastWeekPeriode.startDate, lastWeekPeriode.endDate);
+      const lastWeek = getWeekNumber(new Date()) - 1;
+      const lastWeekPeriode = getWeekStartAndEndDate(
+        new Date().getFullYear(),
+        lastWeek,
+      );
+      fetchDataByEgiUsingDateRange(
+        lastWeekPeriode.startDate,
+        lastWeekPeriode.endDate,
+      );
       setPeriode(lastWeekPeriode);
       setSelectedPeriodOption(value.periode);
-
-
+      setShowDatePicker(false);
     } else if (value.periode == 'This Month') {
       const thisMonthPeriode = getCurrentMonthDates();
-      fetchDataByEgiUsingDateRange( thisMonthPeriode.startDate, thisMonthPeriode.endDate);
+      fetchDataByEgiUsingDateRange(
+        thisMonthPeriode.startDate,
+        thisMonthPeriode.endDate,
+      );
       setPeriode(thisMonthPeriode);
       setSelectedPeriodOption(value.periode);
-
+      setShowDatePicker(false);
     } else if (value.periode == 'Last Month') {
       const lastMonthPeriode = getLastMonthDates();
-      fetchDataByEgiUsingDateRange( lastMonthPeriode.startDate, lastMonthPeriode.endDate);
+      fetchDataByEgiUsingDateRange(
+        lastMonthPeriode.startDate,
+        lastMonthPeriode.endDate,
+      );
       setPeriode(lastMonthPeriode);
       setSelectedPeriodOption(value.periode);
+      setShowDatePicker(false);
     } else {
-      console.log('date range');
+      setShowDatePicker(true);
     }
   };
 
-    const fetchDataByEgiUsingDateRange = async (startDate: Date, endDate: Date) => {
+  const fetchDataByEgiUsingDateRange = async (
+    startDate: Date,
+    endDate: Date,
+  ) => {
     var egiFuelConsumptionData: BarChartSchema[] = [];
     try {
       // Fetch data from the Supabase table
       const { data, error } = await supabase.rpc(
         'rpc_get_dately_aggregate_by_egi',
-        { start_date: startDate.toISOString().split('T')[0], end_date: endDate.toISOString().split('T')[0] },
+        {
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+        },
       );
 
       if (error) {
@@ -106,10 +163,8 @@ const Analytics: React.FC = () => {
       }
 
       egiFuelConsumptionData = parseBarChartSchemaToEgi(data);
-
-      console.log(egiFuelConsumptionData)
       egiFuelConsumptionData.sort(
-        (a, b) => (a.actual_fc/a.plan_fc) - (b.actual_fc/ b.plan_fc),
+        (a, b) => a.actual_fc / a.plan_fc - b.actual_fc / b.plan_fc,
       );
       setEgiCons(egiFuelConsumptionData);
     } catch (error) {
@@ -117,13 +172,17 @@ const Analytics: React.FC = () => {
     }
   };
 
-  const fetchDataByCnUsingCurrentPeriod = async (egiQuery:string) => {
+  const fetchDataByCnUsingCurrentPeriod = async (egiQuery: string) => {
     var cnFuelConsumptionData: BarChartSchema[] = [];
     try {
       // Fetch data from the Supabase table
       const { data, error } = await supabase.rpc(
         'rpc_get_dately_aggregate_by_cn',
-        { start_date: periode.startDate.toISOString().split('T')[0], end_date: periode.endDate.toISOString().split('T')[0], egi: egiQuery },
+        {
+          start_date: periode.startDate.toISOString().split('T')[0],
+          end_date: periode.endDate.toISOString().split('T')[0],
+          egi: egiQuery,
+        },
       );
 
       if (error) {
@@ -131,7 +190,7 @@ const Analytics: React.FC = () => {
       }
       cnFuelConsumptionData = parseBarChartSchemaToCn(data);
       cnFuelConsumptionData.sort(
-        (a, b) => (a.actual_fc/a.plan_fc) - (b.actual_fc/ b.plan_fc),
+        (a, b) => a.actual_fc / a.plan_fc - b.actual_fc / b.plan_fc,
       );
       setUnitCons(cnFuelConsumptionData);
     } catch (error) {
@@ -139,20 +198,21 @@ const Analytics: React.FC = () => {
     }
   };
 
-  const fetchDailyFCByCnUsingCnAndCurrentPeriod = async (cnQuery:string) => {
+  const fetchDailyFCByCnUsingCnAndCurrentPeriod = async (cnQuery: string) => {
     var cnDailyConsumption: BarChartSchema[] = [];
     try {
       // Fetch data from the Supabase table
-      const { data, error } = await supabase.rpc(
-        'rpc_get_daily_by_cn',
-        { start_date: periode.startDate.toISOString().split('T')[0], end_date: periode.endDate.toISOString().split('T')[0], cn: cnQuery },
-      );
+      const { data, error } = await supabase.rpc('rpc_get_daily_by_cn', {
+        start_date: periode.startDate.toISOString().split('T')[0],
+        end_date: periode.endDate.toISOString().split('T')[0],
+        cn: cnQuery,
+      });
 
       if (error) {
         throw error;
       }
       cnDailyConsumption = parseBarChartSchemaToDate(data);
-    
+
       setDailyCons(cnDailyConsumption);
     } catch (error) {
       setError((error as Error).message);
@@ -161,7 +221,7 @@ const Analytics: React.FC = () => {
 
   useEffect(() => {
     // fetchDataByEgiUsingWeek(week);
-    fetchDataByEgiUsingDateRange( periode.startDate, periode.endDate)
+    fetchDataByEgiUsingDateRange(periode.startDate, periode.endDate);
     // fetchDataByEgiUsingDateRange( '2024-07-01', '2024-07-17')
   }, []);
 
@@ -333,6 +393,25 @@ const Analytics: React.FC = () => {
         </CardDataStats>
       </div>
 
+       { showDatePicker ? <div className="col-span-12 xl:col-span-12 flex flex-row gap-3 justify-center align-middle items-center m-6">
+          <Datepicker
+            options={datePickerOptions}
+            onChange={handleChangeFrom}
+            show={showFrom}
+            setShow={handleCloseFrom}
+          />
+          to
+          <Datepicker
+            options={datePickerOptions}
+            onChange={handleChangeTo}
+            show={showTo}
+            setShow={handleCloseTo}
+          />
+          <button onClick={(e)=> handleRenderByDate(e)} className="border-solid border-black bg-meta-4 dark:bg-meta-2 p-2 text-bodydark2 rounded-lg">
+            Render
+          </button>
+        </div> : <div></div> }
+
       <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
         <div className="col-span-12 xl:col-span-12">
           {egiCons ? (
@@ -349,8 +428,9 @@ const Analytics: React.FC = () => {
           )}
         </div>
 
-        <div className="col-span-12 xl:col-span-12">
+       
 
+        <div className="col-span-12 xl:col-span-12">
           <FuelConsPercentageChart
             data={unitCons}
             onClickChart={handleClickCnChart}
@@ -361,7 +441,6 @@ const Analytics: React.FC = () => {
         </div>
 
         <div className="col-span-12 xl:col-span-12">
-
           <FuelConsPercentageChart
             data={dailyCons}
             title={selectedCn}
