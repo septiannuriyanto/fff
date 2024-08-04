@@ -234,7 +234,7 @@ const Analytics: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
         <CardDataStats
           title="Fuel Consumption Total"
-          total="68"
+          total="-"
           rate="0.43%"
           levelUpBad
         >
@@ -303,8 +303,8 @@ const Analytics: React.FC = () => {
         </CardDataStats>
         <CardDataStats
           title="Total Stock Fuel (Liter)"
-          total="454.123"
-          rate="2.59%"
+          total="-"
+          rate="0%"
           levelUp
         >
           <svg
@@ -350,7 +350,7 @@ const Analytics: React.FC = () => {
             </g>
           </svg>
         </CardDataStats>
-        <CardDataStats title="FT Ready" total="4" rate="">
+        <CardDataStats title="FT Ready" total="5" rate="">
           <svg
             className="fill-primary dark:fill-white"
             width="30px"
