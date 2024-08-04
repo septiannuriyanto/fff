@@ -455,14 +455,14 @@ const Analytics: React.FC = () => {
             category={category}
           />
         </div>
-        <div className="col-span-12 xl:col-span-6">
-          {/* <PortionChart title={"Fuel Cons by Eq Class"} data/> */}
+       {/* <div className="col-span-12 xl:col-span-6">
+           <PortionChart title={"Fuel Cons by Eq Class"} data/>
         </div>
 
-        {/* <MapOne /> */}
         <div className="col-span-12 xl:col-span-12">
           <TableHighestFC />
         </div>
+         */}
       </div>
     </>
   );
