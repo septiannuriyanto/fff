@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState , useRef } from 'react';
 import CardDataStats from '../../components/CardDataStats';
 import TableHighestFC from '../../components/Tables/TableHighestFC';
 import PortionChart from '../../components/Charts/PortionChart';
@@ -49,6 +49,9 @@ const Analytics: React.FC = () => {
   );
   const [selectedPeriodOption, setSelectedPeriodOption] = useState('This Week');
 
+  const cnRef = useRef<HTMLDivElement>(null);
+  const dateRef = useRef<HTMLDivElement>(null);
+
   //---------------DATEPICKER
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showFrom, setShowFrom] = useState<boolean>(false);
@@ -85,12 +88,20 @@ const Analytics: React.FC = () => {
     
     setSelectedEgi(value.x_value);
     fetchDataByCnUsingCurrentPeriod(value.x_value);
+    cnRef.current?.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth'
+    })
   };
 
   const handleClickCnChart = (value: { x_value: string }) => {
   
     setSelectedCn(value.x_value);
     fetchDailyFCByCnUsingCnAndCurrentPeriod(value.x_value);
+    dateRef.current?.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth'
+    })
   };
 
   const handleChangePeriode = (value: { periode: string }) => {
@@ -430,7 +441,7 @@ const Analytics: React.FC = () => {
 
        
 
-        <div className="col-span-12 xl:col-span-12">
+        <div className="col-span-12 xl:col-span-12" ref={cnRef}>
           <FuelConsPercentageChart
             data={unitCons}
             onClickChart={handleClickCnChart}
@@ -440,7 +451,7 @@ const Analytics: React.FC = () => {
           />
         </div>
 
-        <div className="col-span-12 xl:col-span-12">
+        <div className="col-span-12 xl:col-span-12" ref={dateRef} >
           <FuelConsPercentageChart
             data={dailyCons}
             title={selectedCn}
