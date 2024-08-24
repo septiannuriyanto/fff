@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-
+import { Routes, Route } from 'react-router-dom';
 import Loader from './common/Loader';
 import PageTitle from './components/PageTitle';
 import SignIn from './pages/Authentication/SignIn';
@@ -20,170 +18,183 @@ import DailyReport from './pages/Reporting/DailyReport';
 import RitationReport from './pages/Reporting/RitationReport';
 import TMRReport from './pages/Reporting/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
+import Analytics from './pages/Dashboard/Analytics';
+import ProtectedRoute from './pages/ProtectedRoute'; // Adjust the import path as necessary
 
 function App() {
-  const [loading, setLoading] = useState<boolean>(true);
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
-
-  return loading ? (
-    <Loader />
-  ) : (
+  return (
     <DefaultLayout>
       <Routes>
+        <Route path="/auth/signin" element={<SignIn />} />
+        <Route path="/auth/signup" element={<SignUp />} />
+
+        {/* Protected Routes */}
         <Route
-          index
+          path="/"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <ECommerce />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <ECommerce />
+              </>
+            } />
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Analytics />
+              </>
+            } />
           }
         />
         <Route
           path="/calendar"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Calendar />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Calendar />
+              </>
+            } />
           }
         />
         <Route
           path="/profile"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Profile />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Profile />
+              </>
+            } />
           }
         />
         <Route
           path="/forms/form-elements"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <FormElements />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <FormElements />
+              </>
+            } />
           }
         />
         <Route
           path="/forms/form-layout"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <FormLayout />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <FormLayout />
+              </>
+            } />
           }
         />
         <Route
           path="/tables"
           element={
-            <>
-              <PageTitle title="TFFF Dashboard | Fuel Feasibility for Fleet" />
-              <Tables />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Tables />
+              </>
+            } />
           }
         />
         <Route
           path="/settings"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Settings />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Settings />
+              </>
+            } />
           }
         />
         <Route
           path="/chart"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Chart />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Chart />
+              </>
+            } />
           }
         />
         <Route
           path="/ui/alerts"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Alerts />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Alerts />
+              </>
+            } />
           }
         />
         <Route
           path="/ui/buttons"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <Buttons />
-            </>
-          }
-        />
-        <Route
-          path="/auth/signin"
-          element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <SignIn />
-            </>
-          }
-        />
-        <Route
-          path="/auth/signup"
-          element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <SignUp />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Buttons />
+              </>
+            } />
           }
         />
         <Route
           path="/reporting/dailyreport"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <DailyReport />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <DailyReport />
+              </>
+            } />
           }
         />
         <Route
           path="/reporting/ritation"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <RitationReport />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <RitationReport />
+              </>
+            } />
           }
         />
         <Route
           path="/reporting/tmr"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <TMRReport />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <TMRReport />
+              </>
+            } />
           }
         />
         <Route
           path="/reporting/pressureless"
           element={
-            <>
-              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-              <PressurelessReport />
-            </>
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <PressurelessReport />
+              </>
+            } />
           }
         />
       </Routes>
-      
     </DefaultLayout>
   );
 }

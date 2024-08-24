@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import SidebarLinkGroup from './SidebarLinkGroup';
+import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
+import { supabase } from '../../db/SupabaseClient';
+import { useDispatch } from 'react-redux'; // Import useDispatch from Redux
+import { clearSession } from '../../store/sessionSlice'; // Import your action creator
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -9,6 +14,8 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
 
@@ -55,6 +62,31 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     }
   }, [sidebarExpanded]);
 
+  const handleSignOut = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    // e.preventDefault(); // Prevent default behavior if the handler is used for a button
+
+    try {
+      console.log('Logging Out');
+
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      console.log('Supabase Sign-Out Successful');
+      // navigate('/auth/signin');
+      // Clear user data from Redux
+      dispatch(clearSession());
+      window.location.href = '/auth/signin';
+
+      // Redirect the user to the login page
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <aside
       ref={sidebar}
@@ -65,7 +97,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       {/* <!-- SIDEBAR HEADER --> */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
         <NavLink to="/">
-          <img src={Logo} alt="Logo" className="h-6 fill" />
+          <img src={Logo} alt="Logo" className="h-6 fill block dark:hidden" />
+          <img
+            src={LogoDark}
+            alt="LogoDark"
+            className="h-6 fill hidden dark:block"
+          />
         </NavLink>
 
         <button
@@ -395,7 +432,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                               Total Mining Resistance
                             </NavLink>
                           </li>
-                           <li>
+                          <li>
                             <NavLink
                               to="/reporting/pressureless"
                               className={({ isActive }) =>
@@ -493,26 +530,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       >
                         <ul className="mt-4 mb-5.5 flex flex-col gap-2.5 pl-6">
                           <li>
-                            <NavLink
-                              to="/auth/signin"
-                              className={({ isActive }) =>
-                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
-                                (isActive && '!text-body')
-                              }
-                            >
-                              Sign In
-                            </NavLink>
-                          </li>
-                          <li>
-                            <NavLink
-                              to="/auth/signup"
-                              className={({ isActive }) =>
-                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
-                                (isActive && '!text-body')
-                              }
-                            >
-                              Sign Up
-                            </NavLink>
+                            <button onClick={handleSignOut}>Sign Out</button>
                           </li>
                         </ul>
                       </div>

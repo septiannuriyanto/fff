@@ -6,9 +6,13 @@ import './css/style.css';
 import './css/satoshi.css';
 import 'jsvectormap/dist/css/jsvectormap.css';
 import 'flatpickr/dist/flatpickr.min.css';
+import store from './store';
+import { Provider } from 'react-redux';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-    <Router>
+  <Router>
+    <Provider store={store}>
       <App />
-    </Router>
+    </Provider>
+  </Router>,
 );

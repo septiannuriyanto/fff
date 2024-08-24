@@ -1,25 +1,156 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { supabase } from '../../db/SupabaseClient';
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../../components/Breadcrumbs/Breadcrumb';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
+import { useNavigate } from 'react-router-dom';
 
 const SignUp: React.FC = () => {
+  const navigate = useNavigate();
+  const [nrp, setNrp] = useState('');
+  const [namaLengkap, setNamaLengkap] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isDisabled, setIsDisabled] = useState(false);
+  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState({
+    nrp: '',
+    namaLengkap: '',
+    email: '',
+    password: '',
+  });
+  const handleNrpChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nrpValue = event.target.value;
+    setNrp(nrpValue);
+
+    // Fetch the record from Supabase
+    const { data, error } = await supabase
+      .from('manpower')
+      .select('nama')
+      .eq('nrp', nrpValue)
+      .single();
+
+    if (error) {
+      // Handle error if there's an issue with the query
+      setError('User tidak valid');
+      setIsDisabled(false);
+      setNamaLengkap('');
+      console.error('Error fetching data:', error.message);
+      return;
+    }
+
+    if (data) {
+      // Record found, update the nama lengkap field and disable inputs
+      setNamaLengkap(data.nama);
+      setIsDisabled(true);
+      setError('');
+    } else {
+      // No record found, display error message
+      setIsDisabled(false);
+      setNamaLengkap('');
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {
+      nrp: '',
+      namaLengkap: '',
+      email: '',
+      password: '',
+    };
+    let isValid = true;
+
+    if (!nrp) {
+      errors.nrp = 'NRP is required';
+      isValid = false;
+    }
+    if (!namaLengkap) {
+      errors.namaLengkap = 'Nama Lengkap is required';
+      isValid = false;
+    }
+    if (!email) {
+      errors.email = 'Email is required';
+      isValid = false;
+    }
+    if (!password) {
+      errors.password = 'Password is required';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    
+
+    // Validate form inputs
+    if (!validateForm()) {
+      return;
+    }
+
+    if (error) {
+      // Prevent submission if there's an error
+
+      return;
+    }
+
+    // Perform signup logic here (e.g., create a new user in your Supabase auth)
+    const { user, error: signupError } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (signupError) {
+      // Handle signup error
+      if (signupError?.status === 429) {
+        setError('Too many requests. Please try again later.');
+      } else {
+        setError(signupError.message);
+      }
+    } else {
+      // Handle successful signup
+      
+      console.log('Signup successful:', user);
+      // Reset form fields
+      setNrp('');
+      setNamaLengkap('');
+      setEmail('');
+      setPassword('');
+      setIsDisabled(false);
+      setError('');
+      setFormErrors({
+        nrp: '',
+        namaLengkap: '',
+        email: '',
+        password: '',
+      });
+      alert('Signup successful')
+      navigate('/auth/signin');
+    }
+  };
+
   return (
     <>
-      <Breadcrumb pageName="Sign Up" />
-
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="flex flex-wrap items-center">
           <div className="hidden w-full xl:block xl:w-1/2">
             <div className="py-17.5 px-26 text-center">
               <Link className="mb-5.5 inline-block" to="/">
-                <img className="hidden dark:block" src={Logo} alt="Logo" />
-                <img className="dark:hidden" src={LogoDark} alt="Logo" />
+                <img className="h-8 block dark:hidden" src={Logo} alt="Logo" />
+                <img
+                  className="h-8 hidden dark:block"
+                  src={LogoDark}
+                  alt="Logo"
+                />
               </Link>
               <p className="2xl:px-20">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit
-                suspendisse.
+                Sign up menggunakan data anda
               </p>
 
               <span className="mt-15 inline-block">
@@ -149,20 +280,59 @@ const SignUp: React.FC = () => {
 
           <div className="w-full border-stroke dark:border-strokedark xl:w-1/2 xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-17.5">
-              <span className="mb-1.5 block font-medium">Start for free</span>
               <h2 className="mb-9 text-2xl font-bold text-black dark:text-white sm:text-title-xl2">
-                Sign Up to TailAdmin
+                Sign Up to FFF-Project
               </h2>
 
-              <form>
+              <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                  <label className="mb-2.5 block font-medium text-black dark:text-white">
-                    Name
-                  </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Enter your full name"
+                      value={nrp}
+                      onChange={handleNrpChange}
+                      placeholder="NRP"
+                      className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+                    />
+
+                    <span className="absolute right-4 top-4">
+                      <svg
+                        width="22"
+                        height="22"
+                        opacity="0.3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M21.0667 5C21.6586 5.95805 22 7.08604 22 8.29344C22 11.7692 19.1708 14.5869 15.6807 14.5869C15.0439 14.5869 13.5939 14.4405 12.8885 13.8551L12.0067 14.7333C11.272 15.465 11.8598 15.465 12.1537 16.0505C12.1537 16.0505 12.8885 17.075 12.1537 18.0995C11.7128 18.6849 10.4783 19.5045 9.06754 18.0995L8.77362 18.3922C8.77362 18.3922 9.65538 19.4167 8.92058 20.4412C8.4797 21.0267 7.30403 21.6121 6.27531 20.5876C6.22633 20.6364 5.952 20.9096 5.2466 21.6121C4.54119 22.3146 3.67905 21.9048 3.33616 21.6121L2.45441 20.7339C1.63143 19.9143 2.1115 19.0264 2.45441 18.6849L10.0963 11.0743C10.0963 11.0743 9.3615 9.90338 9.3615 8.29344C9.3615 4.81767 12.1907 2 15.6807 2C16.4995 2 17.282 2.15509 18 2.43738"
+                          stroke="#1C274C"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M17.8851 8.29353C17.8851 9.50601 16.8982 10.4889 15.6807 10.4889C14.4633 10.4889 13.4763 9.50601 13.4763 8.29353C13.4763 7.08105 14.4633 6.09814 15.6807 6.09814C16.8982 6.09814 17.8851 7.08105 17.8851 8.29353Z"
+                          stroke="#1C274C"
+                          strokeWidth="1.5"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  {formErrors.nrp && (
+                    <p style={{ color: 'red' }}>{formErrors.nrp}</p>
+                  )}
+                  {error && <p style={{ color: 'red' }}>{error}</p>}
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      disabled={isDisabled}
+                      type="text"
+                      placeholder="Nama Lengkap"
+                      value={namaLengkap}
+                      onChange={(e) => setNamaLengkap(e.target.value)}
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                     />
 
@@ -188,16 +358,17 @@ const SignUp: React.FC = () => {
                       </svg>
                     </span>
                   </div>
+                  {formErrors.namaLengkap && (
+                    <p style={{ color: 'red' }}>{formErrors.namaLengkap}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label className="mb-2.5 block font-medium text-black dark:text-white">
-                    Email
-                  </label>
                   <div className="relative">
                     <input
+                      onChange={(e) => setEmail(e.target.value)}
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="Email"
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                     />
 
@@ -219,16 +390,16 @@ const SignUp: React.FC = () => {
                       </svg>
                     </span>
                   </div>
+                  {formErrors.email && (
+                    <p style={{ color: 'red' }}>{formErrors.email}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label className="mb-2.5 block font-medium text-black dark:text-white">
-                    Password
-                  </label>
                   <div className="relative">
                     <input
                       type="password"
-                      placeholder="Enter your password"
+                      placeholder="Password"
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                     />
 
@@ -257,13 +428,11 @@ const SignUp: React.FC = () => {
                 </div>
 
                 <div className="mb-6">
-                  <label className="mb-2.5 block font-medium text-black dark:text-white">
-                    Re-type Password
-                  </label>
                   <div className="relative">
                     <input
+                      onChange={(e) => setPassword(e.target.value)}
                       type="password"
-                      placeholder="Re-enter your password"
+                      placeholder="Password Lagi"
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                     />
 
@@ -289,16 +458,19 @@ const SignUp: React.FC = () => {
                       </svg>
                     </span>
                   </div>
+                  {formErrors.password && (
+                    <p style={{ color: 'red' }}>{formErrors.password}</p>
+                  )}
                 </div>
 
                 <div className="mb-5">
                   <input
                     type="submit"
-                    value="Create account"
+                    value="Buat Akun"
                     className="w-full cursor-pointer rounded-lg border border-primary bg-primary p-4 text-white transition hover:bg-opacity-90"
                   />
                 </div>
-
+                {/* 
                 <button className="flex w-full items-center justify-center gap-3.5 rounded-lg border border-stroke bg-gray p-4 hover:bg-opacity-50 dark:border-strokedark dark:bg-meta-4 dark:hover:bg-opacity-50">
                   <span>
                     <svg
@@ -334,11 +506,11 @@ const SignUp: React.FC = () => {
                     </svg>
                   </span>
                   Sign up with Google
-                </button>
+                </button> */}
 
                 <div className="mt-6 text-center">
                   <p>
-                    Already have an account?{' '}
+                    Sudah punya akun ?{' '}
                     <Link to="/auth/signin" className="text-primary">
                       Sign in
                     </Link>
