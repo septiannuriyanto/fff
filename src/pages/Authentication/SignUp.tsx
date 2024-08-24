@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../db/SupabaseClient';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../../components/Breadcrumbs/Breadcrumb';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
 import { useNavigate } from 'react-router-dom';
@@ -101,7 +100,7 @@ const SignUp: React.FC = () => {
     }
 
     // Perform signup logic here (e.g., create a new user in your Supabase auth)
-    const { user, error: signupError } = await supabase.auth.signUp({
+    const {error: signupError } = await supabase.auth.signUp({
       email: email,
       password: password,
     });
@@ -115,8 +114,23 @@ const SignUp: React.FC = () => {
       }
     } else {
       // Handle successful signup
+      // Update the email column in the manpower table
+    try {
+      const { data, error: updateError } = await supabase
+        .from('manpower')
+        .update({ email: email }) // Update the email column
+        .eq('nrp', nrp); // Assuming there's a unique identifier
+
+      if (updateError) {
+        console.error('Error updating manpower table:', updateError);
+      } else {
+        console.log('Manpower table updated successfully:', data);
+      }
+    } catch (error) {
+      console.error('Error updating manpower table:', error);
+    }
       
-      console.log('Signup successful:', user);
+      console.log('Signup successful:');
       // Reset form fields
       setNrp('');
       setNamaLengkap('');
