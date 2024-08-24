@@ -1,8 +1,13 @@
 {
-    "routes": [
+    "rewrites": [
       {
-        "src": "/(.*)",
-        "dest": "/index.html"
+        "source": "/(.*).js",
+        "destination": "/src/.main.tsx"
+      },
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
       }
     ]
-}
+  }
+  
