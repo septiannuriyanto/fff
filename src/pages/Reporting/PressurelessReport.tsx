@@ -134,7 +134,7 @@ const PressurelessReport: React.FC = () => {
             getSuggestionValue={getSuggestionValue}
             renderSuggestion={renderSuggestion}
             inputProps={{
-              placeholder: 'Type equipment number',
+              placeholder: 'Ketik Kode Unit',
               value: equipNumber,
               onChange: onEquipNumberChange,
               className: 'w-full p-2 mt-1 border rounded',
@@ -203,7 +203,7 @@ const PressurelessReport: React.FC = () => {
             getSuggestionValue={getSuggestionValue}
             renderSuggestion={renderSuggestion}
             inputProps={{
-              placeholder: 'Type your name',
+              placeholder: 'Ketik nama anda',
               value: reportBy,
               onChange: onReportByChange,
               className: 'w-full p-2 mt-1 border rounded',

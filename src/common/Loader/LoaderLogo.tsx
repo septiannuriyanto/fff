@@ -1,4 +1,4 @@
-import LogoIcon from '../../images/logo/loco-icon.svg';
+import LogoIcon from '../../images/logo/logo-icon.svg';
 
 const LoaderLogo = () => {
   return (
