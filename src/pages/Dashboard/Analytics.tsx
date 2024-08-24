@@ -1,7 +1,5 @@
 import React, { useEffect, useState , useRef } from 'react';
 import CardDataStats from '../../components/CardDataStats';
-import TableHighestFC from '../../components/Tables/TableHighestFC';
-import PortionChart from '../../components/Charts/PortionChart';
 import FuelConsPercentageChart from '../../components/Charts/FuelConsPercentageChart.tsx';
 import { supabase } from '../../db/SupabaseClient.tsx';
 import {
@@ -427,6 +425,7 @@ const Analytics: React.FC = () => {
         <div className="col-span-12 xl:col-span-12">
           {egiCons ? (
             <FuelConsPercentageChart
+            showPeriodPicker={true}
               data={egiCons}
               title="Fuel Consumption Percentage All EGI"
               onClickChart={handleClickEgiChart}
@@ -443,6 +442,7 @@ const Analytics: React.FC = () => {
 
         <div className="col-span-12 xl:col-span-12" ref={cnRef}>
           <FuelConsPercentageChart
+          showPeriodPicker={false}
             data={unitCons}
             onClickChart={handleClickCnChart}
             title={selectedEgi}
@@ -453,6 +453,7 @@ const Analytics: React.FC = () => {
 
         <div className="col-span-12 xl:col-span-12" ref={dateRef} >
           <FuelConsPercentageChart
+          showPeriodPicker={false}
             data={dailyCons}
             title={selectedCn}
             subtitle="Click to show result below"

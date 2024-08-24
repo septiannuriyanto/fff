@@ -6,6 +6,7 @@ import LoaderLogo from '../../common/Loader/LoaderLogo';
 //---------------------------------------------------------------------------------------
 
 interface FuelConsPercentageChartProps {
+  showPeriodPicker : boolean,
   week?: number;
   data?: BarChartSchema[];
   title: string;
@@ -30,6 +31,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
   period,
   onClickChart,
   onClickPeriode,
+  showPeriodPicker,
 }) => {
   const [selectedOption, setSelectedOption] = useState(period);
 
@@ -235,7 +237,7 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
         </div>
         <div>
           <div className="relative z-20 inline-block">
-            <select
+          {showPeriodPicker? <select
               value={selectedOption}
               onChange={handleSelectChange}
               className="relative z-20 inline-flex appearance-none bg-transparent py-1 pl-3 pr-8 text-sm font-medium outline-none"
@@ -255,7 +257,8 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
               <option value="Date Range" className="dark:bg-boxdark">
                 Date Range
               </option>
-            </select>
+            </select> : <div/>}
+            
 
             <span className="absolute top-1/2 right-3 z-10 -translate-y-1/2">
               <svg

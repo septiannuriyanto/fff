@@ -16,6 +16,10 @@ import Tables from './pages/Tables';
 import Alerts from './pages/UiElements/Alerts';
 import Buttons from './pages/UiElements/Buttons';
 import DefaultLayout from './layout/DefaultLayout';
+import DailyReport from './pages/Reporting/DailyReport';
+import RitationReport from './pages/Reporting/RitationReport';
+import TMRReport from './pages/Reporting/TMRReport';
+import PressurelessReport from './pages/Reporting/PressurelessReport';
 
 function App() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -142,7 +146,44 @@ function App() {
             </>
           }
         />
+        <Route
+          path="/reporting/dailyreport"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+              <DailyReport />
+            </>
+          }
+        />
+        <Route
+          path="/reporting/ritation"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+              <RitationReport />
+            </>
+          }
+        />
+        <Route
+          path="/reporting/tmr"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+              <TMRReport />
+            </>
+          }
+        />
+        <Route
+          path="/reporting/pressureless"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+              <PressurelessReport />
+            </>
+          }
+        />
       </Routes>
+      
     </DefaultLayout>
   );
 }

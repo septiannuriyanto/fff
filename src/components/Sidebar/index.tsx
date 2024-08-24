@@ -17,7 +17,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
   const storedSidebarExpanded = localStorage.getItem('sidebar-expanded');
   const [sidebarExpanded, setSidebarExpanded] = useState(
-    storedSidebarExpanded === null ? false : storedSidebarExpanded === 'true'
+    storedSidebarExpanded === null ? false : storedSidebarExpanded === 'true',
   );
 
   // close on click outside
@@ -65,7 +65,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       {/* <!-- SIDEBAR HEADER --> */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
         <NavLink to="/">
-          <img src={Logo} alt="Logo" className='h-6 fill' />
+          <img src={Logo} alt="Logo" className="h-6 fill" />
         </NavLink>
 
         <button
@@ -113,7 +113,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                     <React.Fragment>
                       <NavLink
                         to="#"
-                        className={`group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-bodydark2 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
+                        className={`group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-body duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
                           (pathname === '/' ||
                             pathname.includes('dashboard')) &&
                           'bg-graydark dark:bg-meta-4'
@@ -180,8 +180,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                             <NavLink
                               to="/"
                               className={({ isActive }) =>
-                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark2 duration-300 ease-in-out hover:text-blue-300 ' +
-                                (isActive && '!text-bodydark2')
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
                               }
                             >
                               Fuel Analytics
@@ -196,7 +196,225 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
               </SidebarLinkGroup>
               {/* <!-- Menu Item Dashboard --> */}
 
-             
+              {/* <!-- Menu Item Reporting Pages --> */}
+              <SidebarLinkGroup
+                activeCondition={
+                  pathname === '/reporting' || pathname.includes('reporting')
+                }
+              >
+                {(handleClick, open) => {
+                  return (
+                    <React.Fragment>
+                      <NavLink
+                        to="#"
+                        className={`group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark2 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
+                          (pathname === '/reporting' ||
+                            pathname.includes('reporting')) &&
+                          'bg-graydark dark:bg-meta-4'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          sidebarExpanded
+                            ? handleClick()
+                            : setSidebarExpanded(true);
+                        }}
+                      >
+                        <svg
+                          version="1.1"
+                          id="Uploaded to svgrepo.com"
+                          xmlns="http://www.w3.org/2000/svg"
+                          xmlnsXlink="http://www.w3.org/1999/xlink"
+                          width="18px"
+                          height="19px"
+                          viewBox="0 0 32 32"
+                          xmlSpace="preserve"
+                        >
+                          <g>
+                            <g>
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="11.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="14.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="17.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="20.5"
+                                r="0.5"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,12h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,12,20.5,12z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,15h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,15,20.5,15z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,18h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,18,20.5,18z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,21h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,21,20.5,21z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M23.5,30h-15C7.673,30,7,29.327,7,28.5v-25C7,2.673,7.673,2,8.5,2h1C9.776,2,10,2.224,10,2.5
+			S9.776,3,9.5,3h-1C8.224,3,8,3.225,8,3.5v25C8,28.775,8.224,29,8.5,29h15c0.276,0,0.5-0.225,0.5-0.5v-25C24,3.225,23.776,3,23.5,3
+			h-11C12.224,3,12,2.776,12,2.5S12.224,2,12.5,2h11C24.327,2,25,2.673,25,3.5v25C25,29.327,24.327,30,23.5,30z"
+                              />
+                            </g>
+                            <g>
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="11.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="14.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="17.5"
+                                r="0.5"
+                              />
+                              <circle
+                                className="open_een"
+                                cx="11.5"
+                                cy="20.5"
+                                r="0.5"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,12h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,12,20.5,12z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,15h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,15,20.5,15z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,18h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,18,20.5,18z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M20.5,21h-7c-0.276,0-0.5-0.224-0.5-0.5s0.224-0.5,0.5-0.5h7c0.276,0,0.5,0.224,0.5,0.5
+			S20.776,21,20.5,21z"
+                              />
+                              <path
+                                className="open_een"
+                                d="M23.5,30h-15C7.673,30,7,29.327,7,28.5v-25C7,2.673,7.673,2,8.5,2h1C9.776,2,10,2.224,10,2.5
+			S9.776,3,9.5,3h-1C8.224,3,8,3.225,8,3.5v25C8,28.775,8.224,29,8.5,29h15c0.276,0,0.5-0.225,0.5-0.5v-25C24,3.225,23.776,3,23.5,3
+			h-11C12.224,3,12,2.776,12,2.5S12.224,2,12.5,2h11C24.327,2,25,2.673,25,3.5v25C25,29.327,24.327,30,23.5,30z"
+                              />
+                            </g>
+                          </g>
+                        </svg>
+                        Reporting
+                        <svg
+                          className={`absolute right-4 top-1/2 -translate-y-1/2 fill-current ${
+                            open && 'rotate-180'
+                          }`}
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            clipRule="evenodd"
+                            d="M4.41107 6.9107C4.73651 6.58527 5.26414 6.58527 5.58958 6.9107L10.0003 11.3214L14.4111 6.91071C14.7365 6.58527 15.2641 6.58527 15.5896 6.91071C15.915 7.23614 15.915 7.76378 15.5896 8.08922L10.5896 13.0892C10.2641 13.4147 9.73651 13.4147 9.41107 13.0892L4.41107 8.08922C4.08563 7.76378 4.08563 7.23614 4.41107 6.9107Z"
+                            fill=""
+                          />
+                        </svg>
+                      </NavLink>
+                      {/* <!-- Dropdown Menu Start --> */}
+                      <div
+                        className={`translate transform overflow-hidden ${
+                          !open && 'hidden'
+                        }`}
+                      >
+                        <ul className="mt-4 mb-5.5 flex flex-col gap-2.5 pl-6">
+                          <li>
+                            <NavLink
+                              to="/reporting/dailyreport"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              Daily Report
+                            </NavLink>
+                          </li>
+                          <li>
+                            <NavLink
+                              to="/reporting/ritation"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              Ritation
+                            </NavLink>
+                          </li>
+                          <li>
+                            <NavLink
+                              to="/reporting/tmr"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              Total Mining Resistance
+                            </NavLink>
+                          </li>
+                           <li>
+                            <NavLink
+                              to="/reporting/pressureless"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              Pressureless
+                            </NavLink>
+                          </li>
+                        </ul>
+                      </div>
+                      {/* <!-- Dropdown Menu End --> */}
+                    </React.Fragment>
+                  );
+                }}
+              </SidebarLinkGroup>
+              {/* <!-- Menu Item Reporting Pages --> */}
+
               {/* <!-- Menu Item Auth Pages --> */}
               <SidebarLinkGroup
                 activeCondition={
@@ -278,8 +496,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                             <NavLink
                               to="/auth/signin"
                               className={({ isActive }) =>
-                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark3 duration-300 ease-in-out hover:text-blue-300 ' +
-                                (isActive && '!text-white')
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
                               }
                             >
                               Sign In
@@ -289,8 +507,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                             <NavLink
                               to="/auth/signup"
                               className={({ isActive }) =>
-                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark3 duration-300 ease-in-out hover:text-blue-300 ' +
-                                (isActive && '!text-white')
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
                               }
                             >
                               Sign Up
