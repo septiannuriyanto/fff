@@ -236,12 +236,12 @@ function App() {
         <Route
           path="/reporting/pressureless"
           element={
-            <ProtectedRoute element={
+           
               <>
                 <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
                 <PressurelessReport />
               </>
-            } />
+         
           }
         />
       </Routes>
