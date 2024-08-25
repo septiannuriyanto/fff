@@ -5,7 +5,7 @@ import SignIn from './pages/Authentication/SignIn';
 import SignUp from './pages/Authentication/SignUp';
 import Calendar from './pages/Calendar';
 import Chart from './pages/Chart';
-import ECommerce from './pages/Dashboard/Analytics';
+import ECommerce from './pages/Dashboard/FuelConsumption/FuelConsumption';
 import FormElements from './pages/Form/FormElements';
 import FormLayout from './pages/Form/FormLayout';
 import Profile from './pages/Profile';
@@ -18,8 +18,13 @@ import DailyReport from './pages/Reporting/DailyReport';
 import RitationReport from './pages/Reporting/RitationReport';
 import TMRReport from './pages/Reporting/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
-import Analytics from './pages/Dashboard/Analytics';
+import FuelConsumption from './pages/Dashboard/FuelConsumption/FuelConsumption';
 import ProtectedRoute from './pages/ProtectedRoute'; // Adjust the import path as necessary
+import Dashboard from './pages/Dashboard';
+import StockManagement from './pages/Dashboard/Stock Management/StockManagement';
+import Infrastructure from './pages/Dashboard/Infrastructure/Infrastructure';
+import Manpower from './pages/Dashboard/Manpower/Manpower';
+import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
 
 function App() {
   return (
@@ -35,23 +40,68 @@ function App() {
             <ProtectedRoute element={
               <>
                 <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <ECommerce />
+                <Dashboard />
               </>
             } />
           }
         />
         <Route
-          path="/dashboard"
+          path="/fuelcons"
           element={
             <ProtectedRoute element={
               <>
                 <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Analytics />
+                <FuelConsumption />
+              </>
+            } />
+          }
+        />
+         <Route
+          path="/stockmanagement"
+          element={
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <StockManagement />
+              </>
+            } />
+          }
+        />
+         <Route
+          path="/infrastructure"
+          element={
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Infrastructure />
               </>
             } />
           }
         />
         <Route
+          path="/pressureless"
+          element={
+              <>
+                <PageTitle title="FFF Dashboard | Pressureless Summary" />
+                <PressurelessSummary />
+              </>
+          
+          }
+        />
+        <Route
+          path="/manpower"
+          element={
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Manpower />
+              </>
+            } />
+          }
+        />
+        
+        <Route
+        
           path="/calendar"
           element={
             <ProtectedRoute element={

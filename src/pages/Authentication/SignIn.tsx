@@ -96,14 +96,14 @@ const SignIn: React.FC = () => {
         function storeSession(session: AuthSession) {
           localStorage.setItem('supabaseSession', JSON.stringify(session));
         }
-      }
 
-      // Handle successful login
-      console.log('Login successful');
-      // Store the session in Redux
-      dispatch(setSession(data.session));
-      window.location.href='/';
-      // navigate('/');
+        // Handle successful login
+        console.log('Login successful');
+        // Store the session in Redux
+        dispatch(setSession(data.session));
+        window.location.href = '/';
+        // navigate('/');
+      }
     } catch (error) {
       console.error('Error logging in:', error);
       setError('Login failed');
@@ -232,7 +232,7 @@ const SignIn: React.FC = () => {
                     fill="#1C2434"
                   />
                   <path
-                    d="M292.933 196.201C290.924 197.395 289.721 199.588 289.031 201.821C287.754 205.953 286.985 210.226 286.741 214.545L286.012 227.475L276.984 261.755C284.809 268.37 289.322 266.867 299.855 261.455C310.387 256.044 311.591 263.26 311.591 263.26L313.697 234.092L316.706 202.219C316.031 201.407 315.266 200.672 314.427 200.03C311.645 197.868 308.409 196.366 304.962 195.636C301.516 194.906 297.948 194.967 294.528 195.815L292.933 196.201Z"
+                    d="M292.933 196.201C290.924 197.395 289 .721 199.588 289.031 201.821C287.754 205.953 286.985 210.226 286.741 214.545L286.012 227.475L276.984 261.755C284.809 268.37 289.322 266.867 299.855 261.455C310.387 256.044 311.591 263.26 311.591 263.26L313.697 234.092L316.706 202.219C316.031 201.407 315.266 200.672 314.427 200.03C311.645 197.868 308.409 196.366 304.962 195.636C301.516 194.906 297.948 194.967 294.528 195.815L292.933 196.201Z"
                     fill="#3056D3"
                   />
                   <path

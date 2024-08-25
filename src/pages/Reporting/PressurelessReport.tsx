@@ -24,7 +24,9 @@ const PressurelessReport: React.FC = () => {
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
         .from<PopulationData>('population')
-        .select('code_number');
+        .select('code_number')
+        .eq('pressureless', true)
+        ;
 
       if (error) {
         console.error(error);

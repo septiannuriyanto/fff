@@ -1,22 +1,22 @@
 import React, { useEffect, useState , useRef } from 'react';
-import CardDataStats from '../../components/CardDataStats';
-import FuelConsPercentageChart from '../../components/Charts/FuelConsPercentageChart.tsx';
-import { supabase } from '../../db/SupabaseClient.tsx';
+import CardDataStats from '../../../components/CardDataStats.tsx';
+import FuelConsPercentageChart from '../../../components/Charts/FuelConsPercentageChart.tsx';
+import { supabase } from '../../../db/SupabaseClient.tsx';
 import {
   parseBarChartSchemaToEgi,
   parseBarChartSchemaToCn,
   parseBarChartSchemaToDate,
-} from '../../types/BarChartSchemaParser.ts';
+} from '../../../types/BarChartSchemaParser.ts';
 import Datepicker from 'tailwind-datepicker-react';
-import { datePickerOptions } from '.././../components/Charts/DatePickerComponent.tsx';
+import { datePickerOptions } from '../../../components/Charts/DatePickerComponent.tsx';
 import {
   getWeekNumber,
   getWeekStartAndEndDate,
   getCurrentMonthDates,
   getLastMonthDates,
-} from '../../Utils/TimeUtility.ts';
+} from '../../../Utils/TimeUtility.ts';
 
-import LoaderLogo from '../../common/Loader/LoaderLogo.tsx';
+import LoaderLogo from '../../../common/Loader/LoaderLogo.tsx';
 
 interface ResponseModel {
   CN: string; // Replace with your actual columns
@@ -32,7 +32,7 @@ interface ResponseModel {
   WORKING_HOURS: number;
 }
 
-const Analytics: React.FC = () => {
+const FuelConsumption: React.FC = () => {
   const [data, setData] = useState<ResponseModel[]>([]);
   const [egiCons, setEgiCons] = useState<BarChartSchema[]>([]);
   const [unitCons, setUnitCons] = useState<BarChartSchema[]>([]);
@@ -480,4 +480,4 @@ const Analytics: React.FC = () => {
   );
 };
 
-export default Analytics;
+export default FuelConsumption;
