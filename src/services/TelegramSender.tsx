@@ -1,6 +1,6 @@
 const sendTelegramNotification = async (message:string) => {
-    const botToken = '7123885507:AAGr1FsbwtIicTZRfiU7F8mMtwjbazs3ESQ';
-    const chatId = 'YOUR_CHAT_ID';
+    const botToken = import.meta.env.VITE_TELEGRAM_BOT_API;
+    const chatId = import.meta.env.VITE_TELEGRAM_CHANNEL_ID; // Or use the chat ID if it's private
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
     try {
@@ -27,8 +27,8 @@ const sendTelegramNotification = async (message:string) => {
 
 
   const sendMessageToChannel = async (message:any) => {
-    const botToken = '7123885507:AAGr1FsbwtIicTZRfiU7F8mMtwjbazs3ESQ';
-    const chatId = '@fffprojectbrcg'; // Or use the chat ID if it's private
+    const botToken = import.meta.env.VITE_TELEGRAM_BOT_API;
+    const chatId = import.meta.env.VITE_TELEGRAM_CHANNEL_ID; // Or use the chat ID if it's private
   
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
