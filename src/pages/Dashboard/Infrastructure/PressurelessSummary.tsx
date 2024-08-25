@@ -9,17 +9,17 @@ const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-  
+
   XLSX.writeFile(wb, 'pressureless-detail.xlsx');
 };
-
 
 interface PressurelessSummaryProps {
   allowColumnsEdit: boolean;
 }
 
-const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsEdit }) => {
-
+const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
+  allowColumnsEdit,
+}) => {
   // Row Data: The data to be displayed.
   const [rowData, setRowData] = useState<any[]>([]);
   const [gridApi, setGridApi] = useState<any>(null);
@@ -109,7 +109,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsE
       filter: 'agTextColumnFilter',
       suppressHeaderMenuButton: true,
       suppressHeaderContextMenu: true,
-      cellStyle: (params:any) => {
+      cellStyle: (params: any) => {
         if (params.value === 'OPEN') {
           return { color: 'white', backgroundColor: '#ffaaaa' };
         } else if (params.value === 'PROGRESS') {
@@ -163,45 +163,54 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsE
     params.api.onFilterChanged();
   }, []);
 
-  const handleExport = (e:any)=>{
-  e.preventDefault();
-  exportToExcel(rowData);
-
-  }
+  const handleExport = (e: any) => {
+    e.preventDefault();
+    exportToExcel(rowData);
+  };
 
   const onCellValueChanged = async (params: any) => {
     const { data } = params;
     const { codenumber, lastchecked, status, remark, pressureless } = data;
-  
+    const columnId = params.column.getId();
+    console.log(columnId);
+
     try {
       // Check if pressureless value has changed
-      if (pressureless !== undefined) {
-        // Update the population table
+      if (columnId == 'pressureless') {
+        console.log('updating pressureless installation status');
         const { error: populationError } = await supabase
           .from('population')
           .update({ pressureless })
           .eq('code_number', codenumber);
-  
+
         if (populationError) {
           throw new Error(
             `Error updating population table: ${populationError.message}`,
           );
         }
-        return;
-      }
-  
-      // Check if status or remark have changed
-      if (status !== undefined || remark !== undefined) {
-        // Update the pressureless_report table
+      } else if (columnId == 'status') {
+        console.log('updating status');
         const { error: reportError } = await supabase
           .from('pressureless_report')
-          .update({ status, remark })
+          .update({ status })
           .eq('equip_number', codenumber)
           .eq('date_report', lastchecked); // Use the date_report from the edited row
-  
+
         if (reportError) {
           throw new Error(
-            `Error updating pressureless_report table: ${reportError.message}`,
+            `Error updating status table: ${reportError.message}`,
+          );
+        }
+      } else {
+        console.log('updating remark');
+        const { error: reportError } = await supabase
+          .from('pressureless_report')
+          .update({ remark })
+          .eq('equip_number', codenumber)
+          .eq('date_report', lastchecked); // Use the date_report from the edited row
+        if (reportError) {
+          throw new Error(
+            `Error updating remark table: ${reportError.message}`,
           );
         }
       }
@@ -209,7 +218,6 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsE
       console.error(error);
     }
   };
-  
 
   const autoSizeStrategy = {
     type: 'fitCellContents',
@@ -257,8 +265,6 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsE
                 Kondisi Pressureless
               </h2>
 
-              
-
               <div
                 className="ag-theme-quartz h-100 w-full" // applying the Data Grid theme
               >
@@ -274,7 +280,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({ allowColumnsE
               </div>
               <div className="w-full flex justify-end my-5">
                 <button
-                onClick={handleExport}
+                  onClick={handleExport}
                   className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
                 >
                   Export to excel
