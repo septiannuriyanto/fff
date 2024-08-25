@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
+import { sendMessageToChannel } from '../../services/TelegramSender';
+import { formatDate } from '../../Utils/DateUtility';
 
 // Define the types
 interface PopulationData {
@@ -25,9 +27,7 @@ const PressurelessReport: React.FC = () => {
       const { data, error } = await supabase
         .from<PopulationData>('population')
         .select('code_number')
-        .eq('pressureless', true)
-        ;
-
+        .eq('pressureless', true);
       if (error) {
         console.error(error);
       } else {
@@ -54,15 +54,13 @@ const PressurelessReport: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const { error } = await supabase
-      .from('pressureless_report')
-      .insert([
-        {
-          equip_number: equipNumber,
-          pressureless_condition: pressurelessCondition,
-          report_by: reportBy,
-        },
-      ]);
+    const { error } = await supabase.from('pressureless_report').insert([
+      {
+        equip_number: equipNumber,
+        pressureless_condition: pressurelessCondition,
+        report_by: reportBy,
+      },
+    ]);
 
     if (error) {
       console.error(error);
@@ -71,6 +69,8 @@ const PressurelessReport: React.FC = () => {
       setEquipNumber('');
       setPressurelessCondition(1);
       setReportBy('');
+      const message =  `PRESSURELESS REPORT\n\nLast Checked :${formatDate(Date.now())}\nReported by : ${reportBy}\nUnit : ${equipNumber}\nCondition : ${pressurelessCondition}\nVisit : https://fff-project.vercel.app/pressureless`;
+      sendMessageToChannel(message);
     }
   };
 
@@ -81,21 +81,23 @@ const PressurelessReport: React.FC = () => {
     return inputLength === 0
       ? []
       : list.filter(
-          (item) => item.toLowerCase().slice(0, inputLength) === inputValue
+          (item) => item.toLowerCase().slice(0, inputLength) === inputValue,
         );
   };
 
   const getSuggestionValue = (suggestion: string): string => suggestion;
 
-  const renderSuggestion = (suggestion: string) => (
-    <div>{suggestion}</div>
-  );
+  const renderSuggestion = (suggestion: string) => <div>{suggestion}</div>;
 
   const onSuggestionsFetchRequested = ({ value }: { value: string }) => {
     setSuggestions(getSuggestions(value, codeNumbers));
   };
 
-  const onReportBySuggestionsFetchRequested = ({ value }: { value: string }) => {
+  const onReportBySuggestionsFetchRequested = ({
+    value,
+  }: {
+    value: string;
+  }) => {
     setReportBySuggestions(getSuggestions(value, names));
   };
 
@@ -109,14 +111,14 @@ const PressurelessReport: React.FC = () => {
 
   const onEquipNumberChange = (
     event: React.FormEvent<HTMLElement>,
-    { newValue }: { newValue: string }
+    { newValue }: { newValue: string },
   ) => {
     setEquipNumber(newValue);
   };
 
   const onReportByChange = (
     event: React.FormEvent<HTMLElement>,
-    { newValue }: { newValue: string }
+    { newValue }: { newValue: string },
   ) => {
     setReportBy(newValue);
   };
@@ -144,10 +146,11 @@ const PressurelessReport: React.FC = () => {
             }}
             theme={{
               container: 'relative',
-              suggestionsContainerOpen: 'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
+              suggestionsContainerOpen:
+                'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
               suggestion: 'p-2 hover:bg-gray-200',
               suggestionHighlighted: 'bg-gray-300',
-              input: 'w-full p-2 border rounded'
+              input: 'w-full p-2 border rounded',
             }}
           />
         </div>
@@ -172,7 +175,9 @@ const PressurelessReport: React.FC = () => {
                 onChange={() => setPressurelessCondition(2)}
                 className="mr-2"
               />
-              <label>Tumpah pada akhir refueling, Ada back pressure pada nozzle</label>
+              <label>
+                Tumpah pada akhir refueling, Ada back pressure pada nozzle
+              </label>
             </div>
             <div>
               <input
@@ -182,7 +187,9 @@ const PressurelessReport: React.FC = () => {
                 onChange={() => setPressurelessCondition(3)}
                 className="mr-2"
               />
-              <label>Tumpah pada akhir refueling, Tidak ada back pressure pada nozzle</label>
+              <label>
+                Tumpah pada akhir refueling, Tidak ada back pressure pada nozzle
+              </label>
             </div>
             <div>
               <input
@@ -213,14 +220,18 @@ const PressurelessReport: React.FC = () => {
             }}
             theme={{
               container: 'relative',
-              suggestionsContainerOpen: 'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
+              suggestionsContainerOpen:
+                'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
               suggestion: 'p-2 hover:bg-gray-200',
               suggestionHighlighted: 'bg-gray-300',
-              input: 'w-full p-2 border rounded'
+              input: 'w-full p-2 border rounded',
             }}
           />
         </div>
-        <button type="submit" className="bg-primary text-white py-2 rounded hover:bg-blue-700">
+        <button
+          type="submit"
+          className="bg-primary text-white py-2 rounded hover:bg-blue-700"
+        >
           Submit
         </button>
       </form>

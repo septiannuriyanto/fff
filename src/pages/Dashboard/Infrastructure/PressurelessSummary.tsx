@@ -4,6 +4,7 @@ import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the 
 import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the Data Grid
 import { supabase } from '../../../db/SupabaseClient';
 import * as XLSX from 'xlsx';
+import { sendMessageToChannel } from '../../../services/TelegramSender';
 
 const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -284,6 +285,12 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
                   className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
                 >
                   Export to excel
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
+                >
+                  Send to Telegram
                 </button>
               </div>
               <div className="legend mt-5">
