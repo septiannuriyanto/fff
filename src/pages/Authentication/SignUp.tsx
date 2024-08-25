@@ -130,7 +130,7 @@ const SignUp: React.FC = () => {
       console.error('Error updating manpower table:', error);
     }
       
-      console.log('Signup successful:');
+      console.log('Signup berhasil ');
       // Reset form fields
       setNrp('');
       setNamaLengkap('');
@@ -144,7 +144,7 @@ const SignUp: React.FC = () => {
         email: '',
         password: '',
       });
-      alert('Signup successful')
+      alert('Signup berhasil. Silahkan buka email anda untuk konfirmasi pendaftaran sebelum melakukan sign in.')
       navigate('/auth/signin');
     }
   };
