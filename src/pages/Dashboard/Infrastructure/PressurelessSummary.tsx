@@ -4,7 +4,9 @@ import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the 
 import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the Data Grid
 import { supabase } from '../../../db/SupabaseClient';
 import * as XLSX from 'xlsx';
-import { sendMessageToChannel } from '../../../services/TelegramSender';
+import InstalledChart from './components/InstalledChart';
+import StatusChart from './components/StatusChart';
+import ReportedChart from './components/ReportedChart';
 
 const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -13,6 +15,8 @@ const exportToExcel = (data: any[]) => {
 
   XLSX.writeFile(wb, 'pressureless-detail.xlsx');
 };
+
+
 
 interface PressurelessSummaryProps {
   allowColumnsEdit: boolean;
@@ -26,38 +30,16 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
   const [gridApi, setGridApi] = useState<any>(null);
   const gridRef = useRef();
   // Define the options for the status dropdown
-  const statusOptions = ['OPEN', 'PROGRESS', 'CLOSE'];
-  useEffect(() => {
-    if (gridApi) {
-      gridApi.setFilterModel({
-        pressureless: {
-          filterType: 'boolean',
-          type: 'equals',
-          value: true,
-        },
-      });
-      gridApi.onFilterChanged();
-    }
-  }, [rowData, gridApi]);
-
-  // useEffect(() => {
-  //   const fetchEquipmentSummary = async () => {
-  //     const { data, error } = await supabase.rpc(
-  //       'get_recent_pressureless_condition',
-  //     );
-
-  //     if (error) {
-  //       console.error('Error fetching equipment summary:', error);
-  //     } else {
-  //       console.log(data);
-  //       setRowData(data);
-  //     }
-  //   };
-
-  //   fetchEquipmentSummary();
-  // }, []);
-
-  // Column Definitions: Defines the columns to be displayed.
+  const statusOptions = ['OPEN', 'PROGRESS', 'CLOSED'];
+  const pressurelesssOptions = ['Y', 'N', 'X'];
+  const [allPopulation, setAllPopulation] = useState<number>(0);
+  const [installed, setInstalled] = useState<number>(0);
+  const [notInstalled, setNotInstalled] = useState<number>(0);
+  const [openCount, setOpenCount] = useState<number>(0);
+  const [progressCount, setProgressCount] = useState<number>(0);
+  const [closedCount, setClosedCount] = useState<number>(0);
+  const [reportedCount, setreportedCount] = useState<number>(0);
+  const [notReportedCount, setNotReportedCount] = useState<number>(0);
   const [colDefs, setColDefs] = useState([
     {
       id: 'codenumber',
@@ -74,18 +56,22 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
       suppressHeaderContextMenu: true,
     },
     {
-      id: 'pressureless',
+      id: 'pressureless ',
       field: 'pressureless',
-      filter: 'agSetColumnFilter',
+      filter: 'agTextColumnFilter',
       suppressHeaderMenuButton: true,
       suppressHeaderContextMenu: true,
       editable: allowColumnsEdit,
       filterParams: {
-        values: [true, false], // Possible values for boolean filter
+        values: ['Y', 'N', 'X'], // Possible values for boolean filter
         cellRenderer: 'agCheckboxCellRenderer',
         cellRendererParams: {
           checkbox: true,
         },
+      },
+      cellEditor: 'agSelectCellEditor', // Use agSelectCellEditor
+      cellEditorParams: {
+        values: pressurelesssOptions, // Provide options for the dropdown
       },
     },
     {
@@ -115,10 +101,10 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
           return { color: 'white', backgroundColor: '#ffaaaa' };
         } else if (params.value === 'PROGRESS') {
           return { color: 'black', backgroundColor: '#ffffb0' };
-        } else if (params.value === 'CLOSE') {
+        } else if (params.value === 'CLOSED') {
           return { color: 'black', backgroundColor: '#aaffaa' };
         } else {
-          return { color: 'black', backgroundColor: 'white' };
+          return { color: 'black' };
         }
         return null;
       },
@@ -151,34 +137,103 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
     if (error) {
       console.error('Error fetching equipment summary:', error);
     } else {
-      setRowData(data);
+      // Initialize counts object
+const counts = {
+  all: 0,
+  installed: 0,
+  notInstalled: 0,
+  open: 0,
+  progress: 0,
+  close: 0,
+  notReported: 0,
+  reported: 0
+};
+
+// Process each row to update counts
+data.forEach((row: any) => {
+  counts.all++; // Count each row
+
+  // Handle pressureless conditions
+  if (row.pressureless === 'Y') {
+    counts.installed++; // Increment installed count
+    if (row.status === null) {
+      counts.notReported++; // Increment notReported count if status is empty
+    } else {
+      counts.reported++; // Increment reported count if status is not empty
+    }
+  } else if (row.pressureless === 'N') {
+    counts.notInstalled++; // Increment notInstalled count
+  }
+
+  // Handle status conditions
+  switch (row.status) {
+    case 'OPEN':
+      counts.open++;
+      break;
+    case 'PROGRESS':
+      counts.progress++;
+      break;
+    case 'CLOSED':
+      counts.close++;
+      break;
+    default:
+      // No action needed for default case
+      break;
+  }
+});
+        
+        setAllPopulation(counts.all),
+        setInstalled(counts.installed),
+        setNotInstalled(counts.notInstalled),
+        setOpenCount(counts.open),
+        setProgressCount(counts.progress),
+        setClosedCount(counts.close),
+        setreportedCount(counts.reported);
+        setNotReportedCount(counts.notReported);
+        setRowData(data);
+
     }
     // Apply initial filter
     params.api.setFilterModel({
       pressureless: {
-        filterType: 'boolean',
         type: 'equals',
-        value: true,
+        value: 'Y',
       },
     });
     params.api.onFilterChanged();
   }, []);
 
-  const handleExport = (e: any) => {
+
+  const exportGrid = () => {
+  const params = {
+    fileName: 'infrastructure-grid-export.csv',
+    sheetName: 'Sheet1',
+    processCellCallback: (params:any) => {
+      // Custom logic to format cell data
+      return params.value;
+    }
+  };
+
+  gridRef!.current!.api.exportDataAsCsv();
+};
+  const handleExportCsv = (e: any) => {
     e.preventDefault();
-    exportToExcel(rowData);
+    // exportToExcel(rowData);
+    exportGrid()
   };
 
   const onCellValueChanged = async (params: any) => {
-    const { data } = params;
+    const { data, oldValue } = params;
     const { codenumber, lastchecked, status, remark, pressureless } = data;
     const columnId = params.column.getId();
-    console.log(columnId);
+
+    // The previous status before the change
+    const prevStatus = oldValue;
 
     try {
       // Check if pressureless value has changed
       if (columnId == 'pressureless') {
-        console.log('updating pressureless installation status');
+        // console.log('updating pressureless installation status');
         const { error: populationError } = await supabase
           .from('population')
           .update({ pressureless })
@@ -189,8 +244,18 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
             `Error updating population table: ${populationError.message}`,
           );
         }
+        if (pressureless === 'Y') {
+          setNotInstalled((prev) => prev - 1);
+          setInstalled((prev) => prev + 1);
+        } else if (pressureless === 'N') {
+          setInstalled((prev) => prev - 1);
+          setNotInstalled((prev) => prev + 1);
+        } else {
+          setInstalled((prev) => prev - 1);
+          setNotInstalled((prev) => prev - 1);
+        }
       } else if (columnId == 'status') {
-        console.log('updating status');
+        // console.log('updating status');
         const { error: reportError } = await supabase
           .from('pressureless_report')
           .update({ status })
@@ -201,6 +266,29 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
           throw new Error(
             `Error updating status table: ${reportError.message}`,
           );
+        }
+        // Update for OPEN, PROGRESS, and CLOSED statuses
+        if (status === 'OPEN') {
+          setOpenCount((prev) => prev + 1);
+          if (prevStatus === 'PROGRESS') {
+            setProgressCount((prev) => prev - 1);
+          } else if (prevStatus === 'CLOSED') {
+            setClosedCount((prev) => prev - 1);
+          }
+        } else if (status === 'PROGRESS') {
+          setProgressCount((prev) => prev + 1);
+          if (prevStatus === 'OPEN') {
+            setOpenCount((prev) => prev - 1);
+          } else if (prevStatus === 'CLOSED') {
+            setClosedCount((prev) => prev - 1);
+          }
+        } else if (status === 'CLOSED') {
+          setClosedCount((prev) => prev + 1);
+          if (prevStatus === 'OPEN') {
+            setOpenCount((prev) => prev - 1);
+          } else if (prevStatus === 'PROGRESS') {
+            setProgressCount((prev) => prev - 1);
+          }
         }
       } else {
         console.log('updating remark');
@@ -256,6 +344,95 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
     return params.data.id;
   }, []);
 
+  //------------TABBED BUTTONS
+  interface TabbedButtonProps {
+    filterByStatus: (status: string) => void;
+  }
+  let tabs = [
+    { label: `All (${allPopulation})`, value: 'ALL' },
+    { label: `Installed(${installed})`, value: 'INSTALLED' },
+    { label: `Not Installed(${notInstalled})`, value: 'NOT INSTALLED' },
+      { label: `Reported(${reportedCount})`, value: 'REPORTED' },
+    { label: `Not Reported(${notReportedCount})`, value: 'NOT REPORTED' },
+    { label: `Open(${openCount})`, value: 'OPEN' },
+    { label: `Progress(${progressCount})`, value: 'PROGRESS' },
+    { label: `Closed(${closedCount})`, value: 'CLOSED' },
+  ];
+
+  const [activeTab, setActiveTab] = useState<string>('ALL');
+
+  const handleTabClick = (value: string) => {
+    // console.log(value);
+    setActiveTab(value);
+    filterByStatus(value);
+    // Handle tab click logic here
+  };
+  const filterByStatus = (status: string) => {
+    if (gridRef.current) {
+      const gridApi = gridRef.current.api;
+      if (status === 'ALL') {
+        gridApi.setFilterModel(null); // Show all rows
+      } else if (status === 'INSTALLED') {
+        gridApi.setFilterModel({
+          pressureless: {
+            type: 'equals',
+            filter: 'Y',
+          },
+        });
+      } else if (status === 'NOT INSTALLED') {
+        gridApi.setFilterModel({
+          pressureless: {
+            type: 'equals',
+            filter: 'N',
+          },
+        });
+      }
+      else if (status === 'REPORTED') {
+        gridApi.setFilterModel({
+          pressureless: {
+            type: 'equals',
+            filter: 'Y',
+          },
+          status: {
+            type: 'notBlank',
+          
+          },
+        });
+      }
+      else if (status === 'NOT REPORTED') {
+        gridApi.setFilterModel({
+          pressureless: {
+            type: 'equals',
+            filter: 'Y',
+          },
+          status: {
+            type: 'blank',
+           
+          },
+        });
+      }
+      else {
+        gridApi.setFilterModel({
+          status: {
+            type: 'equals',
+            filter: status,
+          },
+        });
+      }
+      gridApi.onFilterChanged();
+    }
+  };
+const CustomEmptyFilter = (params:any) => {
+  const { api } = params;
+  return {
+    // Your filter implementation
+    doesFilterPass: (params:any) => {
+      return params.data.status === ''; // Customize this condition as needed
+    },
+    // Other filter methods...
+  };
+};
+
   return (
     <>
       <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
@@ -266,9 +443,29 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
                 Kondisi Pressureless
               </h2>
 
-              <div
-                className="ag-theme-quartz h-100 w-full" // applying the Data Grid theme
-              >
+
+      <div className="col-span-12 xl:col-span-6 lg:inline-flex flex-col lg:flex-row justify-center align-middle w-full items-center">
+          <InstalledChart installed={installed} notInstalled={notInstalled} />
+          <ReportedChart reported={reportedCount} notReported={notReportedCount} />
+          <StatusChart openCount={openCount} progressCount={progressCount} closedCount={closedCount} />
+        </div>
+
+              <div className="flex space-x-4 pb-4">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => handleTabClick(tab.value)}
+                    className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-300 ${
+                      activeTab === tab.value
+                        ? 'border-blue-500 text-blue-500'
+                        : 'border-transparent text-gray-600 hover:text-blue-500'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <div className="ag-theme-quartz-auto-dark dark:ag-theme-quartz-dark h-100 w-full">
                 <AgGridReact
                   ref={gridRef}
                   rowData={rowData}
@@ -281,10 +478,10 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
               </div>
               <div className="w-full flex justify-end my-5">
                 <button
-                  onClick={handleExport}
+                  onClick={handleExportCsv}
                   className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
                 >
-                  Export to excel
+                  Export to CSV
                 </button>
               </div>
               <div className="legend mt-5">

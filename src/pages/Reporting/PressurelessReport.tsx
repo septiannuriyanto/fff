@@ -53,14 +53,24 @@ const PressurelessReport: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    let query ={};
 
-    const { error } = await supabase.from('pressureless_report').insert([
-      {
+    if(pressurelessCondition==1){
+      query = {
         equip_number: equipNumber,
         pressureless_condition: pressurelessCondition,
         report_by: reportBy,
-      },
-    ]);
+        status: "CLOSED",
+      }
+    }
+    else{
+    query = {
+        equip_number: equipNumber,
+        pressureless_condition: pressurelessCondition,
+        report_by: reportBy,
+      }
+    }
+    const { error } = await supabase.from('pressureless_report').insert([query]);
 
     if (error) {
       console.error(error);

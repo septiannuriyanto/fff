@@ -27,6 +27,18 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     storedSidebarExpanded === null ? false : storedSidebarExpanded === 'true',
   );
 
+  const [isShown, setIsShown] = useState('');
+
+  const handleCheckboxChange = (event: any) => {
+    console.log(event.target.checked);
+    if(event.target.checked){
+      setIsShown('')
+    }
+    else{
+    setIsShown('block lg:hidden');
+    }
+  };
+
   // close on click outside
   useEffect(() => {
     const clickHandler = ({ target }: MouseEvent) => {
@@ -90,7 +102,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   return (
     <aside
       ref={sidebar}
-      className={`absolute left-0 top-0 z-9999 flex h-screen w-65 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+      className={ `sidebar-main ${isShown} absolute left-0 top-0 z-9999 flex h-screen w-65 flex-col overflow-y-hidden bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -213,7 +225,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                         }`}
                       >
                         <ul className="mt-4 mb-5.5 flex flex-col gap-2.5 pl-6">
-                        <li>
+                          <li>
                             <NavLink
                               to="/"
                               className={({ isActive }) =>
@@ -221,7 +233,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                                 (isActive && '!text-body')
                               }
                             >
-                             Home
+                              Home
                             </NavLink>
                           </li>
                           <li>
@@ -243,7 +255,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                                 (isActive && '!text-body')
                               }
                             >
-                             Stock Management
+                              Stock Management
                             </NavLink>
                           </li>
                           <li>
@@ -254,7 +266,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                                 (isActive && '!text-body')
                               }
                             >
-                             Infrastructure
+                              Infrastructure
                             </NavLink>
                           </li>
                           <li>
@@ -265,7 +277,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                                 (isActive && '!text-body')
                               }
                             >
-                             Manpower
+                              Manpower
                             </NavLink>
                           </li>
                         </ul>
@@ -589,6 +601,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         </nav>
         {/* <!-- Sidebar Menu --> */}
       </div>
+
     </aside>
   );
 };
