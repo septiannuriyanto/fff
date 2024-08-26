@@ -477,7 +477,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
                     </button>
                   ))}
                 </div>
-                <div className="ag-theme-quartz-auto-dark dark:ag-theme-quartz-dark h-100 w-full">
+                <div className="ag-theme-quartz-auto-dark h-100 w-full">
                   <AgGridReact
                     ref={gridRef}
                     rowData={rowData}
