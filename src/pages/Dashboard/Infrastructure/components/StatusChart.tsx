@@ -33,7 +33,7 @@ const StatusChart: React.FC<StatusChartProps> = ({ openCount, progressCount, clo
     },
     dataLabels: {
       style: {
-        colors: ['#FFFFFF'], // Set data label color to white
+        colors: ['black'], // Set data label color to white
         fontSize: '14px', // Adjust font size if needed
         fontFamily: 'Arial, sans-serif', // Set font family if needed
         textShadow: 'none' // Ensure no text shadow is applied

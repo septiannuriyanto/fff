@@ -22,7 +22,7 @@ const Infrastructure = () => {
   }, []);
   return (
     <div>
-      <h2 className="mb-9 text-title-md font-bold text-black dark:text-white sm:text-title-xl2 w-full">
+      <h2 className="mb-2 text-title-sm font-bold text-black dark:text-white w-full">
                 Infrastructure Management
               </h2>
       <PressurelessSummary allowColumnsEdit={session==null}/>

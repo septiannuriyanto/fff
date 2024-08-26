@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import InstalledChart from './components/InstalledChart';
 import StatusChart from './components/StatusChart';
 import ReportedChart from './components/ReportedChart';
+import LoaderLogo from '../../../common/Loader/LoaderLogo';
 
 const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -15,8 +16,6 @@ const exportToExcel = (data: any[]) => {
 
   XLSX.writeFile(wb, 'pressureless-detail.xlsx');
 };
-
-
 
 interface PressurelessSummaryProps {
   allowColumnsEdit: boolean;
@@ -28,6 +27,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
   // Row Data: The data to be displayed.
   const [rowData, setRowData] = useState<any[]>([]);
   const [gridApi, setGridApi] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const gridRef = useRef();
   // Define the options for the status dropdown
   const statusOptions = ['OPEN', 'PROGRESS', 'CLOSED'];
@@ -130,70 +130,76 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
 
   const onGridReady = useCallback(async (params: any) => {
     setGridApi(params.api);
-    const { data, error } = await supabase.rpc(
-      'get_recent_pressureless_condition',
-    );
-
-    if (error) {
-      console.error('Error fetching equipment summary:', error);
-    } else {
+    console.log('Grid is ready.');
+  
+    try {
+      const { data, error } = await supabase.rpc('get_recent_pressureless_condition');
+      console.log('Data:', data);
+      if (error) {
+        console.error('Error fetching equipment summary:', error);
+        setLoading(false); // Ensure loading is set to false in case of error
+        return;
+      }
+  
       // Initialize counts object
-const counts = {
-  all: 0,
-  installed: 0,
-  notInstalled: 0,
-  open: 0,
-  progress: 0,
-  close: 0,
-  notReported: 0,
-  reported: 0
-};
-
-// Process each row to update counts
-data.forEach((row: any) => {
-  counts.all++; // Count each row
-
-  // Handle pressureless conditions
-  if (row.pressureless === 'Y') {
-    counts.installed++; // Increment installed count
-    if (row.status === null) {
-      counts.notReported++; // Increment notReported count if status is empty
-    } else {
-      counts.reported++; // Increment reported count if status is not empty
+      const counts = {
+        all: 0,
+        installed: 0,
+        notInstalled: 0,
+        open: 0,
+        progress: 0,
+        close: 0,
+        notReported: 0,
+        reported: 0,
+      };
+  
+      // Process each row to update counts
+      data.forEach((row: any) => {
+        counts.all++; // Count each row
+  
+        // Handle pressureless conditions
+        if (row.pressureless === 'Y') {
+          counts.installed++;
+          if (row.status === null) {
+            counts.notReported++;
+          } else {
+            counts.reported++;
+          }
+        } else if (row.pressureless === 'N') {
+          counts.notInstalled++;
+        }
+  
+        // Handle status conditions
+        switch (row.status) {
+          case 'OPEN':
+            counts.open++;
+            break;
+          case 'PROGRESS':
+            counts.progress++;
+            break;
+          case 'CLOSED':
+            counts.close++;
+            break;
+          default:
+            break;
+        }
+      });
+  
+      setAllPopulation(counts.all);
+      setInstalled(counts.installed);
+      setNotInstalled(counts.notInstalled);
+      setOpenCount(counts.open);
+      setProgressCount(counts.progress);
+      setClosedCount(counts.close);
+      setreportedCount(counts.reported);
+      setNotReportedCount(counts.notReported);
+      setRowData(data);
+      // setLoading(false); // Ensure loading is set to false after processing
+    } catch (error) {
+      console.error('Error in onGridReady:', error);
+      // setLoading(false); // Ensure loading is set to false in case of error
     }
-  } else if (row.pressureless === 'N') {
-    counts.notInstalled++; // Increment notInstalled count
-  }
-
-  // Handle status conditions
-  switch (row.status) {
-    case 'OPEN':
-      counts.open++;
-      break;
-    case 'PROGRESS':
-      counts.progress++;
-      break;
-    case 'CLOSED':
-      counts.close++;
-      break;
-    default:
-      // No action needed for default case
-      break;
-  }
-});
-        
-        setAllPopulation(counts.all),
-        setInstalled(counts.installed),
-        setNotInstalled(counts.notInstalled),
-        setOpenCount(counts.open),
-        setProgressCount(counts.progress),
-        setClosedCount(counts.close),
-        setreportedCount(counts.reported);
-        setNotReportedCount(counts.notReported);
-        setRowData(data);
-
-    }
-    // Apply initial filter
+  
     params.api.setFilterModel({
       pressureless: {
         type: 'equals',
@@ -202,24 +208,24 @@ data.forEach((row: any) => {
     });
     params.api.onFilterChanged();
   }, []);
-
+  
 
   const exportGrid = () => {
-  const params = {
-    fileName: 'infrastructure-grid-export.csv',
-    sheetName: 'Sheet1',
-    processCellCallback: (params:any) => {
-      // Custom logic to format cell data
-      return params.value;
-    }
-  };
+    const params = {
+      fileName: 'infrastructure-grid-export.csv',
+      sheetName: 'Sheet1',
+      processCellCallback: (params: any) => {
+        // Custom logic to format cell data
+        return params.value;
+      },
+    };
 
-  gridRef!.current!.api.exportDataAsCsv();
-};
+    gridRef!.current!.api.exportDataAsCsv();
+  };
   const handleExportCsv = (e: any) => {
     e.preventDefault();
     // exportToExcel(rowData);
-    exportGrid()
+    exportGrid();
   };
 
   const onCellValueChanged = async (params: any) => {
@@ -352,7 +358,7 @@ data.forEach((row: any) => {
     { label: `All (${allPopulation})`, value: 'ALL' },
     { label: `Installed(${installed})`, value: 'INSTALLED' },
     { label: `Not Installed(${notInstalled})`, value: 'NOT INSTALLED' },
-      { label: `Reported(${reportedCount})`, value: 'REPORTED' },
+    { label: `Reported(${reportedCount})`, value: 'REPORTED' },
     { label: `Not Reported(${notReportedCount})`, value: 'NOT REPORTED' },
     { label: `Open(${openCount})`, value: 'OPEN' },
     { label: `Progress(${progressCount})`, value: 'PROGRESS' },
@@ -386,8 +392,7 @@ data.forEach((row: any) => {
             filter: 'N',
           },
         });
-      }
-      else if (status === 'REPORTED') {
+      } else if (status === 'REPORTED') {
         gridApi.setFilterModel({
           pressureless: {
             type: 'equals',
@@ -395,11 +400,9 @@ data.forEach((row: any) => {
           },
           status: {
             type: 'notBlank',
-          
           },
         });
-      }
-      else if (status === 'NOT REPORTED') {
+      } else if (status === 'NOT REPORTED') {
         gridApi.setFilterModel({
           pressureless: {
             type: 'equals',
@@ -407,11 +410,9 @@ data.forEach((row: any) => {
           },
           status: {
             type: 'blank',
-           
           },
         });
-      }
-      else {
+      } else {
         gridApi.setFilterModel({
           status: {
             type: 'equals',
@@ -422,16 +423,16 @@ data.forEach((row: any) => {
       gridApi.onFilterChanged();
     }
   };
-const CustomEmptyFilter = (params:any) => {
-  const { api } = params;
-  return {
-    // Your filter implementation
-    doesFilterPass: (params:any) => {
-      return params.data.status === ''; // Customize this condition as needed
-    },
-    // Other filter methods...
+  const CustomEmptyFilter = (params: any) => {
+    const { api } = params;
+    return {
+      // Your filter implementation
+      doesFilterPass: (params: any) => {
+        return params.data.status === ''; // Customize this condition as needed
+      },
+      // Other filter methods...
+    };
   };
-};
 
   return (
     <>
@@ -439,66 +440,80 @@ const CustomEmptyFilter = (params:any) => {
         <div className="flex flex-wrap items-center">
           <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">
-              <h2 className="mb-9 font-bold text-black dark:text-white sm:text-title-md w-full">
+              <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full">
                 Kondisi Pressureless
               </h2>
 
+              
+              <div className="content">
+                <div className="col-span-12 xl:col-span-6 lg:inline-flex flex-col lg:flex-row justify-center align-middle w-full items-center">
+                  <InstalledChart
+                    installed={installed}
+                    notInstalled={notInstalled}
+                  />
+                  <ReportedChart
+                    reported={reportedCount}
+                    notReported={notReportedCount}
+                  />
+                  <StatusChart
+                    openCount={openCount}
+                    progressCount={progressCount}
+                    closedCount={closedCount}
+                  />
+                </div>
 
-      <div className="col-span-12 xl:col-span-6 lg:inline-flex flex-col lg:flex-row justify-center align-middle w-full items-center">
-          <InstalledChart installed={installed} notInstalled={notInstalled} />
-          <ReportedChart reported={reportedCount} notReported={notReportedCount} />
-          <StatusChart openCount={openCount} progressCount={progressCount} closedCount={closedCount} />
-        </div>
-
-              <div className="flex space-x-4 pb-4">
-                {tabs.map((tab) => (
+                <div className="flex space-x-4 pb-4 flex-wrap">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.value}
+                      onClick={() => handleTabClick(tab.value)}
+                      className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-300 ${
+                        activeTab === tab.value
+                          ? 'border-blue-500 text-blue-500'
+                          : 'border-transparent text-gray-600 hover:text-blue-500'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="ag-theme-quartz-auto-dark dark:ag-theme-quartz-dark h-100 w-full">
+                  <AgGridReact
+                    ref={gridRef}
+                    rowData={rowData}
+                    columnDefs={colDefs}
+                    defaultColDef={defaultColDef}
+                    autoSizeStrategy={autoSizeStrategy}
+                    onGridReady={onGridReady}
+                    onCellValueChanged={onCellValueChanged}
+                  />
+                </div>
+                <div className="w-full flex justify-end my-5">
                   <button
-                    key={tab.value}
-                    onClick={() => handleTabClick(tab.value)}
-                    className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-300 ${
-                      activeTab === tab.value
-                        ? 'border-blue-500 text-blue-500'
-                        : 'border-transparent text-gray-600 hover:text-blue-500'
-                    }`}
+                    onClick={handleExportCsv}
+                    className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
                   >
-                    {tab.label}
+                    Export to CSV
                   </button>
-                ))}
+                </div>
+                <div className="legend mt-5">
+                  <h4 className="font-bold">Keterangan Kondisi : </h4>
+                  <ul>
+                    <li>1.&nbsp;&nbsp;Tidak ada tumpahan</li>
+                    <li>
+                      2.&nbsp;&nbsp;Tumpah pada akhir Refueling, Ada tekanan
+                      balik pada tuas fuel gun
+                    </li>
+                    <li>
+                      3.&nbsp;&nbsp;Tumpah pada akhir Refueling, Tidak ada
+                      tekanan balik pada tuas fuel gun
+                    </li>
+                    <li>4.&nbsp;&nbsp;Tumpah sejak awal pengisian</li>
+                  </ul>
+                </div>
               </div>
-              <div className="ag-theme-quartz-auto-dark dark:ag-theme-quartz-dark h-100 w-full">
-                <AgGridReact
-                  ref={gridRef}
-                  rowData={rowData}
-                  columnDefs={colDefs}
-                  defaultColDef={defaultColDef}
-                  autoSizeStrategy={autoSizeStrategy}
-                  onGridReady={onGridReady}
-                  onCellValueChanged={onCellValueChanged}
-                />
-              </div>
-              <div className="w-full flex justify-end my-5">
-                <button
-                  onClick={handleExportCsv}
-                  className="bg-body dark:bg-boxdark-2 text-white py-2 px-6 rounded hover:bg-blue-700 solid border-primary"
-                >
-                  Export to CSV
-                </button>
-              </div>
-              <div className="legend mt-5">
-                <h4 className="font-bold">Keterangan Kondisi : </h4>
-                <ul>
-                  <li>1.&nbsp;&nbsp;Tidak ada tumpahan</li>
-                  <li>
-                    2.&nbsp;&nbsp;Tumpah pada akhir Refueling, Ada tekanan balik
-                    pada tuas fuel gun
-                  </li>
-                  <li>
-                    3.&nbsp;&nbsp;Tumpah pada akhir Refueling, Tidak ada tekanan
-                    balik pada tuas fuel gun
-                  </li>
-                  <li>4.&nbsp;&nbsp;Tumpah sejak awal pengisian</li>
-                </ul>
-              </div>
+              
+                
             </div>
           </div>
         </div>
