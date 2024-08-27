@@ -1,11 +1,9 @@
 import { Routes, Route } from 'react-router-dom';
-import Loader from './common/Loader';
 import PageTitle from './components/PageTitle';
 import SignIn from './pages/Authentication/SignIn';
 import SignUp from './pages/Authentication/SignUp';
 import Calendar from './pages/Calendar';
 import Chart from './pages/Chart';
-import ECommerce from './pages/Dashboard/FuelConsumption/FuelConsumption';
 import FormElements from './pages/Form/FormElements';
 import FormLayout from './pages/Form/FormLayout';
 import Profile from './pages/Profile';
@@ -25,6 +23,7 @@ import StockManagement from './pages/Dashboard/Stock Management/StockManagement'
 import Infrastructure from './pages/Dashboard/Infrastructure/Infrastructure';
 import Manpower from './pages/Dashboard/Manpower/Manpower';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
+import Operational from './pages/Dashboard/Operational/Operational';
 
 function App() {
   return (
@@ -63,6 +62,17 @@ function App() {
               <>
                 <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
                 <StockManagement />
+              </>
+            } />
+          }
+        />
+        <Route
+          path="/operational"
+          element={
+            <ProtectedRoute element={
+              <>
+                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                <Operational />
               </>
             } />
           }
