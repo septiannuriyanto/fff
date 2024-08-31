@@ -1,35 +1,39 @@
 import flatpickr from 'flatpickr';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';import React from 'react';
 
-const DatePickerOne = () => {
-  useEffect(() => {
-    // Init flatpickr
-    flatpickr('.form-datepicker', {
-      mode: 'single',
-      static: true,
-      monthSelectorType: 'static',
-      dateFormat: 'M j, Y',
-      prevArrow:
-        '<svg className="fill-current" width="7" height="11" viewBox="0 0 7 11"><path d="M5.4 10.8l1.4-1.4-4-4 4-4L5.4 0 0 5.4z" /></svg>',
-      nextArrow:
-        '<svg className="fill-current" width="7" height="11" viewBox="0 0 7 11"><path d="M1.4 10.8L0 9.4l4-4-4-4L1.4 0l5.4 5.4z" /></svg>',
-    });
+interface DatePickerOneProps {
+  handleChange: (date: Date | null) => void;
+  setValue: string;
+  enabled: boolean;
+}
 
-    
-  }, []);
+const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue, enabled }) => {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) {
+      // Initialize flatpickr or your date picker library
+      flatpickr(inputRef.current, {
+        mode: 'single',
+        dateFormat: 'd/m/Y',
+        onChange: (selectedDates: Date[]) => {
+          handleChange(selectedDates.length ? selectedDates[0] : null);
+        },
+        disable: !enabled ? [['today']] : [], // Disable if `enabled` is false
+      });
+    }
+  }, [enabled]);
 
   return (
-    <div>
-      <label className="mb-3 block text-sm font-medium text-black dark:text-white">
-        Date picker
-      </label>
-      <div className="relative">
+    <div className="relative">
         <input
+          disabled={!enabled}
+          ref={inputRef}
+          value={setValue}
           className="form-datepicker w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-normal outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          placeholder="mm/dd/yyyy"
-          data-class="flatpickr-right"
+          placeholder="dd/MMM/yyyy"
+          readOnly
         />
-
         <div className="pointer-events-none absolute inset-0 left-auto right-5 flex items-center">
           <svg
             width="18"
@@ -45,7 +49,6 @@ const DatePickerOne = () => {
           </svg>
         </div>
       </div>
-    </div>
   );
 };
 

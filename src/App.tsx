@@ -24,6 +24,7 @@ import Infrastructure from './pages/Dashboard/Infrastructure/Infrastructure';
 import Manpower from './pages/Dashboard/Manpower/Manpower';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
 import Operational from './pages/Dashboard/Operational/Operational';
+import Induction from './pages/Dashboard/Manpower/Induction';
 
 function App() {
   return (
@@ -107,6 +108,16 @@ function App() {
                 <Manpower />
               </>
             } />
+          }
+        />
+        <Route
+          path="/induksi"
+          element={
+              <>
+                <PageTitle title="FFF Dashboard | Input Data Induksi" />
+                <Induction/>
+              </>
+          
           }
         />
         
