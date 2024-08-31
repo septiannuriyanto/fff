@@ -117,7 +117,7 @@ const Induction: React.FC = () => {
       setDateErrorMessage(null);
       setStartDate(null);
       setEndDate(null);
-      const message = `INDUCTION REPORT\n\nDate Submit :${formatDate(
+      const message = `INDUCTION REPORT\n\nDate Submit : ${formatDate(
         Date.now(),
       )}\nEmployee Name : ${reportBy}\nDate Start : ${
         startDate
@@ -180,8 +180,8 @@ const Induction: React.FC = () => {
         Input Data Induksi
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <div className="mb-4">
-          <label className="block text-gray-700">Nama :</label>
+        <div className="mb-2">
+          <label className="block text-gray-700">Nama</label>
           <Autosuggest
             suggestions={reportBySuggestions}
             onSuggestionsFetchRequested={onReportBySuggestionsFetchRequested}
@@ -192,7 +192,7 @@ const Induction: React.FC = () => {
               placeholder: 'Ketik dan pilih nama anda',
               value: reportBy,
               onChange: onReportByChange,
-              className: 'w-full p-2 mt-1 border rounded',
+              className: 'w-full p-2 rounded border-[1.5px] border-stroke',
               required: true,
             }}
             theme={{
@@ -216,7 +216,7 @@ const Induction: React.FC = () => {
             setValue={startDate ? moment(startDate).format('DD/MMM/YYYY') : ''}
           />
 
-          <div className="my-1 text-gray-500">s/d</div>
+          <div className="my-2 text-gray-500">s/d</div>
           <DatePickerOne
             enabled={false}
             handleChange={() => {}}
@@ -231,7 +231,7 @@ const Induction: React.FC = () => {
 
         <button
           type="submit"
-          className="bg-primary text-white py-2 rounded hover:bg-blue-700"
+          className="bg-primary text-white py-2 rounded hover:bg-blue-700 mt-4"
         >
           Submit
         </button>

@@ -25,6 +25,8 @@ import Manpower from './pages/Dashboard/Manpower/Manpower';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
 import Operational from './pages/Dashboard/Operational/Operational';
 import Induction from './pages/Dashboard/Manpower/Induction';
+import Roster from './pages/Dashboard/Manpower/Roster';
+import LeaveRequest from './pages/Dashboard/Manpower/LeaveRequest';
 
 function App() {
   return (
@@ -116,6 +118,27 @@ function App() {
               <>
                 <PageTitle title="FFF Dashboard | Input Data Induksi" />
                 <Induction/>
+              </>
+          
+          }
+        />
+         <Route
+          path="/roster"
+          element={
+              <>
+                <PageTitle title="FFF Dashboard | Roster Manpower" />
+                <Roster/>
+              </>
+          
+          }
+        />
+
+        <Route
+          path="/formcuti"
+          element={
+              <>
+                <PageTitle title="FFF Dashboard | Form Pengajuan Cuti" />
+                <LeaveRequest/>
               </>
           
           }
