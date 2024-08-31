@@ -7,27 +7,29 @@ interface DatePickerOneProps {
   enabled: boolean;
 }
 
-const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue, enabled }) => {
+const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,enabled }) => {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (inputRef.current) {
       // Initialize flatpickr or your date picker library
+      if(enabled){
       flatpickr(inputRef.current, {
         mode: 'single',
         dateFormat: 'd/m/Y',
         onChange: (selectedDates: Date[]) => {
+          if(!enabled) return;
           handleChange(selectedDates.length ? selectedDates[0] : null);
         },
-        disable: !enabled ? [['today']] : [], // Disable if `enabled` is false
       });
+      }
+      
     }
   }, [enabled]);
 
   return (
     <div className="relative">
         <input
-          disabled={!enabled}
           ref={inputRef}
           value={setValue}
           className="form-datepicker w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-normal outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
