@@ -33,7 +33,6 @@ const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,en
           ref={inputRef}
           value={setValue || ''}
           className="form-datepicker w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-normal outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          placeholder="dd/MMM/yyyy"
           readOnly
         />
         <div className="pointer-events-none absolute inset-0 left-auto right-5 flex items-center">

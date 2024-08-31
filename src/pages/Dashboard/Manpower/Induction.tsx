@@ -177,7 +177,7 @@ const Induction: React.FC = () => {
   return (
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">
-        Input Data Induksi - try 1
+        Input Data Induksi
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
         <div className="mb-4">
