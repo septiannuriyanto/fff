@@ -177,7 +177,7 @@ const Induction: React.FC = () => {
   return (
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">
-        Input Data Induksi
+        Input Data Induksi - try 1
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
         <div className="mb-4">
@@ -208,7 +208,7 @@ const Induction: React.FC = () => {
           {errorMessage && <div className="text-red-500">{errorMessage}</div>}
         </div>
 
-        <div className="mb-4 items-center align-middle justify-center flex flex-col">
+       
           <div className="my-4 text-gray-500">Input Tanggal Induksi</div>
           <DatePickerOne
             enabled={true}
@@ -226,8 +226,7 @@ const Induction: React.FC = () => {
           {dateErrorMessage && (
             <div className="text-red-500">{dateErrorMessage}</div>
           )}
-        </div>
-
+    
         <div className="mb-4"></div>
 
         <button
