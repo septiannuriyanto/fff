@@ -4,6 +4,7 @@ import { supabase } from '../../../db/SupabaseClient'
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../store'; // Adjust import based on your store setup
 import { Session } from '@supabase/supabase-js'; // Import Session type
+import FilterChange from './FilterChange';
 
 
 const Infrastructure = () => {
@@ -26,6 +27,7 @@ const Infrastructure = () => {
                 Infrastructure Management
               </h2>
       <PressurelessSummary allowColumnsEdit={session==null}/>
+      <FilterChange></FilterChange>
     </div>
   )
 }

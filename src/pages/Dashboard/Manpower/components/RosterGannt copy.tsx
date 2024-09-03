@@ -17,9 +17,9 @@ interface Incumbent {
     // Add other fields from your 'incumbent' table
   };
 interface Manpower {
-    id: number;
+    nrp: number;
     nama: string;
-    groupId: number;
+    position: number;
     color: string;
     // Add other fields from your 'incumbent' table
   }
@@ -86,9 +86,9 @@ const RosterGannt = () => {
                 console.log(data);
                 
                 const formattedData: Manpower[] = data.map((item: any) => ({
+                    nrp: item.nrp,
                     nama: item.nama,
-                    id: item.nrp,
-                    groupId: item.position,
+                    position: item.position,
                     color: getColor(item.position)
                   }));
               
@@ -105,8 +105,8 @@ const RosterGannt = () => {
                 <div className='control-wrapper'>
                     <ScheduleComponent cssClass='timeline-resource-grouping' width='100%' height='650px' selectedDate={new Date(2023,0,1)} currentView='TimelineMonth' workDays={workDays} eventSettings={{ dataSource: data }} group={{ resources: ['Projects', 'Categories'] }} >
                         <ResourcesDirective>
-                             <ResourceDirective field='ProjectId' title='Choose Project' name='Projects' allowMultiple={false} dataSource={incumbents} textField='incumbent' idField='id' colorField='color' />
-                            <ResourceDirective field='TaskId' title='Category' name='Categories' allowMultiple={true} dataSource={menpower} textField='nama' idField='id' groupIDField='groupId' colorField='color' />
+                            <ResourceDirective field='Position' title='Choose Position' name='Projects' allowMultiple={false} dataSource={incumbents} textField='incumbent' idField='id' colorField='color' />
+                            <ResourceDirective field='Nrp' title='Names' name='Categories' allowMultiple={true} dataSource={menpower} textField='nama' idField='nrp' groupIDField='position' colorField='color' />
                         </ResourcesDirective>
                         <ViewsDirective>
                             {/* <ViewDirective option='TimelineDay' /> */}

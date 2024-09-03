@@ -437,7 +437,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
 
   return (
     <>
-      <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+      <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
         <div className="flex flex-wrap items-center">
           <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">

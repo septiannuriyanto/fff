@@ -13,53 +13,34 @@ import { registerLicense } from '@syncfusion/ej2-base';
 
 interface Incumbent {
     id: number;
-    incumbent: number;
-    // Add other fields from your 'incumbent' table
-  };
-interface Manpower {
-    id: number;
-    nama: string;
-    groupId: number;
-    color: string;
+    name: string;
     // Add other fields from your 'incumbent' table
   }
 
 
-const getColor = (position:number)=>{
-
-    let colorCode = "";
-
-    switch(position){
-        case 1: colorCode = "#cb6bb2"
-            break;
-        case 2: colorCode = "#56ca85"
-            break;
-        case 3: colorCode = "#df5286"
-            break;
-        case 4: colorCode = "#7fa900"
-            break;
-        case 5: colorCode = "#ea7a57"
-            break;
-        case 6: colorCode = "#5978ee"
-            break;
-        default: colorCode = "#000000"
-            break;
-
-    }
-    
-    return colorCode;
-
-}
   
 
 const RosterGannt = () => {
     registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
     const [incumbents, setIncumbents] = useState<Incumbent[]>([]);
-    const [menpower, setMenpower] = useState<Manpower[]>([]);
 
     const data: Record<string, any>[] =
         extend([], (dataSource as Record<string, any>).resourceData.concat((dataSource as Record<string, any>).timelineResourceData), null, true) as Record<string, any>[];
-    const workDays: number[] = [0, 1, 2, 3, 4];
+    const workDays: number[] = [0, 1, 2, 3, 4, 5];
+    const position: Record<string, any>[] = [
+        { incumbent: 'GROUP LEADER', id: 1, color: '#cb6bb2' },
+        { incumbent: 'OPERATOR FT', id: 2, color: '#56ca85' },
+        { incumbent: 'FUELMAN', id: 3, color: '#df5286' }
+    ];
+    const categoryData: Record<string, any>[] = [
+        { text: 'Septian Nuriyanto', id: 1, groupId: 1, color: '#df5286' },
+        { text: 'Taufiqurrahman', id: 2, groupId: 1, color: '#7fa900' },
+        { text: 'Arif Dwi F', id: 3, groupId: 1, color: '#ea7a57' },
+        { text: 'Smith', id: 4, groupId: 2, color: '#5978ee' },
+        { text: 'Michael', id: 5, groupId: 3, color: '#df5286' },
+        { text: 'Root', id: 6, groupId: 4, color: '#00bdae' },
+        { text: 'Jim', id: 6, groupId: 5, color: '#00bdae' },
+    ];
 
     useEffect(() => {
         const fetchIncumbents = async () => {
@@ -70,33 +51,13 @@ const RosterGannt = () => {
           if (error) {
             console.error('Error fetching incumbents:', error);
           } else {
-            // console.log(data);
+            console.log(data);
             
             setIncumbents(data || []);
           }
         };
-        const fetchNames = async () => {
-            const { data, error } = await supabase
-              .from('manpower')
-              .select('nrp, nama, position').order('nama'); ;
-      
-            if (error) {
-              console.error('Error fetching names:', error);
-            } else {
-                console.log(data);
-                
-                const formattedData: Manpower[] = data.map((item: any) => ({
-                    nama: item.nama,
-                    id: item.nrp,
-                    groupId: item.position,
-                    color: getColor(item.position)
-                  }));
-              
-              setMenpower(formattedData);
-            }
-          };
-          fetchIncumbents();
-        fetchNames();
+    
+        fetchIncumbents();
       }, []);
 
     return (
@@ -105,8 +66,8 @@ const RosterGannt = () => {
                 <div className='control-wrapper'>
                     <ScheduleComponent cssClass='timeline-resource-grouping' width='100%' height='650px' selectedDate={new Date(2023,0,1)} currentView='TimelineMonth' workDays={workDays} eventSettings={{ dataSource: data }} group={{ resources: ['Projects', 'Categories'] }} >
                         <ResourcesDirective>
-                             <ResourceDirective field='ProjectId' title='Choose Project' name='Projects' allowMultiple={false} dataSource={incumbents} textField='incumbent' idField='id' colorField='color' />
-                            <ResourceDirective field='TaskId' title='Category' name='Categories' allowMultiple={true} dataSource={menpower} textField='nama' idField='id' groupIDField='groupId' colorField='color' />
+                            <ResourceDirective field='ProjectId' title='Choose Project' name='Projects' allowMultiple={false} dataSource={incumbents} textField='incumbent' idField='id' colorField='color' />
+                            <ResourceDirective field='TaskId' title='Category' name='Categories' allowMultiple={true} dataSource={categoryData} textField='text' idField='id' groupIDField='groupId' colorField='color' />
                         </ResourcesDirective>
                         <ViewsDirective>
                             {/* <ViewDirective option='TimelineDay' /> */}
