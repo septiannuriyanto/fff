@@ -1,0 +1,291 @@
+{
+    "rosterData" : [
+      {
+        "Id": 1,
+        "Subject": "S1",
+        "StartTime": "2023-01-01T04:00:00.000Z",
+        "EndTime": "2023-01-01T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+        
+      },
+      {
+        "Id": 2,
+        "Subject": "S1",
+        "StartTime": "2023-01-02T04:00:00.000Z",
+        "EndTime": "2023-01-02T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 3,
+        "Subject": "S1",
+        "StartTime": "2023-01-03T04:00:00.000Z",
+        "EndTime": "2023-01-03T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 4,
+        "Subject": "S1",
+        "StartTime": "2023-01-04T04:00:00.000Z",
+        "EndTime": "2023-01-04T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 5,
+        "Subject": "S1",
+        "StartTime": "2023-01-05T04:00:00.000Z",
+        "EndTime": "2023-01-05T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 6,
+        "Subject": "S1",
+        "StartTime": "2023-01-06T04:00:00.000Z",
+        "EndTime": "2023-01-06T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 7,
+        "Subject": "OFF",
+        "StartTime": "2023-01-07T07:00:00.000Z",
+        "EndTime": "2023-01-07T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#d94c4c",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=1"
+      },
+      {
+        "Id": 8,
+        "Subject": "S2",
+        "StartTime": "2023-01-08T07:00:00.000Z",
+        "EndTime": "2023-01-08T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 9,
+        "Subject": "S2",
+        "StartTime": "2023-01-09T07:00:00.000Z",
+        "EndTime": "2023-01-09T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 10,
+        "Subject": "S2",
+        "StartTime": "2023-01-10T07:00:00.000Z",
+        "EndTime": "2023-01-10T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 11,
+        "Subject": "S2",
+        "StartTime": "2023-01-11T07:00:00.000Z",
+        "EndTime": "2023-01-11T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 12,
+        "Subject": "S2",
+        "StartTime": "2023-01-12T07:00:00.000Z",
+        "EndTime": "2023-01-12T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 13,
+        "Subject": "S2",
+        "StartTime": "2023-01-13T07:00:00.000Z",
+        "EndTime": "2023-01-13T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 1,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 1,
+        "Subject": "S2",
+        "StartTime": "2023-01-01T04:00:00.000Z",
+        "EndTime": "2023-01-01T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 2,
+        "Subject": "S2",
+        "StartTime": "2023-01-02T04:00:00.000Z",
+        "EndTime": "2023-01-02T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 3,
+        "Subject": "S2",
+        "StartTime": "2023-01-03T04:00:00.000Z",
+        "EndTime": "2023-01-03T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 4,
+        "Subject": "S2",
+        "StartTime": "2023-01-04T04:00:00.000Z",
+        "EndTime": "2023-01-04T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 5,
+        "Subject": "S2",
+        "StartTime": "2023-01-05T04:00:00.000Z",
+        "EndTime": "2023-01-05T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 6,
+        "Subject": "S2",
+        "StartTime": "2023-01-06T04:00:00.000Z",
+        "EndTime": "2023-01-06T06:30:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#357cd2",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 7,
+        "Subject": "OFF",
+        "StartTime": "2023-01-07T07:00:00.000Z",
+        "EndTime": "2023-01-07T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#d94c4c",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=1"
+      },
+      {
+        "Id": 8,
+        "Subject": "S1",
+        "StartTime": "2023-01-08T07:00:00.000Z",
+        "EndTime": "2023-01-08T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 9,
+        "Subject": "S1",
+        "StartTime": "2023-01-09T07:00:00.000Z",
+        "EndTime": "2023-01-09T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 10,
+        "Subject": "S1",
+        "StartTime": "2023-01-10T07:00:00.000Z",
+        "EndTime": "2023-01-10T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 11,
+        "Subject": "S1",
+        "StartTime": "2023-01-11T07:00:00.000Z",
+        "EndTime": "2023-01-11T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 12,
+        "Subject": "S1",
+        "StartTime": "2023-01-12T07:00:00.000Z",
+        "EndTime": "2023-01-12T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      },
+      {
+        "Id": 13,
+        "Subject": "S1",
+        "StartTime": "2023-01-13T07:00:00.000Z",
+        "EndTime": "2023-01-13T09:15:00.000Z",
+        "IsAllDay": true,
+        "PositionId": 1,
+        "RowId": 2,
+        "Color": "#7fa900",
+        "RecurrenceRule": "FREQ=WEEKLY;INTERVAL=2"
+      }
+    ]
+  }

@@ -248,3 +248,35 @@
         display: none;
     }
 }
+
+
+.schedule-container {
+    position: relative;
+    overflow-x: hidden; /* Hide overflow for the main container */
+}
+
+.schedule-wrapper {
+    overflow-x: auto; /* Enable horizontal scrolling for the wrapper */
+    position: relative;
+}
+
+.schedule-footer {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    background: #f9f9f9;
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    white-space: nowrap; /* Ensure content does not wrap */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    z-index: 1; /* Ensure it stays above the Scheduler */
+}
+
+.summary-day {
+    display: inline-block; /* Display summaries inline */
+    margin-right: 20px;
+}
+
+.schedule-content {
+    padding-bottom: 60px; /* Add padding to avoid overlap with footer */
+}

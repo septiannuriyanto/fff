@@ -1,125 +1,279 @@
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
-import { useEffect, useState } from 'react';
-import { TimelineViews, TimelineMonth, Agenda, ScheduleComponent, ViewsDirective, ViewDirective, ResourcesDirective, ResourceDirective, Inject, Resize, DragAndDrop } from '@syncfusion/ej2-react-schedule';
+import { useEffect, useState, useRef } from 'react';
+import {
+  TimelineViews,
+  TimelineMonth,
+  Agenda,
+  ScheduleComponent,
+  ViewsDirective,
+  ViewDirective,
+  ResourcesDirective,
+  ResourceDirective,
+  Inject,
+  Resize,
+  DragAndDrop,
+  EventRenderedArgs,
+  CellTemplateArgs,
+} from '@syncfusion/ej2-react-schedule';
 import { extend } from '@syncfusion/ej2-base';
 import * as dataSource from './datasource.json';
 import { supabase } from '../../../../db/SupabaseClient';
-// import './RosterGannt.css'
+import './RosterGannt.css';
 // import './bootstrap.min.css'
-import './bootstrap5.css'
+import './bootstrap5.css';
 import { registerLicense } from '@syncfusion/ej2-base';
-
+import rosterDataJson from './rosterdata.json';
+import { DataService } from './RosterDataFetcher';
 
 interface Incumbent {
-    id: number;
-    incumbent: number;
-    // Add other fields from your 'incumbent' table
-  };
-interface Manpower {
-    id: number;
-    nama: string;
-    groupId: number;
-    color: string;
-    // Add other fields from your 'incumbent' table
-  }
-
-
-const getColor = (position:number)=>{
-
-    let colorCode = "";
-
-    switch(position){
-        case 1: colorCode = "#cb6bb2"
-            break;
-        case 2: colorCode = "#56ca85"
-            break;
-        case 3: colorCode = "#df5286"
-            break;
-        case 4: colorCode = "#7fa900"
-            break;
-        case 5: colorCode = "#ea7a57"
-            break;
-        case 6: colorCode = "#5978ee"
-            break;
-        default: colorCode = "#000000"
-            break;
-
-    }
-    
-    return colorCode;
-
+  id: number;
+  name: string;
+  // Add other fields from your 'incumbent' table
 }
-  
+
+interface Menpower {
+  id: number;
+  nrp: string;
+  text: string;
+  groupId: number;
+  // Add other fields from your 'incumbent' table
+}
+
+interface EventSummary {
+  [date: string]: {
+    [subject: string]: number;
+  };
+}
+
+interface RosterData {
+  rosterData: EventData[];
+}
+
+const processEventData = (events: EventData[]): EventSummary => {
+  const summary: EventSummary = {};
+
+  events.forEach((event) => {
+    const eventDate = new Date(event.StartTime).toDateString();
+    const eventSubject = event.Subject;
+
+    if (!summary[eventDate]) {
+      summary[eventDate] = {};
+    }
+
+    if (!summary[eventDate][eventSubject]) {
+      summary[eventDate][eventSubject] = 0;
+    }
+
+    summary[eventDate][eventSubject] += 1;
+  });
+
+  return summary;
+};
+
+const rosterData = rosterDataJson as { rosterData: EventData[] };
+const data: EventData[] = rosterData.rosterData;
+
+const eventSummary = processEventData(data);
 
 const RosterGannt = () => {
-    registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
-    const [incumbents, setIncumbents] = useState<Incumbent[]>([]);
-    const [menpower, setMenpower] = useState<Manpower[]>([]);
+  registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
+  const [incumbents, setIncumbents] = useState<Incumbent[]>([]);
+  const [menpower, setMenpower] = useState<Menpower[]>([]);
+  const [data, setData] = useState<Record<string, any>[]>();
+  const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
 
-    const data: Record<string, any>[] =
-        extend([], (dataSource as Record<string, any>).resourceData.concat((dataSource as Record<string, any>).timelineResourceData), null, true) as Record<string, any>[];
-    const workDays: number[] = [0, 1, 2, 3, 4];
+  const [summary, setSummary] = useState<EventSummary>(eventSummary);
+  const scheduleRef = useRef<ScheduleComponent>(null);
+  const workDays: number[] = [0, 1, 2, 3, 4, 5];
+  // Type assertion for the imported JSON data
+  // const rosterData = rosterDataJson as RosterData;
+  // const rosterdataArray: EventData[] = rosterData.rosterData; // Extract the array
 
-    useEffect(() => {
-        const fetchIncumbents = async () => {
-          const { data, error } = await supabase
-            .from('incumbent')
-            .select('*');
-    
-          if (error) {
-            console.error('Error fetching incumbents:', error);
-          } else {
-            // console.log(data);
+  useEffect(() => {
+    const loadData = async () => {
+        try {
+            const fetchedData = await DataService.getAllData();
+            console.log(fetchedData);
+            setData(fetchedData)
             
-            setIncumbents(data || []);
-          }
-        };
-        const fetchNames = async () => {
-            const { data, error } = await supabase
-              .from('manpower')
-              .select('nrp, nama, position').order('nama'); ;
-      
-            if (error) {
-              console.error('Error fetching names:', error);
-            } else {
-                console.log(data);
-                
-                const formattedData: Manpower[] = data.map((item: any) => ({
-                    nama: item.nama,
-                    id: item.nrp,
-                    groupId: item.position,
-                    color: getColor(item.position)
-                  }));
-              
-              setMenpower(formattedData);
-            }
-          };
-          fetchIncumbents();
-        fetchNames();
-      }, []);
+        } catch (error) {
+            console.error('Failed to load data:', error);
+        } finally {
+        }
+    };
 
-    return (
-        <div className='schedule-control-section'>
-            <div className='col-lg-12 control-section'>
-                <div className='control-wrapper'>
-                    <ScheduleComponent cssClass='timeline-resource-grouping' width='100%' height='650px' selectedDate={new Date(2023,0,1)} currentView='TimelineMonth' workDays={workDays} eventSettings={{ dataSource: data }} group={{ resources: ['Projects', 'Categories'] }} >
-                        <ResourcesDirective>
-                             <ResourceDirective field='ProjectId' title='Choose Project' name='Projects' allowMultiple={false} dataSource={incumbents} textField='incumbent' idField='id' colorField='color' />
-                            <ResourceDirective field='TaskId' title='Category' name='Categories' allowMultiple={true} dataSource={menpower} textField='nama' idField='id' groupIDField='groupId' colorField='color' />
-                        </ResourcesDirective>
-                        <ViewsDirective>
-                            {/* <ViewDirective option='TimelineDay' /> */}
-                            {/* <ViewDirective option='TimelineWeek' /> */}
-                            {/* <ViewDirective option='TimelineWorkWeek' /> */}
-                            <ViewDirective option='TimelineMonth' />
-                            {/* <ViewDirective option='Agenda' /> */}
-                        </ViewsDirective>
-                        <Inject services={[TimelineViews, TimelineMonth, Agenda, Resize, DragAndDrop]} />
-                    </ScheduleComponent>
-                </div>
-            </div>
+    loadData();
+}, []);
+
+
+  useEffect(() => {
+    const fetchIncumbents = async () => {
+      const { data, error } = await supabase.from('incumbent').select('*');
+
+      if (error) {
+        console.error('Error fetching incumbents:', error);
+      } else {
+        // console.log(data);
+
+        setIncumbents(data || []);
+      }
+    };
+    const fetchNames = async () => {
+      const { data, error } = await supabase
+        .from('manpower')
+        .select('nrp, nama, position')
+        .order('off_day')
+        .order('nama', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching names:', error);
+      } else {
+        // console.log(data);
+        let idCounter = 1;
+        let lastPosition: number | null = null; // To keep track of the previous position
+        let menpowerData: Menpower[] = [];
+
+        data.forEach((item: any) => {
+          let position: number = 0;
+          position = item.position;
+          if (position == lastPosition) {
+            // If the current position is the same as the last one, increment the idCounter
+            idCounter++;
+          } else {
+            // If the position has changed, reset the idCounter to 1
+            idCounter = 1;
+          }
+
+          // Update lastPosition to the current position
+
+          lastPosition = position;
+          // Push the formatted data into menpowerData
+          menpowerData.push({
+            text: toProperCase(item.nama),
+            id: idCounter,
+            nrp: item.nrp,
+            groupId: item.position,
+          });
+        });
+        // console.log(menpowerData);
+
+        // Update state with menpowerData
+        setMenpower(menpowerData);
+      }
+    };
+    fetchIncumbents();
+    fetchNames();
+  }, []);
+
+  useEffect(() => {
+    if (scheduleRef.current) {
+      const scheduler = scheduleRef.current;
+      const updateCounts = () => {
+        const events = scheduler.getCurrentViewEvents();
+        const counts: Record<string, number> = {};
+        events.forEach((event) => {
+          const dateKey = event.StartTime.toDateString();
+          counts[dateKey] = (counts[dateKey] || 0) + 1;
+        });
+        setEventCounts(counts);
+      };
+
+      scheduler.eventRendered = updateCounts;
+      scheduler.dataBound = updateCounts;
+
+      updateCounts(); // Initial count update
+    }
+  }, []);
+
+
+    
+
+
+  function toProperCase(str: string) {
+    return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  const onEventRendered = (args: EventRenderedArgs) => {
+    const eventData = args.data as EventData;
+    if (eventData.Color) {
+      args.element.style.backgroundColor = eventData.Color;
+    }
+  };
+
+  return (
+    <div className="schedule-control-section">
+      <div className="col-lg-12 control-section">
+        <div className="control-wrapper">
+          <ScheduleComponent
+            cssClass="timeline-resource-grouping"
+            width="100%"
+            height="650px"
+            selectedDate={new Date()}
+            currentView="TimelineMonth"
+            workDays={workDays}
+            eventRendered={onEventRendered}
+            eventSettings={{ dataSource: data }}
+            group={{ resources: ['Projects', 'Categories'] }}
+          >
+            <ResourcesDirective>
+              <ResourceDirective
+                field="PositionId"
+                title="Choose Project"
+                name="Projects"
+                allowMultiple={false}
+                dataSource={incumbents}
+                textField="incumbent"
+                idField="id"
+                colorField="color"
+              />
+              {/* <ResourceDirective field='TaskId' title='Category' name='Categories' allowMultiple={true} dataSource={categoryData} textField='text' idField='id' groupIDField='groupId' colorField='color' /> */}
+              <ResourceDirective
+                field="Nrp"
+                title="Category"
+                name="Categories"
+                allowMultiple={true}
+                dataSource={menpower}
+                textField="text"
+                idField="nrp"
+                groupIDField="groupId"
+                colorField="color"
+              />
+            </ResourcesDirective>
+            <ViewsDirective>
+              {/* <ViewDirective option='TimelineDay' /> */}
+              {/* <ViewDirective option='TimelineWeek' /> */}
+              {/* <ViewDirective option='TimelineWorkWeek' /> */}
+              <ViewDirective option="TimelineMonth" />
+              {/* <ViewDirective option='Agenda' /> */}
+            </ViewsDirective>
+            <Inject
+              services={[
+                TimelineViews,
+                TimelineMonth,
+                Agenda,
+                Resize,
+                DragAndDrop,
+              ]}
+            />
+          </ScheduleComponent>
+
+          {/* Footer with event counts */}
+          <div className="schedule-footer">
+            {Object.entries(summary).map(([date, subjects]) => (
+              <div key={date} className="summary-day">
+                <h4>{date}</h4>
+                {Object.entries(subjects).map(([subject, count]) => (
+                  <div key={subject}>
+                    {subject}: {count}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
-    );
-}
+      </div>
+    </div>
+  );
+};
 export default RosterGannt;
