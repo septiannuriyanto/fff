@@ -199,6 +199,14 @@ const RosterGannt = () => {
     if (eventData.Color) {
       args.element.style.backgroundColor = eventData.Color;
     }
+    // Apply z-index based on custom priority logic
+    if (eventData.Priority === 'high') {
+      args.element.style.zIndex = '3'; // Higher z-index for high priority
+    } else if (eventData.Priority === 'medium') {
+      args.element.style.zIndex = '2'; // Medium z-index for medium priority
+    } else if (eventData.Priority === 'low') {
+      args.element.style.zIndex = '1'; // Lower z-index for low priority
+    }
   };
 
   return (

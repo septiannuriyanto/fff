@@ -9,4 +9,5 @@ interface EventData {
     Color?: string;
     RecurrenceRule?: string;
     Nrp: string;
+    Priority: string;
   }

@@ -22,7 +22,7 @@ const LeaveRequest = () => {
   useEffect(() => {
     const fetchNames = async () => {
       const { data, error } = await supabase
-        .from<ManpowerData>('manpower')
+        .from('manpower')
         .select('nama');
 
       if (error) {
@@ -138,7 +138,7 @@ const LeaveRequest = () => {
               year: 'numeric',
             })
           : ''
-      }\nVisit : https://fff-project.vercel.app/roster`;
+      }\nVisit : https://fff-project.vercel.app/cuti`;
       sendMessageToChannel(message);
     }
   };

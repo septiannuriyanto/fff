@@ -269,7 +269,7 @@
     padding: 10px;
     white-space: nowrap; /* Ensure content does not wrap */
     overflow-x: auto; /* Enable horizontal scrolling */
-    z-index: 1; /* Ensure it stays above the Scheduler */
+    z-index: 4; /* Ensure it stays above the Scheduler */
 }
 
 .summary-day {
@@ -279,4 +279,17 @@
 
 .schedule-content {
     padding-bottom: 60px; /* Add padding to avoid overlap with footer */
+}
+
+
+.high-priority {
+  z-index: 3;
+}
+
+.medium-priority {
+  z-index: 2;
+}
+
+.low-priority {
+  z-index: 1;
 }
