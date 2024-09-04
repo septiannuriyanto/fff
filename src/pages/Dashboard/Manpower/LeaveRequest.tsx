@@ -18,6 +18,7 @@ const LeaveRequest = () => {
   const [dateErrorMessage, setDateErrorMessage] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [remark, setRemark] = useState<string>('');
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -101,13 +102,14 @@ const LeaveRequest = () => {
       nrp: employee.nrp,
       date_leave_start: startDate ? startDateFormatted : '',
       date_leave_end: endDate ? endDateFormatted : '',
+      remark: remark
     };
 
     const { error } = await supabase.from('leave').insert([query]);
 
     if (error) {
       if (error.code === '23505') {
-        setErrorMessage("Anda Sudah mengisi induksi hari ini");
+        setErrorMessage("Anda Sudah membuat pengajuan hari ini");
       }
       else{
         setErrorMessage(error.message);
@@ -138,7 +140,8 @@ const LeaveRequest = () => {
               year: 'numeric',
             })
           : ''
-      }\nVisit : https://fff-project.vercel.app/cuti`;
+      }\nRemark : ${remark}
+      \nVisit : https://fff-project.vercel.app/cuti`;
       sendMessageToChannel(message);
     }
   };
@@ -150,6 +153,11 @@ const LeaveRequest = () => {
   const handleEndDateChange = (date: Date | null) => {
     setEndDate(date);
     setDateErrorMessage(null);
+  };
+
+  const handleRemarkChange = (e:any) => {
+    e.preventDefault();
+    setRemark(e.target.value)
   };
 
   return (
@@ -206,7 +214,7 @@ const LeaveRequest = () => {
 
         <div className="mt-4 mb-8">
           <label className="block text-gray-700">Keterangan :</label>
-          <input type="text" className="w-full p-2 rounded border-[1.5px] border-stroke" />
+          <input type="text" onChange={handleRemarkChange} className="w-full p-2 rounded border-[1.5px] border-stroke" />
         </div>
 
         <button
