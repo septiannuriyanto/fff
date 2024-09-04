@@ -3,6 +3,8 @@ import { supabase } from '../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
 import DatePickerOne from '../../../components/Forms/DatePicker/DatePickerOne';
 import moment from 'moment';
+import { formatDate, formatDateForSupabase } from '../../../Utils/DateUtility';
+import { sendMessageToChannel } from '../../../services/TelegramSender';
 
 interface ManpowerData {
   nrp?: string;
@@ -63,7 +65,84 @@ const LeaveRequest = () => {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = () => {};
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Check if `reportBy` exists in the `manpower` table
+    const { data: manpowerData, error: fetchError } = await supabase
+      .from('manpower')
+      .select('nrp')
+      .eq('nama', name);
+
+    if (fetchError) {
+      console.error('Error fetching manpower data:', fetchError);
+      setErrorMessage('Error checking the manpower data.');
+      return;
+    }
+
+    if (manpowerData.length === 0) {
+      // If `reportBy` is not found
+      setErrorMessage('Nama tidak ditemukan.');
+      return;
+    }
+
+    //date checker
+    if (startDate == null) {
+      setDateErrorMessage('Tanggal belum dipilih');
+      return;
+    }
+    const employee = manpowerData[0]; // Assumes nrp is unique
+
+    const startDateFormatted = formatDateForSupabase(startDate); // "YYYY-MM-DD"
+    const endDateFormatted = formatDateForSupabase(endDate!); // "YYYY-MM-DD"
+    //update the table
+    let query = {
+      id: startDateFormatted + employee.nrp,
+      nrp: employee.nrp,
+      date_leave_start: startDate ? startDateFormatted : '',
+      date_leave_end: endDate ? endDateFormatted : '',
+    };
+
+    const { error } = await supabase.from('leave').insert([query]);
+
+    if (error) {
+      if (error.code === '23505') {
+        setErrorMessage("Anda Sudah mengisi induksi hari ini");
+      }
+      else{
+        setErrorMessage(error.message);
+      }
+      
+    } else {
+      alert('Data successfully submitted');
+      setName('');
+      setErrorMessage(null);
+      setDateErrorMessage(null);
+      setStartDate(null);
+      setEndDate(null);
+      const message = `PENGAJUAN CUTI\n\nDate Submit : ${formatDate(
+        Date.now(),
+      )}\nEmployee Name : ${name}\nDate Start : ${
+        startDate
+          ? startDate.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })
+          : ''
+      }\nDate End : ${
+        endDate
+          ? endDate.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })
+          : ''
+      }\nVisit : https://fff-project.vercel.app/roster`;
+      sendMessageToChannel(message);
+    }
+  };
+
   const handleStartDateChange = (date: Date | null) => {
     setStartDate(date);
     setDateErrorMessage(null);
