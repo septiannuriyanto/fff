@@ -241,16 +241,16 @@ class DataService {
     const { error } = await supabase.from('shiftly_plan').insert([query]);
     if (error) {
       console.error('Error inserting data:', error);
-      return;
+      return false;
     }
     console.log('Data added:', query);
+    return true;
   }
 
   static async editData(data: any) {
     const startDate = new Date(data.StartTime);
     const endDate = new Date(data.EndTime);
 
-    endDate.setDate(endDate.getDate() - 1);
 
     // Extract and format the date portion
     const formattedStartDate = format(startDate, 'yyyy-MM-dd'); // YYYY-MM-DD
@@ -271,9 +271,10 @@ class DataService {
 
     if (error) {
       console.error('Error updating data:', error);
-      return;
+      return false;
     }
     console.log('Data updated:', query);
+    return true;
   }
 
   static async removeData(data: any) {
@@ -285,9 +286,10 @@ class DataService {
 
     if (error) {
       console.error('Error removing data:', error);
-      return;
+      return false;
     }
     console.log('Data removed:', data);
+    return true;
   }
 }
 

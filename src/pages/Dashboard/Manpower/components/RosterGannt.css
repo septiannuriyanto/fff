@@ -293,4 +293,12 @@
 .low-priority {
   z-index: 1;
 }
+.custom-date-header.red-header {
+  color: red; /* Text color red */
+  font-weight: bold; /* Optional: Make the text bold */
+}
 
+
+
+
+/* Cell Dimensions */

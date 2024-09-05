@@ -15,7 +15,7 @@ import {
   DragAndDrop,
   EventRenderedArgs,
   CellTemplateArgs,
-  ActionEventArgs 
+  ActionEventArgs,
 } from '@syncfusion/ej2-react-schedule';
 import { extend } from '@syncfusion/ej2-base';
 import * as dataSource from './datasource.json';
@@ -81,7 +81,7 @@ const RosterGannt = () => {
   registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
   const [incumbents, setIncumbents] = useState<Incumbent[]>([]);
   const [menpower, setMenpower] = useState<Menpower[]>([]);
-  const [data, setData] = useState<Record<string, any>[]>();
+  const [data, setData] = useState<Record<string, any>[]>([]);
   const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
 
   const [summary, setSummary] = useState<EventSummary>(eventSummary);
@@ -94,20 +94,18 @@ const RosterGannt = () => {
 
   useEffect(() => {
     const loadData = async () => {
-        try {
-            const fetchedData = await DataService.getAllData();
-            console.log(fetchedData);
-            setData(fetchedData)
-            
-        } catch (error) {
-            console.error('Failed to load data:', error);
-        } finally {
-        }
+      try {
+        const fetchedData = await DataService.getAllData();
+        console.log(fetchedData);
+        setData(fetchedData);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+      }
     };
 
     loadData();
-}, []);
-
+  }, []);
 
   useEffect(() => {
     const fetchIncumbents = async () => {
@@ -188,10 +186,6 @@ const RosterGannt = () => {
     }
   }, []);
 
-
-    
-
-
   function toProperCase(str: string) {
     return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
   }
@@ -211,51 +205,77 @@ const RosterGannt = () => {
     }
   };
 
-
-   // Handle the event added
-   const onActionBegin = (args: ActionEventArgs) => {
+  // Handle the event added
+  const onActionBegin = async (args: ActionEventArgs) => {
     if (args.requestType === 'eventCreate') {
+      const prevData = data;
       // Set the color based on the subject
       const subject = args.data[0].Subject;
       const color = getColor(subject.toUpperCase());
       args.data[0].Color = color; // Add color property to event data
       args.data[0].Subject = subject.toUpperCase();
-      DataService.insertData(args.data[0])
+      const result = await DataService.insertData(args.data[0]);
+      if(result){
       
+      }
+     
       // Additional logic for adding events
     } else if (args.requestType === 'eventChange') {
       const subject = args.data.Subject;
       const color = getColor(subject.toUpperCase());
       args.data.Color = color; // Add color property to event data
       args.data.Subject = subject.toUpperCase();
-      DataService.editData(args.data)
+      const result = await DataService.editData(args.data);
+      if(result){
+      
+      }
       // Additional logic for editing events
-      schedulerRef.current.refreshEvents();
     } else if (args.requestType === 'eventRemove') {
-      DataService.removeData(args.data[0])
-      // Additional logic for removing events
+      const result = await DataService.removeData(args.data[0]);
+      if (result === true) {
+        // Remove the event from the state
+        
+        // setData((prevData) =>
+        //   prevData.filter((event) => event.id !== args.data[0].id),
+        // );
+      }
     }
   };
 
-
-  const onActionComplete = (args) => {
-    if (args.requestType === 'eventCreate' || args.requestType === 'eventChange' || args.requestType === 'eventRemove') {
-      schedulerRef.current.refreshEvents();
+  const onActionComplete = (args: ActionEventArgs) => {
+    if (
+      args.requestType === 'eventCreate' ||
+      args.requestType === 'eventChange' ||
+      args.requestType === 'eventRemove'
+    ) {
+      // scheduleRef.current.refresh();
     }
   };
 
+  const DateHeaderTemplate = (props) => {
+    const date = new Date(props.date);
+    const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' }); // Get day name (e.g., "Monday");
+    const isMinggu = dayName.toLowerCase().includes('min'); 
 
-
- 
+    return (
+    <div
+      className={`custom-date-header ${isMinggu ? 'red-header' : ''}`} // Conditionally apply class
+    >
+      {dayName}
+      <br/>
+      {date.getDate()}
+    </div>)
+  };
 
   return (
     <div className="schedule-control-section">
       <div className="col-lg-12 control-section">
         <div className="control-wrapper">
           <ScheduleComponent
-         ref={schedulerRef}
-         actionComplete={onActionComplete}
-            cssClass="timeline-resource-grouping"
+            dateHeaderTemplate={DateHeaderTemplate}
+            ref={schedulerRef}
+            actionComplete={onActionComplete}
+            cssClass='schedule-cell-dimension'
             width="100%"
             height="650px"
             selectedDate={new Date()}
