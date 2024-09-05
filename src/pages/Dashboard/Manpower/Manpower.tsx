@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Roster from './Roster';
 const Manpower = () => {
 
 useEffect(()=>{},[
@@ -6,28 +7,18 @@ useEffect(()=>{},[
 
 ]);
 
-  return (
-    <>
-      <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <div className="flex flex-wrap items-center">
-          <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
-            <div className="w-full p-4 sm:p-12.5 xl:p-5">
-              <h2 className="mb-9 text-title-md font-bold text-black dark:text-white sm:text-title-xl2 w-full">
-                Manpower Management
-              </h2>
-  
-              <div
-                className="main-content h-100 w-full"
-               
-              >
-                
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+return (
+  <div>
+    <div className="title">
+      <h2 className="mb-2 text-title-sm font-bold text-black dark:text-white w-full">
+        Manpower Management
+      </h2>
+    </div>
+    <div className="content-container">
+      <Roster />
+    </div>
+  </div>
+);
 };
 
 export default Manpower;

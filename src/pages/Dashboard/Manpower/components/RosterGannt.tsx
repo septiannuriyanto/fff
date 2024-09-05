@@ -15,6 +15,7 @@ import {
   DragAndDrop,
   EventRenderedArgs,
   CellTemplateArgs,
+  ActionEventArgs 
 } from '@syncfusion/ej2-react-schedule';
 import { extend } from '@syncfusion/ej2-base';
 import * as dataSource from './datasource.json';
@@ -24,7 +25,7 @@ import './RosterGannt.css';
 import './bootstrap5.css';
 import { registerLicense } from '@syncfusion/ej2-base';
 import rosterDataJson from './rosterdata.json';
-import { DataService } from './RosterDataFetcher';
+import { DataService, getColor } from './RosterDataFetcher';
 
 interface Incumbent {
   id: number;
@@ -84,6 +85,7 @@ const RosterGannt = () => {
   const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
 
   const [summary, setSummary] = useState<EventSummary>(eventSummary);
+  const schedulerRef = useRef(null);
   const scheduleRef = useRef<ScheduleComponent>(null);
   const workDays: number[] = [0, 1, 2, 3, 4, 5];
   // Type assertion for the imported JSON data
@@ -209,11 +211,50 @@ const RosterGannt = () => {
     }
   };
 
+
+   // Handle the event added
+   const onActionBegin = (args: ActionEventArgs) => {
+    if (args.requestType === 'eventCreate') {
+      // Set the color based on the subject
+      const subject = args.data[0].Subject;
+      const color = getColor(subject.toUpperCase());
+      args.data[0].Color = color; // Add color property to event data
+      args.data[0].Subject = subject.toUpperCase();
+      DataService.insertData(args.data[0])
+      
+      // Additional logic for adding events
+    } else if (args.requestType === 'eventChange') {
+      const subject = args.data.Subject;
+      const color = getColor(subject.toUpperCase());
+      args.data.Color = color; // Add color property to event data
+      args.data.Subject = subject.toUpperCase();
+      DataService.editData(args.data)
+      // Additional logic for editing events
+      schedulerRef.current.refreshEvents();
+    } else if (args.requestType === 'eventRemove') {
+      DataService.removeData(args.data[0])
+      // Additional logic for removing events
+    }
+  };
+
+
+  const onActionComplete = (args) => {
+    if (args.requestType === 'eventCreate' || args.requestType === 'eventChange' || args.requestType === 'eventRemove') {
+      schedulerRef.current.refreshEvents();
+    }
+  };
+
+
+
+ 
+
   return (
     <div className="schedule-control-section">
       <div className="col-lg-12 control-section">
         <div className="control-wrapper">
           <ScheduleComponent
+         ref={schedulerRef}
+         actionComplete={onActionComplete}
             cssClass="timeline-resource-grouping"
             width="100%"
             height="650px"
@@ -223,6 +264,7 @@ const RosterGannt = () => {
             eventRendered={onEventRendered}
             eventSettings={{ dataSource: data }}
             group={{ resources: ['Projects', 'Categories'] }}
+            actionBegin={onActionBegin}
           >
             <ResourcesDirective>
               <ResourceDirective
