@@ -26,8 +26,9 @@ import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSu
 import Operational from './pages/Dashboard/Operational/Operational';
 import Induction from './pages/Dashboard/Manpower/Induction';
 import Roster from './pages/Dashboard/Manpower/Roster';
-import LeaveRequest from './pages/Dashboard/Manpower/LeaveRequest';
-import SchedulerExample from './pages/Dashboard/Manpower/components/SchedulerExample';
+import LeaveRequest from './pages/Dashboard/Manpower/Leave/LeaveRequest';
+import SchedulerExample from './pages/Dashboard/Manpower/Roster/SchedulerExample';
+import LeaveList from './pages/Dashboard/Manpower/Leave/LeaveList';
 
 function App() {
   return (
@@ -154,6 +155,19 @@ function App() {
           
           }
         />
+
+<Route
+        
+        path="/cuti"
+        element={
+          <ProtectedRoute element={
+            <>
+              <PageTitle title="FFF Dashboard | Daftar Cuti" />
+              <LeaveList />
+            </>
+          } />
+        }
+      />
         
         <Route
         

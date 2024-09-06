@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Roster from './Roster';
+import LeaveList from './Leave/LeaveList';
 const Manpower = () => {
 
 useEffect(()=>{},[
@@ -15,7 +16,12 @@ return (
       </h2>
     </div>
     <div className="content-container">
+      <div className="roster mb-2">
       <Roster />
+      </div>
+      <div className="leave-list mb-2">
+      <LeaveList/>
+      </div>
     </div>
   </div>
 );

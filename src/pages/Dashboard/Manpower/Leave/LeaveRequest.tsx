@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
-import DatePickerOne from '../../../components/Forms/DatePicker/DatePickerOne';
+import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import moment from 'moment';
-import { formatDate, formatDateForSupabase } from '../../../Utils/DateUtility';
-import { sendMessageToChannel } from '../../../services/TelegramSender';
+import { formatDate, formatDateForSupabase } from '../../../../Utils/DateUtility';
+import { sendMessageToChannel } from '../../../../services/TelegramSender';
 
 interface ManpowerData {
   nrp?: string;
