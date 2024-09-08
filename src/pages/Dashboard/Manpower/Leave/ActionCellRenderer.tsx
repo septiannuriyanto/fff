@@ -8,51 +8,25 @@ import {
   faEllipsisH,
 } from '@fortawesome/free-solid-svg-icons';
 import { Email } from './EmailTemplate';
+import HardcopyLeaveLetterTemplate from './HardcopyLeaveLetterTemplate';
 
 interface ActionCellRendererProps {
-  data: any; // Define a more specific type if known
+  value: any; // You might want to define a more specific type here
+  data: any;  // The row data
+  onApprove: (data: any) => void;
+  onMail: (data: any) => void;
+  onPrint: (data: any) => void;
+  onMore: (data: any) => void;
 }
 
 const ActionCellRenderer: React.FC<ActionCellRendererProps> = (props) => {
-  const handleApprove = () => {
-    console.log('Approve action for:', props.data);
-  };
 
-  const handleMail = async () => {
-    const nrp = props.data.nrp;
+  const handleApprove = () => props.onApprove(props.data);
+  const handleMail = () => props.onMail(props.data);
+  const handlePrint = () => props.onPrint(props.data);
+  const handleMore = () => props.onMore(props.data);
 
-    const { data, error } = await supabase
-      .from('manpower')
-      .select('email')
-      .eq('nrp', nrp);
-    if (error) {
-      console.error('Error fetching email:', error);
-      return;
-    }
-    const email = data[0].email;
-    if(email){
-        sendEmail(email)
-    }
-    else{
-        alert('Anda belum mendaftarkan email')
-    }
-
-    // console.log('Mail action for:', props.data);
-  };
-
-  function sendEmail(email:string){
-
-    console.log(email);
-    
-  }
-
-  const handlePrint = () => {
-    console.log('Print action for:', props.data);
-  };
-
-  const handleMore = () => {
-    console.log('More action for:', props.data);
-  };
+ 
 
   return (
     <div className="flex items-center justify-center h-full">

@@ -1,0 +1,15 @@
+@media print {
+    table {
+      width: 100%;
+    }
+    th {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100px; /* Adjust as needed */
+    }
+    img {
+      max-width: 100%; /* Ensure image fits within the cell */
+    }
+  }
+  

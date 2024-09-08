@@ -98,7 +98,7 @@ const LeaveRequest = () => {
     const endDateFormatted = formatDateForSupabase(endDate!); // "YYYY-MM-DD"
     //update the table
     let query = {
-      id: startDateFormatted + employee.nrp,
+      letter_id: startDateFormatted + employee.nrp,
       nrp: employee.nrp,
       date_leave_start: startDate ? startDateFormatted : '',
       date_leave_end: endDate ? endDateFormatted : '',
