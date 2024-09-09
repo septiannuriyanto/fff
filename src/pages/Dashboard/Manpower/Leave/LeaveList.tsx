@@ -102,7 +102,6 @@ const LeaveList = () => {
     }
     else{
         alert('Anda belum mendaftarkan email')
-        return;
     }
 
     console.log(paramdata);

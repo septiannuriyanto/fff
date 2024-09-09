@@ -29,6 +29,7 @@ import Roster from './pages/Dashboard/Manpower/Roster';
 import LeaveRequest from './pages/Dashboard/Manpower/Leave/LeaveRequest';
 import SchedulerExample from './pages/Dashboard/Manpower/Roster/SchedulerExample';
 import LeaveList from './pages/Dashboard/Manpower/Leave/LeaveList';
+import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 
 function App() {
   return (
@@ -41,276 +42,313 @@ function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Dashboard />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Dashboard />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/fuelcons"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <FuelConsumption />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <FuelConsumption />
+                </>
+              }
+            />
           }
         />
-         <Route
+        <Route
           path="/stockmanagement"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <StockManagement />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <StockManagement />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/operational"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Operational />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Operational Dashboard" />
+                  <Operational />
+                </>
+              }
+            />
           }
         />
-         <Route
+        <Route
+          path="/anomaly"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Anomaly Refueling" />
+              <RefuelingAnomaly />
+            </>
+          }
+        />
+        <Route
           path="/infrastructure"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Infrastructure />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Infrastructure />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/pressureless"
           element={
-              <>
-                <PageTitle title="FFF Dashboard | Pressureless Summary" />
-                <PressurelessSummary />
-              </>
-          
+            <>
+              <PageTitle title="FFF Dashboard | Pressureless Summary" />
+              <PressurelessSummary />
+            </>
           }
         />
         <Route
           path="/manpower"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Manpower />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Manpower />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/induksi"
           element={
-              <>
-                <PageTitle title="FFF Dashboard | Input Data Induksi" />
-                <Induction/>
-              </>
-          
+            <>
+              <PageTitle title="FFF Dashboard | Input Data Induksi" />
+              <Induction />
+            </>
           }
         />
-         <Route
+        <Route
           path="/roster"
           element={
-              <>
-                <PageTitle title="FFF Dashboard | Roster Manpower" />
-                <Roster/>
-              </>
-          
+            <>
+              <PageTitle title="FFF Dashboard | Roster Manpower" />
+              <Roster />
+            </>
           }
         />
         <Route
           path="/scheduler"
           element={
-              <>
-                <PageTitle title="FFF Dashboard | Scheduler Example" />
-                <SchedulerExample/>
-              </>
-          
+            <>
+              <PageTitle title="FFF Dashboard | Scheduler Example" />
+              <SchedulerExample />
+            </>
           }
         />
 
         <Route
           path="/formcuti"
           element={
-              <>
-                <PageTitle title="FFF Dashboard | Form Pengajuan Cuti" />
-                <LeaveRequest/>
-              </>
-          
+            <>
+              <PageTitle title="FFF Dashboard | Form Pengajuan Cuti" />
+              <LeaveRequest />
+            </>
+          }
+        />
+        <Route
+          path="/cuti"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Daftar Cuti" />
+                  <LeaveList />
+                </>
+              }
+            />
           }
         />
 
-<Route
-        
-        path="/cuti"
-        element={
-          <ProtectedRoute element={
-            <>
-              <PageTitle title="FFF Dashboard | Daftar Cuti" />
-              <LeaveList />
-            </>
-          } />
-        }
-      />
-        
         <Route
-        
           path="/calendar"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Calendar />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Calendar />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/profile"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Profile />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Profile />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/forms/form-elements"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <FormElements />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <FormElements />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/forms/form-layout"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <FormLayout />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <FormLayout />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/tables"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Tables />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Tables />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/settings"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Settings />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Settings />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/chart"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Chart />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Chart />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/ui/alerts"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Alerts />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Alerts />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/ui/buttons"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <Buttons />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <Buttons />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/reporting/dailyreport"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <DailyReport />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <DailyReport />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/reporting/ritation"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <RitationReport />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <RitationReport />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/reporting/tmr"
           element={
-            <ProtectedRoute element={
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <TMRReport />
-              </>
-            } />
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <TMRReport />
+                </>
+              }
+            />
           }
         />
         <Route
           path="/reporting/pressureless"
           element={
-           
-              <>
-                <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
-                <PressurelessReport />
-              </>
-         
+            <>
+              <PageTitle title="FFF Dashboard | Pressureless Reporting" />
+              <PressurelessReport />
+            </>
           }
         />
       </Routes>

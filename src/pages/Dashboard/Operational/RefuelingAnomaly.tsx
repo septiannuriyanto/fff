@@ -1,76 +1,173 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import { format, parse, isValid } from 'date-fns';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the Data Grid
 import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the Data Grid
+import { supabase } from '../../../db/SupabaseClient';
+import { GridApi } from 'ag-grid-community';
+import { formatDateForSupabase } from '../../../Utils/DateUtility';
+import AnomalyBarChart from './components/AnomalyBarChart';
+import AnomalyBarChartSwapped from './components/AnomalyBarChartSwapped';
+import { sendMessageToChannel } from '../../../services/TelegramSender';
 
-const fullColumns = [
-  { headerName: 'Job Row Id', field: 'JobRowId' },
-  { headerName: 'Distrik', field: 'Distrik' },
-  { headerName: 'Issued Date', field: 'IssuedDate' },
-  { headerName: 'Shift', field: 'Shift' },
-  { headerName: 'Eq Class', field: 'EquipmentClass' },
-  { headerName: 'EGI', field: 'EGI' },
-  { headerName: 'Unit No', field: 'UnitNo' },
-  { headerName: 'Status', field: 'Status' },
-  { headerName: 'Whouse Id', field: 'WhouseId' },
-  { headerName: 'Ref Hour Start', field: 'RefHourStart' },
-  { headerName: 'Ref Hour Stop', field: 'RefHourStop' },
-  { headerName: 'Driver Name', field: 'DriverName' },
-  { headerName: 'Fuelman Name', field: 'FuelmanName' },
-  { headerName: 'Log Sheet Code', field: 'LogSheetCode' },
-  { headerName: 'Flow Meter End', field: 'FlowMeterEnd' },
-  { headerName: 'Flow Meter Start', field: 'FlowMeterStart' },
-  { headerName: 'HM/KM', field: 'HMKM' },
-  { headerName: 'Max Tank Capacity', field: 'MaxTankCapacity' },
-  { headerName: 'Qty [L]', field: 'QtyL' },
-  { headerName: 'Qty Variance', field: 'QtyOverUnderL' },
-  { headerName: 'Freq Refueling', field: 'FreqRefueling' },
-  { headerName: 'Problem Category', field: 'ProblemCategory' },
-  { headerName: 'Reason', field: 'Reason' },
-  { headerName: 'Remark', field: 'Remark' },
-];
-const simpleColumns = [
-  { headerName: 'Issued Date', field: 'IssuedDate' },
-  { headerName: 'Shift', field: 'Shift' },
-  { headerName: 'Unit No', field: 'UnitNo' },
-  { headerName: 'Whouse Id', field: 'WhouseId' },
-  { headerName: 'Ref Hour Start', field: 'RefHourStart' },
-  { headerName: 'Ref Hour Stop', field: 'RefHourStop' },
-  { headerName: 'Driver Name', field: 'DriverName' },
-  { headerName: 'Fuelman Name', field: 'FuelmanName' },
-  { headerName: 'Flow Meter End', field: 'FlowMeterEnd' },
-  { headerName: 'Flow Meter Start', field: 'FlowMeterStart' },
-  { headerName: 'HM/KM', field: 'HMKM' },
-  { headerName: 'Max Tank Capacity', field: 'MaxTankCapacity' },
-  { headerName: 'Qty [L]', field: 'QtyL' },
-  { headerName: 'Qty Variance', field: 'QtyOverUnderL' },
-  { headerName: 'Freq Refueling', field: 'FreqRefueling' },
-  { headerName: 'Problem Category', field: 'ProblemCategory' },
-  { headerName: 'Reason', field: 'Reason' },
-  { headerName: 'Remark', field: 'Remark' },
+const ProblemCategoryOptions = [
+  'Run Out Fuel',
+  'Cycle Reset',
+  'Normal Schedule',
+  'Typing Error',
+  'Post Breakdown',
+  'Location Unreachable',
+  'Wrong Max Tank',
+  'Unidentified',
+  'Heavy Work',
+  '',
 ];
 
-const RefuelingAnomaly = () => {
+interface RefuelingAnomalyProps {
+  allowColumnsEdit: boolean;
+}
+
+const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
+  allowColumnsEdit,
+}) => {
+  console.log('Allow Columns Edit:', allowColumnsEdit); // Add this to debug
+  const gridRef = useRef();
+
+  const [editColumn, setEditColumn] = useState(allowColumnsEdit);
+  const [swapChart, setSwapChart] = useState(false);
+
+  const fullColumns = [
+    { id: 'JobRowId', headerName: 'Job Row Id', field: 'JobRowId' },
+    { id: 'Distrik', headerName: 'Distrik', field: 'Distrik' },
+    { id: 'IssuedDate', headerName: 'Issued Date', field: 'IssuedDate' },
+    { id: 'EquipmentClass', headerName: 'Eq Class', field: 'EquipmentClass' },
+    { id: 'EGI', headerName: 'EGI', field: 'EGI' },
+    { id: 'UnitNo', headerName: 'Unit No', field: 'UnitNo' },
+    { id: 'Status', headerName: 'Status', field: 'Status' },
+    { id: 'WhouseId', headerName: 'Whouse Id', field: 'WhouseId' },
+    { id: 'RefHourStart', headerName: 'Ref Hour Start', field: 'RefHourStart' },
+    { id: 'RefHourStop', headerName: 'Ref Hour Stop', field: 'RefHourStop' },
+    { id: 'DriverName', headerName: 'Driver Name', field: 'DriverName' },
+    { id: 'FuelmanName', headerName: 'Fuelman Name', field: 'FuelmanName' },
+    { id: 'LogSheetCode', headerName: 'Log Sheet Code', field: 'LogSheetCode' },
+    { id: 'FlowMeterEnd', headerName: 'Flow Meter End', field: 'FlowMeterEnd' },
+    {
+      id: 'FlowMeterStart',
+      headerName: 'Flow Meter Start',
+      field: 'FlowMeterStart',
+    },
+    { id: 'HMKM', headerName: 'HM/KM', field: 'HMKM' },
+    {
+      id: 'MaxTankCapacity',
+      headerName: 'Max Tank Capacity',
+      field: 'MaxTankCapacity',
+    },
+    { id: 'QtyL', headerName: 'Qty [L]', field: 'QtyL' },
+    { id: 'QtyOverUnderL', headerName: 'Qty Variance', field: 'QtyOverUnderL' },
+    {
+      id: 'FreqRefueling',
+      headerName: 'Freq Refueling',
+      field: 'FreqRefueling',
+    },
+    {
+      id: 'ProblemCategory',
+      headerName: 'Problem Category',
+      field: 'ProblemCategory',
+      cellEditor: 'agSelectCellEditor', // Use agSelectCellEditor
+      editable: editColumn,
+      cellEditorParams: {
+        values: ProblemCategoryOptions, // Provide options for the dropdown
+      },
+    },
+    {
+      id: 'Reason',
+      headerName: 'Reason',
+      field: 'Reason',
+      editable: editColumn,
+    },
+    {
+      id: 'Remark',
+      headerName: 'Remark',
+      field: 'Remark',
+      editable: editColumn,
+    },
+  ];
+
+  const simpleColumns = [
+    { id: 'IssuedDate', headerName: 'Issued Date', field: 'IssuedDate' },
+    { id: 'Shift', headerName: 'Shift', field: 'Shift', minWidth: 10 },
+    { id: 'UnitNo', headerName: 'Unit No', field: 'UnitNo' },
+    { id: 'WhouseId', headerName: 'Whouse Id', field: 'WhouseId' },
+    { id: 'RefHourStart', headerName: 'Ref Hour Start', field: 'RefHourStart' },
+    { id: 'RefHourStop', headerName: 'Ref Hour Stop', field: 'RefHourStop' },
+    { id: 'DriverName', headerName: 'Driver Name', field: 'DriverName' },
+    { id: 'FuelmanName', headerName: 'Fuelman Name', field: 'FuelmanName' },
+    { id: 'FlowMeterEnd', headerName: 'Flow Meter End', field: 'FlowMeterEnd' },
+    {
+      id: 'FlowMeterStart',
+      headerName: 'Flow Meter Start',
+      field: 'FlowMeterStart',
+    },
+    { id: 'HMKM', headerName: 'HM/KM', field: 'HMKM' },
+    {
+      id: 'MaxTankCapacity',
+      headerName: 'Max Tank Capacity',
+      field: 'MaxTankCapacity',
+    },
+    { id: 'QtyL', headerName: 'Qty [L]', field: 'QtyL' },
+    { id: 'QtyOverUnderL', headerName: 'Qty Variance', field: 'QtyOverUnderL' },
+    {
+      id: 'FreqRefueling',
+      headerName: 'Freq Refueling',
+      field: 'FreqRefueling',
+    },
+    {
+      id: 'ProblemCategory',
+      headerName: 'Problem Category',
+      field: 'ProblemCategory',
+      editable: editColumn,
+      cellEditor: 'agSelectCellEditor', // Use agSelectCellEditor
+      cellEditorParams: {
+        values: ProblemCategoryOptions, // Provide options for the dropdown
+      },
+    },
+    {
+      id: 'Reason',
+      headerName: 'Reason',
+      field: 'Reason',
+      editable: editColumn,
+    },
+    {
+      id: 'Remark',
+      headerName: 'Remark',
+      field: 'Remark',
+      editable: editColumn,
+    },
+  ];
+
+  useEffect(() => {
+    setEditColumn(allowColumnsEdit);
+  }, [allowColumnsEdit]);
+
+  const defaultColDef = {
+    editable: editColumn, // Use columnEdit for default editable state
+    filter: true,
+    sortable: true,
+  };
+
+  const autoSizeStrategy = {
+    type: 'fitCellContents',
+  };
+  const [autoSize, setAutoSize] = useState(autoSizeStrategy);
   const [showDragandDrop, setShowDragandDrop] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [csvData, setCsvData] = useState<string | null>(null);
   const [rowData, setRowData] = useState<any[]>([]);
-  const [useColumn, setUseColumn] = useState<any[]>(fullColumns);
-
-  const gridRef = useRef();
-    const autoSizeStrategy = {
-      type: 'fitCellContents',
-    };
-
-  const defaultColDef = {
-    editable: true,
-    filter: true, // Enable filtering on all columns
-    sortable: true, // Enable sorting
-  };
+  const [useColumn, setUseColumn] = useState<any[]>(simpleColumns);
+  const [gridApi, setGridApi] = useState<any>(null);
 
   const onToggleFileInput = (e: any) => {
     e.preventDefault();
@@ -125,22 +222,21 @@ const RefuelingAnomaly = () => {
 
     return modifiedData;
   };
- const handleExportCsv = (e: any) => {
+  const handleExportCsv = (e: any) => {
     e.preventDefault();
     // exportToExcel(rowData);
     exportGrid();
   };
-  
+
   const exportGrid = () => {
     const params = {
       fileName: 'refuelingAnomaly-grid-export.csv',
       sheetName: 'Sheet1',
       processCellCallback: (params: any) => {
         // Custom logic to format cell data
-        return params.value;  
-      
+        return params.value;
       },
-      processHeaderCallback: (params:any) => {
+      processHeaderCallback: (params: any) => {
         return params.column.getColDef().field; // Use the 'field' as the header instead of 'headerName'
       },
     };
@@ -265,7 +361,13 @@ const RefuelingAnomaly = () => {
                       'Error parsing date:',
                       filteredRow[dateIssuedIndex],
                     );
-                    filteredRow[dateIssuedIndex] = 'Invalid Date';
+
+                    const splitString = filteredRow[dateIssuedIndex].split('/');
+                    console.log(splitString);
+
+                    const date = `${splitString[2]}-${splitString[1]}-${splitString[0]}`;
+
+                    filteredRow[dateIssuedIndex] = date;
                   }
                 }
 
@@ -277,13 +379,13 @@ const RefuelingAnomaly = () => {
             // console.log('Modified CSV Data:', csvString);
 
             // Set the row data for AG Grid
-            const rowDatas = modifiedData.map((row: String[]) => {
+            const rowDatas = modifiedData.map((row: string[]) => {
               // console.log(row);
 
               return {
                 Distrik: row[0],
                 IssuedDate: row[1],
-                Shift: row[2],
+                Shift: parseInt(row[2]),
                 EquipmentClass: row[3],
                 EGI: row[4],
                 UnitNo: row[5],
@@ -297,17 +399,30 @@ const RefuelingAnomaly = () => {
                 JobRowId: row[13],
                 FlowMeterEnd: row[14],
                 FlowMeterStart: row[15],
-                HMKM: row[16],
-                MaxTankCapacity: row[17],
-                QtyL: row[18],
-                QtyOverUnderL: row[19],
-                FreqRefueling: row[20],
+                HMKM: parseFloat(row[16]),
+                MaxTankCapacity: parseFloat(row[17]),
+                QtyL: parseFloat(row[18]),
+                QtyOverUnderL: parseFloat(row[19]),
+                FreqRefueling: parseInt(row[20]),
               };
             });
 
             console.log('Row Data for AG Grid:', rowDatas); // Log the row data for AG Grid
-            setRowData(rowDatas); // Set the processed data as the row data for AG Grid
-
+            const newItems = rowDatas.filter(
+              (item2) =>
+                !rowData.some((item1) => item1.JobRowId === item2.JobRowId),
+            );
+            const filteredRowDatas = newItems.filter(
+              (item) => item.Distrik !== '',
+            );
+            if (filteredRowDatas.length > 0) {
+              const updatedRowData = [...rowData, ...filteredRowDatas]; // Use spread operator to create a new array
+              console.log(filteredRowDatas);
+              batchInsertItems(filteredRowDatas);
+              setRowData(updatedRowData); // Update state with the new array
+              const message = `NEW ANOMALY DETECTED : ${filteredRowDatas.length} ITEM\nPlease add some feedback at :\nhttps://fff-project.vercel.app/anomaly`;
+              sendMessageToChannel(message)
+            }
           } else {
             setErrorMessage('Failed to parse the CSV file.');
           }
@@ -320,6 +435,23 @@ const RefuelingAnomaly = () => {
       setErrorMessage('Please upload a valid CSV file.');
     }
   };
+
+  async function batchInsertItems(items: any) {
+    try {
+      // Insert the items into the `refueling_anomaly` table
+      const { data, error } = await supabase
+        .from('refueling_anomaly')
+        .upsert(items, { onConflict: ['JobRowId'] }); // Adjust onConflict if necessary
+
+      if (error) {
+        throw new Error(`Error inserting items: ${error.message}`);
+      }
+
+      console.log('Items successfully inserted:', data);
+    } catch (error) {
+      console.error('Error during batch insert:', error);
+    }
+  }
 
   // const validateAndParseFile = (file: File) => {
   //   if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
@@ -423,12 +555,228 @@ const RefuelingAnomaly = () => {
 
   const onToggleColumn = (e: any) => {
     e.preventDefault();
-    if (useColumn == fullColumns) {
+    console.log('Changing column type');
+
+    if (useColumn.length == fullColumns.length) {
       setUseColumn(simpleColumns);
     } else {
       setUseColumn(fullColumns);
     }
+    setAutoSize(autoSizeStrategy);
   };
+
+  useEffect(() => {
+    const fetchAnomalyRecords = async () => {
+      const { data, error } = await supabase
+        .from('refueling_anomaly')
+        .select('*');
+
+      if (error) {
+        console.log('Error fetching data : ' + error.message);
+        return;
+      }
+
+      // Initialize counts object
+      const counts = {
+        all: 0,
+        feedbacked: 0,
+        new: 0,
+      };
+
+      // Process each row to update counts
+      data.forEach((row: any) => {
+        counts.all++; // Count each row
+
+        // Handle reason filled
+        if (row.Reason == null) {
+          counts.new++;
+        } else if (row.Reason.trim() !== '') {
+          counts.feedbacked++;
+        } else {
+          counts.new++;
+        }
+      });
+
+      setFeedbacked(counts.feedbacked);
+      setNewCase(counts.new);
+      setAllCase(counts.all);
+      setRowData(data);
+    };
+
+    fetchAnomalyRecords();
+  }, []);
+
+  const onCellValueChanged = async (params: any) => {
+    const { data, oldValue } = params;
+    const { JobRowId, Reason, ProblemCategory, Remark } = data;
+    const columnId = params.column.getId();
+
+    // The previous status before the change
+    const prevStatus = oldValue;
+
+    // Check if pressureless value has changed
+    if (columnId == 'Reason') {
+      // console.log('updating pressureless installation status');
+      const { error: reasonError } = await supabase
+        .from('refueling_anomaly')
+        .update({ Reason: Reason })
+        .eq('JobRowId', JobRowId);
+
+      if (reasonError) {
+        console.log(`Error updating reason: ${reasonError.message}`);
+        return;
+      }
+      if (
+        (prevStatus.Reason === '' || prevStatus.Reason === null) &&
+        (Reason !== '' || Reason !== null)
+      ) {
+        setFeedbacked((prev) => prev + 1);
+        setNewCase((prev) => prev - 1);
+      } else if (
+        (prevStatus.Reason !== '' || prevStatus.Reason !== null) &&
+        (Reason === '' || Reason === null)
+      ) {
+        setFeedbacked((prev) => prev - 1);
+        setNewCase((prev) => prev + 1);
+      } else {
+      }
+
+      // if (pressureless === 'Y') {
+      //   setNotInstalled((prev) => prev - 1);
+      //   setInstalled((prev) => prev + 1);
+      // } else if (pressureless === 'N') {
+      //   setInstalled((prev) => prev - 1);
+      //   setNotInstalled((prev) => prev + 1);
+      // } else {
+      //   setInstalled((prev) => prev - 1);
+      //   setNotInstalled((prev) => prev - 1);
+      // }
+    } else if (columnId == 'ProblemCategory') {
+      // console.log('updating status');
+      const { error: problemCategoryError } = await supabase
+        .from('refueling_anomaly')
+        .update({ ProblemCategory: ProblemCategory })
+        .eq('JobRowId', JobRowId);
+      if (problemCategoryError) {
+        console.log(
+          `Error updating Problem Categoory: ${problemCategoryError.message}`,
+        );
+        return;
+      }
+      // Update for OPEN, PROGRESS, and CLOSED statuses
+      // if (status === 'OPEN') {
+      //   setOpenCount((prev) => prev + 1);
+      //   if (prevStatus === 'PROGRESS') {
+      //     setProgressCount((prev) => prev - 1);
+      //   } else if (prevStatus === 'CLOSED') {
+      //     setClosedCount((prev) => prev - 1);
+      //   }
+      // } else if (status === 'PROGRESS') {
+      //   setProgressCount((prev) => prev + 1);
+      //   if (prevStatus === 'OPEN') {
+      //     setOpenCount((prev) => prev - 1);
+      //   } else if (prevStatus === 'CLOSED') {
+      //     setClosedCount((prev) => prev - 1);
+      //   }
+      // } else if (status === 'CLOSED') {
+      //   setClosedCount((prev) => prev + 1);
+      //   if (prevStatus === 'OPEN') {
+      //     setOpenCount((prev) => prev - 1);
+      //   } else if (prevStatus === 'PROGRESS') {
+      //     setProgressCount((prev) => prev - 1);
+      //   }
+      // }
+    } else {
+      console.log('updating remark');
+      const { error: remarkError } = await supabase
+        .from('refueling_anomaly')
+        .update({ Remark: Remark })
+        .eq('JobRowId', JobRowId);
+      if (remarkError) {
+        console.log(`Error updating remark: ${remarkError.message}`);
+        return;
+      }
+    }
+  };
+
+  const getRowId = useCallback((params: any) => {
+    return params.data.id;
+  }, []);
+
+  //------------TABBED BUTTONS\
+  const [allCase, setAllCase] = useState(0);
+  const [feedbacked, setFeedbacked] = useState(0);
+  const [newCase, setNewCase] = useState(0);
+
+  interface TabbedButtonProps {
+    filterByStatus: (status: string) => void;
+  }
+  let tabs = [
+    { label: `All (${allCase})`, value: 'ALL' },
+    { label: `Feedbacked(${feedbacked})`, value: 'FEEDBACKED' },
+    { label: `New(${newCase})`, value: 'NEW' },
+  ];
+
+  const [activeTab, setActiveTab] = useState<string>('ALL');
+
+  const onGridReady = useCallback(async (params: { api: GridApi }) => {
+    setGridApi(params.api);
+    console.log('Grid is ready.');
+  }, []);
+
+  const handleTabClick = (value: string) => {
+    // console.log(value);
+    setActiveTab(value);
+    filterByStatus(value);
+    // Handle tab click logic here
+  };
+  const filterByStatus = (status: string) => {
+    if (gridRef.current) {
+      const gridApi = gridRef.current.api;
+      if (status === 'ALL') {
+        gridApi.setFilterModel(null); // Show all rows
+      } else if (status === 'FEEDBACKED') {
+        gridApi.setFilterModel({
+          Reason: {
+            type: 'notBlank',
+          },
+        });
+      } else {
+        gridApi.setFilterModel({
+          Reason: {
+            type: 'blank',
+          },
+        });
+      }
+      gridApi.onFilterChanged();
+    }
+  };
+
+  const onToggleChartView = (e:any)=>{
+    e.preventDefault();
+    setSwapChart((prev)=> !prev);
+  }
+
+   // Filter the data
+   const [filterCategory, setFilterCategory]= useState(false);
+   const itemsToExclude = [
+    'Normal Schedule',
+    'Wrong Max Tank',
+    'Cycle Reset',
+    'Heavy Work',
+    'Post Breakdown',
+    'Run Out Fuel',
+  ]; // Specify items to exclude
+
+   const filterData = (data: any[], itemsToExclude: string[], key: string): any[] => {
+    return data.filter(item => !itemsToExclude.includes(item[key]));
+  };
+
+  const filteredData =filterCategory? filterData(rowData, itemsToExclude, 'ProblemCategory') : rowData;
+  const onToggleFilterView = (e:any)=>{
+    e.preventDefault();
+    setFilterCategory((prev)=> !prev);
+  }
 
   return (
     <>
@@ -439,6 +787,7 @@ const RefuelingAnomaly = () => {
               <h2 className="mb-9 font-bold text-black dark:text-white sm:text-title-sm w-full">
                 Refueling Frequency Anomaly Analysis
               </h2>
+              {swapChart? <AnomalyBarChart data={filteredData}/> : <AnomalyBarChartSwapped data={filteredData}/>}
               <div className="buttonheaders w-full content-between flex justify-between">
                 <button
                   onClick={onToggleFileInput}
@@ -448,10 +797,26 @@ const RefuelingAnomaly = () => {
                 </button>
 
                 <button
+                  onClick={onToggleChartView}
+                  className="mb-2 bg-gray-200 text-gray-800 border border-gray-300 rounded-md px-4 py-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  Switch View
+                </button>
+
+                <button
+                  onClick={onToggleFilterView}
+                  className="mb-2 bg-gray-200 text-gray-800 border border-gray-300 rounded-md px-4 py-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  View Filtered
+                </button>
+
+                <button
                   onClick={onToggleColumn}
                   className="mb-2 bg-gray-200 text-gray-800 border border-gray-300 rounded-md px-4 py-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 >
-                  {useColumn == simpleColumns ? 'Simple' : 'Fullsize'}
+                  {useColumn.length === simpleColumns.length
+                    ? 'FullSize'
+                    : 'Simple'}
                 </button>
               </div>
 
@@ -531,12 +896,33 @@ const RefuelingAnomaly = () => {
                 </>
               )}
 
+            
+
+              <div className="flex space-x-4 pb-4 flex-wrap">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => handleTabClick(tab.value)}
+                    className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-300 ${
+                      activeTab === tab.value
+                        ? 'border-blue-500 text-blue-500'
+                        : 'border-transparent text-gray-600 hover:text-blue-500'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="ag-theme-quartz-auto-dark h-100 w-full">
                 <AgGridReact
+                  onCellValueChanged={onCellValueChanged}
                   ref={gridRef}
                   columnDefs={useColumn}
                   rowData={rowData}
                   defaultColDef={defaultColDef}
+                  autoSizeStrategy={autoSize}
+
                   // domLayout="autoHeight" // Automatically adjust height based on the number of rows
                 />
               </div>
