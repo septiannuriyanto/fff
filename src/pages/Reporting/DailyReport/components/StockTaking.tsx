@@ -3,9 +3,12 @@ import { supabase } from '../../../../db/SupabaseClient';
 import { AgGridReact } from 'ag-grid-react';
 import StockTakingChart from './StockTakingChart';
 import {
+  formatDate,
   formatDateForSupabase,
   formatDateToIndonesian,
   formatDateToIndonesianByDate,
+  formatDateToISO,
+  formatDateToString,
 } from '../../../../Utils/DateUtility';
 import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import moment from 'moment';
@@ -145,7 +148,7 @@ const StockTaking: React.FC = () => {
       query = {
         ...query,
         warehouse_id: WhouseId,
-        created_at: date
+        created_at: formatDateToString(date!)
       };
 
       const { error } = await supabase.from('stock_taking').insert([query]);
@@ -344,9 +347,9 @@ const StockTaking: React.FC = () => {
   
 
   const handleDateChange = async (date: Date | null) => {
-    console.log(date);
+    console.log(formatDateToString(date!));
     setDate(date);
-    await fetchWarehouseWithStockTaking(formatDateForSupabase(date!));
+    await fetchWarehouseWithStockTaking(formatDateToString(date!));
   };
 
   return (

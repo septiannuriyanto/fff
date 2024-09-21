@@ -13,6 +13,14 @@ const formatDate = (date:number) => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
+  const formatDateToString = (date:Date) => {
+    // Format the date and time components
+    const day = String(date.getDate());
+    const month = String(date.getMonth() + 1);
+    const year = String(date.getFullYear());
+    return `${year}/${month}/${day}`;
+  };
+
   const formatDateToIndonesian = (date: number) => {
     // Create a new Date object and add 8 hours to get UTC+8
     const utcDate = new Date(date + 8 * 60 * 60 * 1000);
@@ -53,4 +61,12 @@ const formatDate = (date:number) => {
     return `${year}-${month}-${day}`;
   };
 
-  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate }
+  const formatDateToISO = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
+  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate, formatDateToISO, formatDateToString }
