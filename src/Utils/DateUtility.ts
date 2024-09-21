@@ -13,6 +13,36 @@ const formatDate = (date:number) => {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
+  const formatDateToIndonesian = (date: number) => {
+    // Create a new Date object and add 8 hours to get UTC+8
+    const utcDate = new Date(date + 8 * 60 * 60 * 1000);
+  
+    // Format the date using Indonesian locale with full month name
+    const formattedDate = utcDate.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long', // Full month name
+      year: 'numeric',
+    });
+  
+    return formattedDate;
+  };
+
+  const formatDateToIndonesianByDate = (date: Date) => {
+    // Add 8 hours to get UTC+8
+    const utcDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  
+    // Format the date using Indonesian locale with full month name
+    const formattedDate = utcDate.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long', // Full month name
+      year: 'numeric',
+    });
+  
+    return formattedDate;
+  };
+  
+  
+
   const formatDateForSupabase = (date: Date) => {
     if (!date) return null;
 
@@ -23,4 +53,4 @@ const formatDate = (date:number) => {
     return `${year}-${month}-${day}`;
   };
 
-  export { formatDate, formatDateForSupabase }
+  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate }

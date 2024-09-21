@@ -12,9 +12,9 @@ import Tables from './pages/Tables';
 import Alerts from './pages/UiElements/Alerts';
 import Buttons from './pages/UiElements/Buttons';
 import DefaultLayout from './layout/DefaultLayout';
-import DailyReport from './pages/Reporting/DailyReport';
-import RitationReport from './pages/Reporting/RitationReport';
-import TMRReport from './pages/Reporting/TMRReport';
+import DailyReport from './pages/Reporting/DailyReport/DailyReport';
+import RitationReport from './pages/Reporting/DailyReport/components/RitationReport';
+import TMRReport from './pages/Reporting/DailyReport/components/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
 import FuelConsumption from './pages/Dashboard/FuelConsumption/FuelConsumption';
 import ProtectedRoute from './pages/ProtectedRoute'; // Adjust the import path as necessary
@@ -30,6 +30,8 @@ import LeaveRequest from './pages/Dashboard/Manpower/Leave/LeaveRequest';
 import SchedulerExample from './pages/Dashboard/Manpower/Roster/SchedulerExample';
 import LeaveList from './pages/Dashboard/Manpower/Leave/LeaveList';
 import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
+import StockReporting from './pages/Reporting/DailyReport/components/StockReporting';
+import StockTaking from './pages/Reporting/DailyReport/components/StockTaking';
 
 function App() {
   return (
@@ -309,8 +311,34 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF Dashboard | Daily Report" />
                   <DailyReport />
+                </>
+              }
+            />
+          }
+        />
+        <Route
+          path="/reporting/stock"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Stock Reporting" />
+                  <StockReporting />
+                </>
+              }
+            />
+          }
+        />
+        <Route
+          path="/reporting/stocktaking"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Stock Taking" />
+                  <StockTaking />
                 </>
               }
             />
@@ -322,7 +350,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF Dashboard | Ritation Report" />
                   <RitationReport />
                 </>
               }
@@ -335,7 +363,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF Dashboard | TMR Report" />
                   <TMRReport />
                 </>
               }

@@ -12,21 +12,30 @@ const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,en
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    const today = new Date();
+    
+    // Calculate the first day of the current month
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Calculate the last day of the current month
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
     if (inputRef.current) {
-      // Initialize flatpickr or your date picker library
-      if(enabled){
-      flatpickr(inputRef.current, {
-        mode: 'single',
-        dateFormat: 'd/m/Y',
-        onChange: (selectedDates: Date[]) => {
-          if(!enabled) return;
-          handleChange(selectedDates.length ? selectedDates[0] : null);
-        },
-      });
+      if (enabled) {
+        flatpickr(inputRef.current, {
+          mode: 'single',
+          dateFormat: 'd/m/Y',
+          minDate: startOfMonth,  // Start date: first day of the month
+          maxDate: endOfMonth,    // End date: last day of the month
+          onChange: (selectedDates: Date[]) => {
+            if (!enabled) return;
+            handleChange(selectedDates.length ? selectedDates[0] : null);
+          },
+        });
       }
-      
     }
   }, [enabled]);
+  
 
   return (
     <div className="relative">
