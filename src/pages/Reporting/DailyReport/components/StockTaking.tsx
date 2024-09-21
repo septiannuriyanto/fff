@@ -369,7 +369,7 @@ const StockTaking: React.FC = () => {
                   <DatePickerOne
                     enabled={true}
                     handleChange={handleDateChange}
-                    setValue={formatDateToIndonesianByDate(date!)}
+                    setValue={formatDateToString(date!)}
                   />
                 </div>
               </div>
