@@ -334,14 +334,10 @@ function App() {
         <Route
           path="/reporting/stocktaking"
           element={
-            <ProtectedRoute
-              element={
-                <>
-                  <PageTitle title="FFF Dashboard | Stock Taking" />
-                  <StockTaking />
-                </>
-              }
-            />
+            <>
+            <PageTitle title="FFF Dashboard | Stock Taking" />
+            <StockTaking />
+          </>
           }
         />
         <Route
