@@ -140,7 +140,7 @@ const StockTaking: React.FC = () => {
     return data.length;
   };
 
-  const setOrUpdateDB = async (WhouseId:string, query:any) =>{
+  const setOrUpdateDB = async (WhouseId: string, query: any) => {
     //==========================================================================Database Execution
     let isRecorded = await checkisRecorded(WhouseId);
     if (isRecorded == 0) {
@@ -148,7 +148,7 @@ const StockTaking: React.FC = () => {
       query = {
         ...query,
         warehouse_id: WhouseId,
-        created_at: formatDateToString(date!)
+        created_at: formatDateToString(date!),
       };
 
       const { error } = await supabase.from('stock_taking').insert([query]);
@@ -171,7 +171,7 @@ const StockTaking: React.FC = () => {
       console.log('Data updated:', query);
     }
     //===========================================================================
-  }
+  };
 
   const onCellValueChanged = async (params: any) => {
     const { data, oldValue } = params;
@@ -223,7 +223,7 @@ const StockTaking: React.FC = () => {
         pending_posting: params.data.PendingPosting,
         pending_receive: params.data.PendingReceive,
       };
-  
+
       await setOrUpdateDB(params.data.WhouseId, query);
 
       setSohFisik(Math.round(literSum));
@@ -239,7 +239,6 @@ const StockTaking: React.FC = () => {
         soh_system: params.data.SOHSystem,
       };
       await setOrUpdateDB(params.data.WhouseId, query);
-
     } else if (columnId == 'PendingPosting') {
       console.log('Change Pending Posting');
       let literSum = getColumnSum('PendingPosting');
@@ -277,10 +276,12 @@ const StockTaking: React.FC = () => {
     setDiff(Math.round(newDifference)); // Update diff
   };
 
-  const fetchWarehouseWithStockTaking = async (paramDate : any) => {
+  const fetchWarehouseWithStockTaking = async (paramDate: any) => {
     // Call the stored procedure using the Supabase RPC functionality
-    const { data, error } = await supabase
-      .rpc('fetch_storage_with_stock_taking', { p_date: formatDateForSupabase(paramDate) });
+    const { data, error } = await supabase.rpc(
+      'fetch_storage_with_stock_taking',
+      { p_date: formatDateForSupabase(paramDate) },
+    );
 
     if (error) {
       console.log('Error fetching data: ' + error.message);
@@ -300,51 +301,52 @@ const StockTaking: React.FC = () => {
       PendingReceive: row.pending_receive || null,
     }));
 
-    setRowData(dataRow); // Set the data in the grid  
+    setRowData(dataRow); // Set the data in the grid
     updateStockStatus(dataRow);
   };
 
-  const updateStockStatus = (dataRow:any) => {
-     // Initialize totals
-     let totalQtyLiter = 0;
-     let totalSOHSystem = 0;
-     let totalPendingPosting = 0;
-     let totalPendingReceive = 0;
- 
-     // Iterate through the array and sum values
-     dataRow.forEach((record) => {
-        if(record.QtyLiter != null){
-          totalQtyLiter += record.QtyLiter;
-        }
-        if(record.SOHSystem !=null){
-          totalSOHSystem += record.SOHSystem;
-        }
-       if(record.PendingPosting !=null){
-          totalPendingPosting += record.PendingPosting || 0;
-       }
-      if(record.PendingReceive !=null){
+  const updateStockStatus = (dataRow: any) => {
+    // Initialize totals
+    let totalQtyLiter = 0;
+    let totalSOHSystem = 0;
+    let totalPendingPosting = 0;
+    let totalPendingReceive = 0;
+
+    // Iterate through the array and sum values
+    dataRow.forEach((record) => {
+      if (record.QtyLiter != null) {
+        totalQtyLiter += record.QtyLiter;
+      }
+      if (record.SOHSystem != null) {
+        totalSOHSystem += record.SOHSystem;
+      }
+      if (record.PendingPosting != null) {
+        totalPendingPosting += record.PendingPosting || 0;
+      }
+      if (record.PendingReceive != null) {
         totalPendingReceive += record.PendingReceive || 0;
       }
-      
-     });
- 
-     // Update the states with the calculated totals
-     setSohFisik(Math.round(totalQtyLiter));
-     setSohSystem(Math.round(totalSOHSystem));
-     setPendingPosting(Math.round(totalPendingPosting));
-     setPendingReceive(Math.round(totalPendingReceive));
- 
-     // Calculate the difference
-     const calculatedDiff =
-       Math.round(totalQtyLiter + totalPendingPosting - totalSOHSystem - totalPendingReceive);
-     setDiff(calculatedDiff);
+    });
 
-  }
+    // Update the states with the calculated totals
+    setSohFisik(Math.round(totalQtyLiter));
+    setSohSystem(Math.round(totalSOHSystem));
+    setPendingPosting(Math.round(totalPendingPosting));
+    setPendingReceive(Math.round(totalPendingReceive));
+
+    // Calculate the difference
+    const calculatedDiff = Math.round(
+      totalQtyLiter +
+        totalPendingPosting -
+        totalSOHSystem -
+        totalPendingReceive,
+    );
+    setDiff(calculatedDiff);
+  };
 
   useEffect(() => {
     fetchWarehouseWithStockTaking(date!);
   }, [date]); // Adding 'date' as a dependency, so it refetches when the date changes
-  
 
   const handleDateChange = async (date: Date | null) => {
     console.log(formatDateToString(date!));
@@ -387,23 +389,33 @@ const StockTaking: React.FC = () => {
               <div className="w-full content-between flex justify-between mb-4 px-2">
                 <div>
                   <h1 className="font-bold">Stock Fisik</h1>
-                  <h1>{sohFisik}</h1>
+                  <h1>{sohFisik.toLocaleString('id-ID')}</h1>
                 </div>
                 <div>
                   <h1 className="font-bold">Pending Posting</h1>
-                  <h1>{pendingPosting}</h1>
+                  <h1>{pendingPosting.toLocaleString('id-ID')}</h1>
                 </div>
                 <div>
                   <h1 className="font-bold">Stock System</h1>
-                  <h1>{sohSystem}</h1>
+                  <h1>{sohSystem.toLocaleString('id-ID')}</h1>
                 </div>
                 <div>
                   <h1 className="font-bold">Pending Receive</h1>
-                  <h1>{pendingReceive}</h1>
+                  <h1>{pendingReceive.toLocaleString('id-ID')}</h1>
                 </div>
                 <div>
                   <h1 className="font-bold">Difference</h1>
-                  <h1>{diff}</h1>
+                  <h1
+                    className={`${
+                      diff > 0
+                        ? 'text-green-500'
+                        : diff < 0
+                        ? 'text-red-500'
+                        : ''
+                    }`}
+                  >
+                    {diff.toLocaleString('id-ID')}
+                  </h1>
                 </div>
               </div>
 
