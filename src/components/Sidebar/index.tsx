@@ -521,6 +521,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                               Pressureless
                             </NavLink>
                           </li>
+                          <li>
+                            <NavLink
+                              to="/reporting/stocktaking"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              Stock Taking
+                            </NavLink>
+                          </li>
                         </ul>
                       </div>
                       {/* <!-- Dropdown Menu End --> */}
