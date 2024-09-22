@@ -157,6 +157,7 @@ const StockTaking: React.FC = () => {
       query = {
         ...query,
         warehouse_id: WhouseId,
+        working_shift : selecteddShift,
         created_at: formatDateToString(date!),
       };
 
@@ -236,12 +237,14 @@ const StockTaking: React.FC = () => {
       await setOrUpdateDB(params.data.WhouseId, query);
 
       setSohFisik(Math.round(literSum));
+      params.node.setDataValue('WorkingShift', selecteddShift); // Update Working Shift
     } else if (columnId == 'QtyLiter') {
       console.log('Change Qty Liter');
     } else if (columnId == 'SOHSystem') {
       console.log('Change SOH System');
       let literSum = getColumnSum('SOHSystem');
       setSohSystem(literSum);
+      params.node.setDataValue('WorkingShift', selecteddShift); // Update Working Shift
 
       //=========QUERY MODIFICATION
       const query = {
@@ -252,6 +255,7 @@ const StockTaking: React.FC = () => {
       console.log('Change Pending Posting');
       let literSum = getColumnSum('PendingPosting');
       setPendingPosting(Math.round(literSum));
+      params.node.setDataValue('WorkingShift', selecteddShift); // Update Working Shift
 
       //=========QUERY MODIFICATION
       const query = {
@@ -262,6 +266,7 @@ const StockTaking: React.FC = () => {
       console.log('Change Pending Receive');
       let literSum = getColumnSum('PendingReceive');
       setPendingReceive(literSum);
+      params.node.setDataValue('WorkingShift', selecteddShift); // Update Working Shift
 
       //=========QUERY MODIFICATION
       const query = {
