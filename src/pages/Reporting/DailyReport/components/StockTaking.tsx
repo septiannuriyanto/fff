@@ -17,6 +17,7 @@ const StockTaking: React.FC = () => {
   const fullColumns = [
     { id: 'WhouseId', headerName: 'WH ID', field: 'WhouseId', editable: false },
     { id: 'UnitId', headerName: 'Unit ID', field: 'UnitId', editable: false },
+    { id: 'WorkingShift', headerName: 'Shift', field: 'WorkingShift', editable: true },
     {
       id: 'HeightCm',
       headerName: 'Height Cm',
@@ -58,7 +59,18 @@ const StockTaking: React.FC = () => {
   const [pendingReceive, setPendingReceive] = useState<number>(0);
   const [diff, setDiff] = useState<number>(0);
   const [date, setDate] = useState<Date | null>(new Date());
+  const [selecteddShift, setSelectedShift] = useState<string>('1');
   const gridRef = useRef();
+
+  // Define a type for the possible options
+  type Option = 'Shift 1' | 'Shift 2';
+
+  const handleChangeShift = async(event: React.ChangeEvent<HTMLSelectElement>) => {
+    
+    console.log(event.target.value);
+    setSelectedShift(event.target.value as Option);
+    await fetchWarehouseWithStockTaking(date!,  parseInt(event.target.value));
+  };
 
   const getQtyByHeight = async (height: any, whId: string) => {
     let heightBottom = Math.floor(height);
@@ -99,9 +111,6 @@ const StockTaking: React.FC = () => {
         ((height - heightBottom) / (heightTop - heightBottom)) *
           (qtyTop - qtyBottom);
     }
-
-    console.log(qtyBottom);
-    console.log(qtyTop);
 
     // Perform linear interpolation to get the resultLiter
 
@@ -276,11 +285,12 @@ const StockTaking: React.FC = () => {
     setDiff(Math.round(newDifference)); // Update diff
   };
 
-  const fetchWarehouseWithStockTaking = async (paramDate: any) => {
+  const fetchWarehouseWithStockTaking = async (paramDate: Date, paramShift:number) => {
+    
     // Call the stored procedure using the Supabase RPC functionality
     const { data, error } = await supabase.rpc(
       'fetch_storage_with_stock_taking',
-      { p_date: formatDateForSupabase(paramDate) },
+      { p_date: formatDateToString(paramDate), p_shift : paramShift },
     );
 
     if (error) {
@@ -288,11 +298,11 @@ const StockTaking: React.FC = () => {
       return;
     }
 
-    console.log(data); // This will log the result of the joined storage and stock_taking data
 
     // Prepare the data for the grid
     const dataRow = data.map((row: any) => ({
       WhouseId: row.warehouse_id,
+      WorkingShift : row.working_shift || null,
       UnitId: row.unit_id,
       HeightCm: row.height_cm || null,
       QtyLiter: row.qty_liter || 0,
@@ -345,13 +355,12 @@ const StockTaking: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchWarehouseWithStockTaking(date!);
+    fetchWarehouseWithStockTaking(date!, parseInt(selecteddShift));
   }, [date]); // Adding 'date' as a dependency, so it refetches when the date changes
 
   const handleDateChange = async (date: Date | null) => {
-    console.log(formatDateToString(date!));
     setDate(date);
-    await fetchWarehouseWithStockTaking(formatDateToString(date!));
+    await fetchWarehouseWithStockTaking(date!, parseInt(selecteddShift));
   };
 
   return (
@@ -360,18 +369,54 @@ const StockTaking: React.FC = () => {
         <div className="flex flex-wrap items-center">
           <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">
-              <div className=" flex flex-row w-full justify-between  mb-2 ">
-                <div className="w-full justify-end">
-                  <h2 className="font-bold text-black dark:text-white sm:text-title-sm w-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start mb-2 text-start">
+                <div className="w-full sm:w-auto sm:mb-2">
+                  <h2 className="font-bold text-black dark:text-white text-start sm:text-title-sm sm:w-full">
                     Quick Stock Taking
                   </h2>
                 </div>
 
-                <div className="flex w-full justify-end">
+                <div className="flex align-middle  justify-end sm:justify-between">
+                  <div className="relative z-20 inline-flex  align-middle">
+                    <select
+                      value={selecteddShift}
+                      onChange={handleChangeShift}
+                      className="relative z-20 inline-flex appearance-none bg-transparent py-1 pl-3 pr-8 text-sm font-medium outline-none"
+                    >
+                      <option value="1" className="dark:bg-boxdark">
+                        Shift 1
+                      </option>
+                      <option value="2" className="dark:bg-boxdark">
+                        Shift 2
+                      </option>
+                    </select>
+
+                    <span className="absolute top-1/2 right-3 z-10 -translate-y-1/2">
+                      <svg
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M0.47072 1.08816C0.47072 1.02932 0.500141 0.955772 0.54427 0.911642C0.647241 0.808672 0.809051 0.808672 0.912022 0.896932L4.85431 4.60386C4.92785 4.67741 5.06025 4.67741 5.14851 4.60386L9.09079 0.896932C9.19376 0.793962 9.35557 0.808672 9.45854 0.911642C9.56151 1.01461 9.5468 1.17642 9.44383 1.27939L5.50155 4.98632C5.22206 5.23639 4.78076 5.23639 4.51598 4.98632L0.558981 1.27939C0.50014 1.22055 0.47072 1.16171 0.47072 1.08816Z"
+                          fill="#637381"
+                        />
+                        <path
+                          fillRule="evenodd"
+                          clipRule="evenodd"
+                          d="M1.22659 0.546578L5.00141 4.09604L8.76422 0.557869C9.08459 0.244537 9.54201 0.329403 9.79139 0.578788C10.112 0.899434 10.0277 1.36122 9.77668 1.61224L9.76644 1.62248L5.81552 5.33722C5.36257 5.74249 4.6445 5.7544 4.19352 5.32924C4.19327 5.32901 4.19377 5.32948 4.19352 5.32924L0.225953 1.61241C0.102762 1.48922 -4.20186e-08 1.31674 -3.20269e-08 1.08816C-2.40601e-08 0.905899 0.0780105 0.712197 0.211421 0.578787C0.494701 0.295506 0.935574 0.297138 1.21836 0.539529L1.22659 0.546578ZM4.51598 4.98632C4.78076 5.23639 5.22206 5.23639 5.50155 4.98632L9.44383 1.27939C9.5468 1.17642 9.56151 1.01461 9.45854 0.911642C9.35557 0.808672 9.19376 0.793962 9.09079 0.896932L5.14851 4.60386C5.06025 4.67741 4.92785 4.67741 4.85431 4.60386L0.912022 0.896932C0.809051 0.808672 0.647241 0.808672 0.54427 0.911642C0.500141 0.955772 0.47072 1.02932 0.47072 1.08816C0.47072 1.16171 0.50014 1.22055 0.558981 1.27939L4.51598 4.98632Z"
+                          fill="#637381"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+
                   <DatePickerOne
                     enabled={true}
                     handleChange={handleDateChange}
-                    setValue={formatDateToString(date!)}
+                    setValue={date ? formatDateToString(new Date(date)) : ""} 
                   />
                 </div>
               </div>
