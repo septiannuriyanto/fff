@@ -255,7 +255,7 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
           if (result.errors.length === 0) {
             const columnXIndex = 0;
             const columnYIndex = 22; // Column U is index 20
-            const columnsToDelete = [12, 13]; // Columns M and N (zero-based indices)
+            const columnsToDelete = [7, 12, 13]; // Columns H, M and N (zero-based indices)
             const dateIssuedIndex = 1;
 
             // Process data: remove specified columns, slice columns A to U, and perform replacements
@@ -686,7 +686,8 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
       //     setProgressCount((prev) => prev - 1);
       //   }
       // }
-    } else {
+    } 
+    else if (columnId == 'Remark'){
       console.log('updating remark');
       const { error: remarkError } = await supabase
         .from('refueling_anomaly')
@@ -696,6 +697,17 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
         console.log(`Error updating remark: ${remarkError.message}`);
         return;
       }
+    }
+    else {
+      console.log('updating data');
+      // const { error: remarkError } = await supabase
+      //   .from('refueling_anomaly')
+      //   .update({ Remark: Remark })
+      //   .eq('JobRowId', JobRowId);
+      // if (remarkError) {
+      //   console.log(`Error updating remark: ${remarkError.message}`);
+      //   return;
+      // }
     }
   };
 
@@ -788,13 +800,14 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
                 Refueling Frequency Anomaly Analysis
               </h2>
               {swapChart? <AnomalyBarChart data={filteredData}/> : <AnomalyBarChartSwapped data={filteredData}/>}
-              <div className="buttonheaders w-full content-between flex justify-between">
-                <button
+              <div className="buttonheaders w-full content-between flex justify-between gap-1">
+                {allowColumnsEdit ? <button
                   onClick={onToggleFileInput}
                   className="mb-2 bg-gray-200 text-gray-800 border border-gray-300 rounded-md px-4 py-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
                 >
                   {showDragandDrop ? 'Close Panel' : 'Add New Data'}
-                </button>
+                </button> : null}
+                
 
                 <button
                   onClick={onToggleChartView}
