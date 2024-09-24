@@ -343,14 +343,10 @@ function App() {
         <Route
           path="/reporting/ritation"
           element={
-            <ProtectedRoute
-              element={
                 <>
                   <PageTitle title="FFF Dashboard | Ritation Report" />
                   <RitationReport />
                 </>
-              }
-            />
           }
         />
         <Route
