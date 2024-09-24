@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
 import { sendMessageToChannel } from '../../../../services/TelegramSender';
-import { formatDate, formatDateToDdMmyy, formatDateToString } from '../../../../Utils/DateUtility';
+import {
+  formatDate,
+  formatDateToDdMmyy,
+  formatDateToIndonesianByDate,
+  formatDateToString,
+} from '../../../../Utils/DateUtility';
 import DropZone from './DropZone';
 import { uploadImage } from '../../../../services/ImageUploader';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
-import Loader from '../../../../common/Loader';
-
+import LogoIcon from '../../../../images/logo/logo-icon.svg';
+import { getNrpFromName } from '../../../../functions/get_nrp';
 // Define the types
 interface PopulationData {
   unit_id: string;
@@ -20,6 +25,7 @@ interface ManpowerData {
 
 const RitationReport: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
   const [reportNumber, setReportNumber] = useState<number>(0);
   const [equipNumber, setEquipNumber] = useState<string>('');
   const [pressurelessCondition, setPressurelessCondition] = useState<number>(1);
@@ -46,13 +52,11 @@ const RitationReport: React.FC = () => {
       } else {
         console.log(data);
 
-        const units = data?.map((item) => item.unit_id) || [] ;
+        const units = data?.map((item) => item.unit_id) || [];
         const whs = data?.map((item) => item.warehouse_id) || [];
 
         setCodeNumbers(units);
         setWarehouses(whs);
-
-        
       }
     };
 
@@ -87,84 +91,120 @@ const RitationReport: React.FC = () => {
   }, []);
 
 
-  useEffect(()=>{
-    const fetchReportNumber = async ()=>{
-      const { data, error } = await supabase
-        .from('ritasi_fuel')
-        .select('no_surat_jalan')
-        .eq('ritation_date', formatDateToString(new Date()));
+  const getReportNumber = async () =>{
+    const { data, error } = await supabase
+    .from('ritasi_fuel')
+    .select('no_surat_jalan')
+    .eq('ritation_date', formatDateToString(new Date()));
 
-      if (error) {
-        console.error(error);
-        return;
-      } 
-      setReportNumber(data.length);
-      
-    }
+  if (error) {
+    console.error(error);
+    return;
+  }
+  return data.length;
+  }
+
+  const fetchReportNumber = async () => {
+    const { data, error } = await supabase
+    .from('ritasi_fuel')
+    .select('no_surat_jalan')
+    .eq('ritation_date', formatDateToString(new Date()));
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+    setReportNumber(data.length);
+  };
+
+  useEffect(() => {
+
 
     fetchReportNumber();
+  }, []);
 
-  },[]);
-
-  const normalizeReportNumber = (param:number) =>{
-      if(param < 10){
-        return `0${param}`
-      }
-      else return param
-  }
+  const normalizeReportNumber = (param: number) => {
+    if (param < 10) {
+      return `0${param}`;
+    } else return param;
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    const optNrp = await getNrpFromName(operator);
+    const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
     setIsLoading(true);
     //Upload Image
-    const flowmeterBeforeUrl = await uploadImage(flowmeterBeforeFile!, 'fm-before', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
-    const flowmeterAfterUrl = await uploadImage(flowmeterAfterFile!, 'fm-after', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
-    const suratJalanUrl = await uploadImage(suratJalanFile!, 'surat-jalan', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
-    
+    const flowmeterBeforeUrl = await uploadImage(
+      flowmeterBeforeFile!,
+      'fm-before',
+      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+        reportNumber + 1,
+      )}`,
+    );
+    const flowmeterAfterUrl = await uploadImage(
+      flowmeterAfterFile!,
+      'fm-after',
+      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+        reportNumber + 1,
+      )}`,
+    );
+    const suratJalanUrl = await uploadImage(
+      suratJalanFile!,
+      'surat-jalan',
+      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+        reportNumber + 1,
+      )}`,
+    );
+
     //Count required data
-    const flowmeterqty = parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
+    const flowmeterqty =
+      parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
     const whId = findWarehouseId(equipNumber);
 
     //Count the quantities
-    const avgQtyBefore = (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) /2;
-    const avgQtyAfter = (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
-    const qtySondingBefore = await getQtyByHeight(avgQtyBefore , whId) || 0;
-    const qtySondingAfter = await getQtyByHeight(avgQtyAfter , whId)  || 0;
+    const avgQtyBefore =
+      (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) / 2;
+    const avgQtyAfter =
+      (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
+    const qtySondingBefore = (await getQtyByHeight(avgQtyBefore, whId)) || 0;
+    const qtySondingAfter = (await getQtyByHeight(avgQtyAfter, whId)) || 0;
     const qtySonding = qtySondingAfter - qtySondingBefore;
 
     //construct the query
     let query = {
-      no_surat_jalan : `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`,
-      queue_num : reportNumber+1,
-      warehouse_id : whId,
-      qty_sj : flowmeterqty,
-      qty_sonding : qtySonding,
-      qty_sonding_before : qtySondingBefore,
-      qty_sonding_after : qtySondingAfter,
-      sonding_before_front : teraDepanBefore,
-      sonding_before_rear : teraBelakangBefore,
-      sonding_after_front : teraDepanAfter,
-      sonding_after_rear : teraBelakangAfter,
-      flowmeter_before_url : flowmeterBeforeUrl.imageUrl,
-      flowmeter_after_url : flowmeterAfterUrl.imageUrl,
-      sj_url : suratJalanUrl.imageUrl,
-      ritation_date : formatDateToString(new Date())
+      no_surat_jalan: `G${formatDateToDdMmyy(
+        new Date(),
+      )}${normalizeReportNumber(reportNumber + 1)}`,
+      queue_num: reportNumber + 1,
+      warehouse_id: whId,
+      operator_id : optNrp,
+      fuelman_id : fmNrp,
+      qty_sj: flowmeterqty,
+      qty_flowmeter_before : flowmeterBefore,
+      qty_flowmeter_after : flowmeterAfter,
+      qty_sonding: qtySonding,
+      qty_sonding_before: qtySondingBefore,
+      qty_sonding_after: qtySondingAfter,
+      sonding_before_front: teraDepanBefore,
+      sonding_before_rear: teraBelakangBefore,
+      sonding_after_front: teraDepanAfter,
+      sonding_after_rear: teraBelakangAfter,
+      flowmeter_before_url: flowmeterBeforeUrl.imageUrl,
+      flowmeter_after_url: flowmeterAfterUrl.imageUrl,
+      sj_url: suratJalanUrl.imageUrl,
+      ritation_date: formatDateToString(new Date()),
     };
 
-    const { error } = await supabase
-      .from('ritasi_fuel')
-      .insert([query]);
+    const { error } = await supabase.from('ritasi_fuel').insert([query]);
 
     if (error) {
       console.error(error);
     } else {
       //Ditch loading screen
-
-      setIsLoading(false);
-      alert('Data successfully submitted');
-      location.reload();
+      setIsComplete(true);
 
       // setEquipNumber('');
       // setPressurelessCondition(1);
@@ -221,7 +261,6 @@ const RitationReport: React.FC = () => {
     event: React.FormEvent<HTMLElement>,
     { newValue }: { newValue: string },
   ) => {
-    
     setEquipNumber(newValue);
   };
 
@@ -253,7 +292,7 @@ const RitationReport: React.FC = () => {
   );
   const [suratJalanFile, setSuratJalanFile] = useState<File | null>(null);
 
-  const handleFlowmeterBeforeUpload = async(file: File) => {
+  const handleFlowmeterBeforeUpload = async (file: File) => {
     setFlowmeterBeforeFile(file);
     // You can add additional logic here, like validating the file or processing it
     console.log('Flowmeter Before Uploaded:', file);
@@ -277,58 +316,159 @@ const RitationReport: React.FC = () => {
   const [flowmeterBefore, setFlowmeterBefore] = React.useState('');
   const [flowmeterAfter, setFlowmeterAfter] = React.useState('');
 
-  const handleTeraDepanBeforeChange = (event:any) => {
+  const handleTeraDepanBeforeChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setTeraDepanBefore(newValue);
     }
-  }
-  const handleTeraDepanAfterChange = (event:any) => {
+  };
+  const handleTeraDepanAfterChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setTeraDepanAfter(newValue);
     }
-  }
-  const handleTeraBelakangBeforeChange = (event:any) => {
+  };
+  const handleTeraBelakangBeforeChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setTeraBelakangBefore(newValue);
     }
-  }
-  const handleTeraBelakangAfterChange = (event:any) => {
+  };
+  const handleTeraBelakangAfterChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setTeraBelakangAfter(newValue);
     }
-  }
-  const handleFlowmeterBeforeChange = (event:any) => {
+  };
+  const handleFlowmeterBeforeChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setFlowmeterBefore(newValue);
     }
-  }
-  const handleFlowmeterAfterChange = (event:any) => {
+  };
+  const handleFlowmeterAfterChange = (event: any) => {
     const newValue = event.target.value;
     // Only allow numbers and periods
-    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === "") {
+    if (/^[0-9]*\.?[0-9]*$/.test(newValue) || newValue === '') {
       setFlowmeterAfter(newValue);
     }
-  }
+  };
 
-  return (
+  const handleShareInformation = async(e: any) => {
+    e.preventDefault();
+    const newReportNumber = await getReportNumber();
 
+    const no_surat_jalan = `G${formatDateToDdMmyy(
+      new Date(),
+    )}${normalizeReportNumber(newReportNumber || 0)}`;
 
-    (
-      isLoading? <Loader></Loader> :
-      <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
+    const { data, error } = await supabase
+    .from('ritasi_fuel')
+    .select('ritation_date,qty_sonding_before, qty_sonding_after, qty_sonding, qty_flowmeter_before, qty_flowmeter_after')
+    .eq('no_surat_jalan', no_surat_jalan);
+    
+    if(error){
+      alert (error.message);
+      return;
+    }
+    console.log(no_surat_jalan);
+    
+    console.log(data);
+
+    const flowmeterqty =
+      parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
+   
+    const url = `https://fff-project.vercel.app/reporting/ritation/${no_surat_jalan}`
+    
+    const averageTeraBefore = (parseFloat(teraDepanBefore)+parseFloat(teraBelakangBefore))/2;
+    const averageTeraAfter = (parseFloat(teraDepanAfter)+parseFloat(teraBelakangAfter))/2;
+    const information =
+    `LAPORAN RITASI\n
+    *====== Data Ritasi =======*
+    Tanggal : ${formatDateToIndonesianByDate(new Date(data[0].ritation_date))}
+    No. Surat jalan : ${no_surat_jalan}
+    Fuel Truck : ${equipNumber}
+    Operator : ${operator}
+    Fuelman : ${fuelman}
+    *====== Sonding Before =======*
+    Depan : ${teraDepanBefore} cm
+    Belakang : ${teraBelakangBefore} cm
+    Rata-Rata : ${averageTeraBefore} cm
+    Qty : ${data[0].qty_sonding_before} liter
+    *====== Sonding After =======*
+    Depan : ${teraDepanAfter} cm
+    Belakang : ${teraBelakangAfter} cm
+    Rata-Rata : ${averageTeraAfter} cm
+    Qty : ${data[0].qty_sonding_after} liter
+    *====== Flowmeter =======*
+    Before : ${data[0].qty_flowmeter_before}
+    After : ${data[0].qty_flowmeter_after}
+    Selisih : ${data[0].qty_flowmeter_after - data[0].qty_flowmeter_before} liter
+    *====== Summary =======*
+    Qty by Sonding ${data[0].qty_sonding} liter
+    Qty by SJ : ${flowmeterqty} liter
+    \nDetail : ${url}
+    `
+
+    const message = encodeURIComponent(information);
+  
+  // WhatsApp API link
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${message}`;
+  
+  // Open the URL
+  window.open(whatsappUrl, '_blank');
+  };
+
+  return isLoading ? (
+    <div>
+      <div className="flex flex-col">
+        <div className="flex h-screen items-center justify-center bg-white">
+          {isComplete ? (
+            <div></div>
+          ) : (
+            <div className="h-32 w-32 animate-spin rounded-full border-4 border-solid border-black border-t-transparent z-1 absolute m-auto"></div>
+          )}
+          <div className="flex justify-center items-center">
+            <img
+              className="align-middle h-12 z-99 absolute m-auto"
+              src={LogoIcon}
+              alt=""
+            />
+
+            <div className="relative top-25 text-center">
+              <h1 className="font-bold text-black">
+                Fuel Feasibility for Fleet
+              </h1>
+              {isComplete ? (
+                <div>
+                  <h1 className='mt-3'>Selesai, silahkan share ke group dengan klik tombol di bawah</h1>
+                  <button
+                    onClick={handleShareInformation}
+                    className="bg-primary text-white py-2 rounded hover:bg-blue-700 w-full"
+                  >
+                    Share
+                  </button>
+                </div>
+              ) : (
+                <h4>Now Loading....</h4>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <h1 className="block text-gray-700 mb-6">Nomor Ritasi :  {reportNumber + 1}</h1>
+        <h1 className="block text-gray-700 mb-6">
+          Nomor Ritasi : {reportNumber + 1}
+        </h1>
         <div className="mb-4">
           <label className="block text-gray-700">Nomor FT :</label>
           <Autosuggest
@@ -414,8 +554,8 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_before_front">Tera Depan</label>
               <input
-              value={teraDepanBefore}
-              onChange={handleTeraDepanBeforeChange}
+                value={teraDepanBefore}
+                onChange={handleTeraDepanBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
@@ -423,8 +563,8 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_before_front">Tera Belakang</label>
               <input
-              value={teraBelakangBefore}
-              onChange={handleTeraBelakangBeforeChange}
+                value={teraBelakangBefore}
+                onChange={handleTeraBelakangBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
@@ -432,8 +572,8 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input__flowmeter-before">Flowmeter Awal</label>
               <input
-              value={flowmeterBefore}
-              onChange={handleFlowmeterBeforeChange}
+                value={flowmeterBefore}
+                onChange={handleFlowmeterBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
@@ -447,8 +587,8 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_after_front">Tera Depan</label>
               <input
-              value={teraDepanAfter}
-              onChange={handleTeraDepanAfterChange}
+                value={teraDepanAfter}
+                onChange={handleTeraDepanAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
@@ -456,8 +596,8 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_after_front">Tera Belakang</label>
               <input
-              value={teraBelakangAfter}
-              onChange={handleTeraBelakangAfterChange}
+                value={teraBelakangAfter}
+                onChange={handleTeraBelakangAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
@@ -467,8 +607,8 @@ const RitationReport: React.FC = () => {
                 Flowmeter Akhir
               </label>
               <input
-              value={flowmeterAfter}
-              onChange={handleFlowmeterAfterChange}
+                value={flowmeterAfter}
+                onChange={handleFlowmeterAfterChange}
                 inputMode="decimal"
                 type="text"
                 className="input__flowmeter-after w-full p-2 border rounded mb-2"
@@ -478,9 +618,10 @@ const RitationReport: React.FC = () => {
           <div className="data_menpower-ritasi flex flex-row justify-between grow gap-4 mb-4">
             <div className="foto__flowmeter-before w-full">
               {flowmeterBeforeFile ? (
-                <div className="file-preview">
+                <div className="file-preview1">
                   <h2>Uploaded File:</h2>
                   <img
+                    id="fm-before"
                     src={URL.createObjectURL(flowmeterBeforeFile)}
                     alt={flowmeterBeforeFile.name}
                     className="thumbnail w-full h-auto"
@@ -488,6 +629,7 @@ const RitationReport: React.FC = () => {
                 </div>
               ) : (
                 <DropZone
+                  id="fm-before"
                   title="Flowmeter Before"
                   onFileUpload={handleFlowmeterBeforeUpload}
                 />
@@ -495,9 +637,10 @@ const RitationReport: React.FC = () => {
             </div>
             <div className="foto__flowmeter-after w-full">
               {flowmeterAfterFile ? (
-                <div className="file-preview">
+                <div className="file-preview2">
                   <h2>Uploaded File:</h2>
                   <img
+                    id="fm-after"
                     src={URL.createObjectURL(flowmeterAfterFile)}
                     alt={flowmeterAfterFile.name}
                     className="thumbnail w-full h-auto"
@@ -505,6 +648,7 @@ const RitationReport: React.FC = () => {
                 </div>
               ) : (
                 <DropZone
+                  id="fm-after"
                   title="Flowmeter After"
                   onFileUpload={handleFlowmeterAfterUpload}
                 />
@@ -512,9 +656,10 @@ const RitationReport: React.FC = () => {
             </div>
             <div className="foto__surat-jalan w-full">
               {suratJalanFile ? (
-                <div className="file-preview">
+                <div className="file-preview3">
                   <h2>Uploaded File:</h2>
                   <img
+                    id="surat-jalan"
                     src={URL.createObjectURL(suratJalanFile)}
                     alt={suratJalanFile.name}
                     className="thumbnail w-full h-auto"
@@ -522,6 +667,7 @@ const RitationReport: React.FC = () => {
                 </div>
               ) : (
                 <DropZone
+                  id="surat-jalan"
                   title="Surat Jalan"
                   onFileUpload={handleSuratJalanUpload}
                 />
@@ -538,7 +684,6 @@ const RitationReport: React.FC = () => {
         </button>
       </form>
     </div>
-    )
   );
 };
 

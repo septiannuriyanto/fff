@@ -2,10 +2,11 @@ import { useState } from 'react';
 
 interface DropZoneProps {
   title: string;
+  id:string;
   onFileUpload: (file: File) => void;
 }
 
-const DropZone: React.FC<DropZoneProps> = ({ title, onFileUpload }) => {
+const DropZone: React.FC<DropZoneProps> = ({ title, id, onFileUpload }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -48,7 +49,7 @@ const DropZone: React.FC<DropZoneProps> = ({ title, onFileUpload }) => {
         onDragLeave={handleDragLeave}
       >
         <label
-          htmlFor="dropzone-file"
+          htmlFor={id}
           className="flex flex-col items-center justify-center w-full h-full"
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -75,7 +76,7 @@ const DropZone: React.FC<DropZoneProps> = ({ title, onFileUpload }) => {
             </p>
           </div>
           <input
-            id="dropzone-file"
+            id={id}
             type="file"
             className="hidden"
             accept=".png, .jpg, .jpeg"

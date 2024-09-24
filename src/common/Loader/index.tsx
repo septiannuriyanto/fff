@@ -1,6 +1,6 @@
 import LogoIcon from '../../images/logo/logo-icon.svg';
 
-const Loader = () => {
+const Loader = (title:any) => {
   return (
     <div className="flex flex-col">
       <div className="flex h-screen items-center justify-center bg-white">
@@ -15,7 +15,7 @@ const Loader = () => {
 
           <div className="relative top-25 text-center">
             <h1 className='font-bold text-black'>Fuel Feasibility for Fleet</h1>
-            <h4>Now Loading....</h4>
+            <h4>{title || 'Now Loading....'}</h4>
           </div>
 
         </div>
