@@ -78,7 +78,7 @@ const DropZone: React.FC<DropZoneProps> = ({ title, onFileUpload }) => {
             id="dropzone-file"
             type="file"
             className="hidden"
-            accept=".png, .jpg"
+            accept=".png, .jpg, .jpeg"
             onChange={handleFileChange}
           />
         </label>

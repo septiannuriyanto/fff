@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
 import { sendMessageToChannel } from '../../../../services/TelegramSender';
-import { formatDate } from '../../../../Utils/DateUtility';
+import { formatDate, formatDateToDdMmyy, formatDateToString } from '../../../../Utils/DateUtility';
 import DropZone from './DropZone';
+import { uploadImage } from '../../../../services/ImageUploader';
+import { getQtyByHeight } from '../../../../functions/Interpolate';
 
 // Define the types
 interface PopulationData {
@@ -16,6 +18,7 @@ interface ManpowerData {
 }
 
 const RitationReport: React.FC = () => {
+  const [reportNumber, setReportNumber] = useState<number>(0);
   const [equipNumber, setEquipNumber] = useState<string>('');
   const [pressurelessCondition, setPressurelessCondition] = useState<number>(1);
   const [reportBy, setReportBy] = useState<string>('');
@@ -23,6 +26,7 @@ const RitationReport: React.FC = () => {
   const [operator, setOperator] = useState<string>('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [codeNumbers, setCodeNumbers] = useState<string[]>([]);
+  const [warehouses, setWarehouses] = useState<string[]>([]);
   const [fuelmanSuggestions, setFuelmanSuggestions] = useState<string[]>([]);
   const [operatorSuggestions, setOperatorSuggestions] = useState<string[]>([]);
 
@@ -32,7 +36,7 @@ const RitationReport: React.FC = () => {
   useEffect(() => {
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
-        .from<PopulationData>('storage')
+        .from('storage')
         .select('unit_id, warehouse_id')
         .order('warehouse_id');
       if (error) {
@@ -40,13 +44,19 @@ const RitationReport: React.FC = () => {
       } else {
         console.log(data);
 
-        setCodeNumbers(data?.map((item) => item.unit_id) || []);
+        const units = data?.map((item) => item.unit_id) || [] ;
+        const whs = data?.map((item) => item.warehouse_id) || [];
+
+        setCodeNumbers(units);
+        setWarehouses(whs);
+
+        
       }
     };
 
     const fetchFuelman = async () => {
       const { data, error } = await supabase
-        .from<ManpowerData>('manpower')
+        .from('manpower')
         .select('nama')
         .eq('position', 5);
 
@@ -74,39 +84,88 @@ const RitationReport: React.FC = () => {
     fetchOperator();
   }, []);
 
+
+  useEffect(()=>{
+    const fetchReportNumber = async ()=>{
+      const { data, error } = await supabase
+        .from('ritasi_fuel')
+        .select('no_surat_jalan')
+        .eq('ritation_date', formatDateToString(new Date()));
+
+      if (error) {
+        console.error(error);
+        return;
+      } 
+      setReportNumber(data.length);
+      
+    }
+
+    fetchReportNumber();
+
+  },[]);
+
+  const normalizeReportNumber = (param:number) =>{
+      if(param < 10){
+        return `0${param}`
+      }
+      else return param
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    let query = {};
+    
+    //Upload Image
+    const flowmeterBeforeUrl = await uploadImage(flowmeterBeforeFile!, 'fm-before', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
+    const flowmeterAfterUrl = await uploadImage(flowmeterAfterFile!, 'fm-after', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
+    const suratJalanUrl = await uploadImage(suratJalanFile!, 'surat-jalan', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
+    
+    //Count required data
+    const flowmeterqty = parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
+    const whId = findWarehouseId(equipNumber);
 
-    if (pressurelessCondition == 1) {
-      query = {
-        equip_number: equipNumber,
-        pressureless_condition: pressurelessCondition,
-        report_by: reportBy,
-        status: 'CLOSED',
-      };
-    } else {
-      query = {
-        equip_number: equipNumber,
-        pressureless_condition: pressurelessCondition,
-        report_by: reportBy,
-      };
-    }
+    //Count the quantities
+    const avgQtyBefore = (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) /2;
+    const avgQtyAfter = (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
+    const qtySondingBefore = await getQtyByHeight(avgQtyBefore , whId) || 0;
+    const qtySondingAfter = await getQtyByHeight(avgQtyAfter , whId)  || 0;
+    const qtySonding = qtySondingAfter - qtySondingBefore;
+
+    //construct the query
+    let query = {
+      no_surat_jalan : `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`,
+      queue_num : reportNumber+1,
+      warehouse_id : whId,
+      qty_sj : flowmeterqty,
+      qty_sonding : qtySonding,
+      qty_sonding_before : qtySondingBefore,
+      qty_sonding_after : qtySondingAfter,
+      sonding_before_front : teraDepanBefore,
+      sonding_before_rear : teraBelakangBefore,
+      sonding_after_front : teraDepanAfter,
+      sonding_after_rear : teraBelakangAfter,
+      flowmeter_before_url : flowmeterBeforeUrl.imageUrl,
+      flowmeter_after_url : flowmeterAfterUrl.imageUrl,
+      sj_url : suratJalanUrl.imageUrl,
+      ritation_date : formatDateToString(new Date())
+    };
+
     const { error } = await supabase
-      .from('pressureless_report')
+      .from('ritasi_fuel')
       .insert([query]);
 
     if (error) {
       console.error(error);
     } else {
       alert('Data successfully submitted');
-      setEquipNumber('');
-      setPressurelessCondition(1);
-      setReportBy('');
-      const message = `PRESSURELESS REPORT\n\nLast Checked :${formatDate(
-        Date.now(),
-      )}\nReported by : ${reportBy}\nUnit : ${equipNumber}\nCondition : ${pressurelessCondition}\nVisit : https://fff-project.vercel.app/pressureless`;
-      sendMessageToChannel(message);
+      location.reload();
+
+      // setEquipNumber('');
+      // setPressurelessCondition(1);
+      // setReportBy('');
+      // const message = `PRESSURELESS REPORT\n\nLast Checked :${formatDate(
+      //   Date.now(),
+      // )}\nReported by : ${reportBy}\nUnit : ${equipNumber}\nCondition : ${pressurelessCondition}\nVisit : https://fff-project.vercel.app/pressureless`;
+      // sendMessageToChannel(message);
     }
   };
 
@@ -155,7 +214,13 @@ const RitationReport: React.FC = () => {
     event: React.FormEvent<HTMLElement>,
     { newValue }: { newValue: string },
   ) => {
+    
     setEquipNumber(newValue);
+  };
+
+  const findWarehouseId = (unitId: string) => {
+    const result = codeNumbers.indexOf(unitId);
+    return warehouses[result]; // Return the warehouse_id or null if not found
   };
 
   const onFuelmanChange = (
@@ -181,7 +246,7 @@ const RitationReport: React.FC = () => {
   );
   const [suratJalanFile, setSuratJalanFile] = useState<File | null>(null);
 
-  const handleFlowmeterBeforeUpload = (file: File) => {
+  const handleFlowmeterBeforeUpload = async(file: File) => {
     setFlowmeterBeforeFile(file);
     // You can add additional logic here, like validating the file or processing it
     console.log('Flowmeter Before Uploaded:', file);
@@ -252,9 +317,9 @@ const RitationReport: React.FC = () => {
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <h1 className="block text-gray-700 mb-6">Nomor Ritasi : </h1>
+        <h1 className="block text-gray-700 mb-6">Nomor Ritasi :  {reportNumber + 1}</h1>
         <div className="mb-4">
-          <label className="block text-gray-700">Equipment Number:</label>
+          <label className="block text-gray-700">Nomor FT :</label>
           <Autosuggest
             suggestions={suggestions}
             onSuggestionsFetchRequested={onSuggestionsFetchRequested}
@@ -288,7 +353,7 @@ const RitationReport: React.FC = () => {
               getSuggestionValue={getSuggestionValue}
               renderSuggestion={renderSuggestion}
               inputProps={{
-                placeholder: 'Ketik nama Fuelman',
+                placeholder: 'Ketik dan pilih nama',
                 value: fuelman,
                 onChange: onFuelmanChange,
                 className: 'w-full p-2 mt-1 border rounded',
@@ -313,7 +378,7 @@ const RitationReport: React.FC = () => {
               getSuggestionValue={getSuggestionValue}
               renderSuggestion={renderSuggestion}
               inputProps={{
-                placeholder: 'Ketik nama Operator',
+                placeholder: 'Ketik dan pilih nama',
                 value: operator,
                 onChange: onOperatorChange,
                 className: 'w-full p-2 mt-1 border rounded',
@@ -338,6 +403,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_before_front">Tera Depan</label>
               <input
+              value={teraDepanBefore}
               onChange={handleTeraDepanBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
@@ -346,6 +412,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_before_front">Tera Belakang</label>
               <input
+              value={teraBelakangBefore}
               onChange={handleTeraBelakangBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
@@ -354,6 +421,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input__flowmeter-before">Flowmeter Awal</label>
               <input
+              value={flowmeterBefore}
               onChange={handleFlowmeterBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
@@ -368,6 +436,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_after_front">Tera Depan</label>
               <input
+              value={teraDepanAfter}
               onChange={handleTeraDepanAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
@@ -376,6 +445,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_after_front">Tera Belakang</label>
               <input
+              value={teraBelakangAfter}
               onChange={handleTeraBelakangAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
@@ -386,8 +456,8 @@ const RitationReport: React.FC = () => {
                 Flowmeter Akhir
               </label>
               <input
+              value={flowmeterAfter}
               onChange={handleFlowmeterAfterChange}
-                pattern="[0-9]*\.?[0-9]*"
                 inputMode="decimal"
                 type="text"
                 className="input__flowmeter-after w-full p-2 border rounded mb-2"
@@ -402,7 +472,7 @@ const RitationReport: React.FC = () => {
                   <img
                     src={URL.createObjectURL(flowmeterBeforeFile)}
                     alt={flowmeterBeforeFile.name}
-                    className="thumbnail h-32 w-32"
+                    className="thumbnail w-full h-auto"
                   />
                 </div>
               ) : (
@@ -419,7 +489,7 @@ const RitationReport: React.FC = () => {
                   <img
                     src={URL.createObjectURL(flowmeterAfterFile)}
                     alt={flowmeterAfterFile.name}
-                    className="thumbnail h-32 w-32"
+                    className="thumbnail w-full h-auto"
                   />
                 </div>
               ) : (
@@ -436,7 +506,7 @@ const RitationReport: React.FC = () => {
                   <img
                     src={URL.createObjectURL(suratJalanFile)}
                     alt={suratJalanFile.name}
-                    className="thumbnail h-32 w-32"
+                    className="thumbnail w-full h-auto"
                   />
                 </div>
               ) : (
