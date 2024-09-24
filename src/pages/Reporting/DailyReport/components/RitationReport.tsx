@@ -6,6 +6,7 @@ import { formatDate, formatDateToDdMmyy, formatDateToString } from '../../../../
 import DropZone from './DropZone';
 import { uploadImage } from '../../../../services/ImageUploader';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
+import Loader from '../../../../common/Loader';
 
 // Define the types
 interface PopulationData {
@@ -18,6 +19,7 @@ interface ManpowerData {
 }
 
 const RitationReport: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [reportNumber, setReportNumber] = useState<number>(0);
   const [equipNumber, setEquipNumber] = useState<string>('');
   const [pressurelessCondition, setPressurelessCondition] = useState<number>(1);
@@ -114,6 +116,8 @@ const RitationReport: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    //Set loading screen
+    setIsLoading(true);
     //Upload Image
     const flowmeterBeforeUrl = await uploadImage(flowmeterBeforeFile!, 'fm-before', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
     const flowmeterAfterUrl = await uploadImage(flowmeterAfterFile!, 'fm-after', `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(reportNumber+1)}`)
@@ -156,6 +160,9 @@ const RitationReport: React.FC = () => {
     if (error) {
       console.error(error);
     } else {
+      //Ditch loading screen
+
+      setIsLoading(false);
       alert('Data successfully submitted');
       location.reload();
 
@@ -314,7 +321,11 @@ const RitationReport: React.FC = () => {
   }
 
   return (
-    <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
+
+
+    (
+      isLoading? <Loader></Loader> :
+      <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
         <h1 className="block text-gray-700 mb-6">Nomor Ritasi :  {reportNumber + 1}</h1>
@@ -527,6 +538,7 @@ const RitationReport: React.FC = () => {
         </button>
       </form>
     </div>
+    )
   );
 };
 
