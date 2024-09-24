@@ -384,7 +384,7 @@ const RitationReport: React.FC = () => {
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
    
     const url = `https://fff-project.vercel.app/reporting/ritation/${no_surat_jalan}`
-    
+     
     const averageTeraBefore = (parseFloat(teraDepanBefore)+parseFloat(teraBelakangBefore))/2;
     const averageTeraAfter = (parseFloat(teraDepanAfter)+parseFloat(teraBelakangAfter))/2;
     const information =

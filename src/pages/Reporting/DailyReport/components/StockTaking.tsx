@@ -12,7 +12,7 @@ import {
 } from '../../../../Utils/DateUtility';
 import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import moment from 'moment';
-import { getQtyByHeight } from '../../../../functions/interpolate';
+import { getQtyByHeight } from '../../../../functions/Interpolate';
 
 const StockTaking: React.FC = () => {
   const fullColumns = [
