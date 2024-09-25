@@ -202,6 +202,9 @@ const RitationReport: React.FC = () => {
 
     if (error) {
       console.error(error);
+      alert(error);
+      setIsComplete(false);
+      setIsLoading(false);
     } else {
       //Ditch loading screen
       setIsComplete(true);
