@@ -26,7 +26,7 @@ interface ManpowerData {
 const RitationReport: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [reportNumber, setReportNumber] = useState<number>(0);
+  const [reportNumber, setReportNumber] = useState('');
   const [equipNumber, setEquipNumber] = useState<string>('');
   const [pressurelessCondition, setPressurelessCondition] = useState<number>(1);
   const [reportBy, setReportBy] = useState<string>('');
@@ -90,38 +90,35 @@ const RitationReport: React.FC = () => {
     fetchOperator();
   }, []);
 
+  // const getReportNumber = async () => {
+  //   const { data, error } = await supabase
+  //     .from('ritasi_fuel')
+  //     .select('no_surat_jalan')
+  //     .eq('ritation_date', formatDateToString(new Date()));
 
-  const getReportNumber = async () =>{
-    const { data, error } = await supabase
-    .from('ritasi_fuel')
-    .select('no_surat_jalan')
-    .eq('ritation_date', formatDateToString(new Date()));
+  //   if (error) {
+  //     console.error(error);
+  //     return;
+  //   }
+  //   return data.length;
+  // };
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-  return data.length;
-  }
+  // const fetchReportNumber = async () => {
+  //   const { data, error } = await supabase
+  //     .from('ritasi_fuel')
+  //     .select('no_surat_jalan')
+  //     .eq('ritation_date', formatDateToString(new Date()));
 
-  const fetchReportNumber = async () => {
-    const { data, error } = await supabase
-    .from('ritasi_fuel')
-    .select('no_surat_jalan')
-    .eq('ritation_date', formatDateToString(new Date()));
+  //   if (error) {
+  //     console.error(error);
+  //     return;
+  //   }
+  //   setReportNumber(data.length);
+  // };
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-    setReportNumber(data.length);
-  };
-
-  useEffect(() => {
-
-
-    fetchReportNumber();
-  }, []);
+  // useEffect(() => {
+  //   fetchReportNumber();
+  // }, []);
 
   const normalizeReportNumber = (param: number) => {
     if (param < 10) {
@@ -131,7 +128,7 @@ const RitationReport: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
@@ -141,21 +138,21 @@ const RitationReport: React.FC = () => {
       flowmeterBeforeFile!,
       'fm-before',
       `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
-        reportNumber + 1,
+        parseInt(reportNumber),
       )}`,
     );
     const flowmeterAfterUrl = await uploadImage(
       flowmeterAfterFile!,
       'fm-after',
       `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
-        reportNumber + 1,
+        parseInt(reportNumber),
       )}`,
     );
     const suratJalanUrl = await uploadImage(
       suratJalanFile!,
       'surat-jalan',
       `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
-        reportNumber + 1,
+        parseInt(reportNumber),
       )}`,
     );
 
@@ -177,14 +174,14 @@ const RitationReport: React.FC = () => {
     let query = {
       no_surat_jalan: `G${formatDateToDdMmyy(
         new Date(),
-      )}${normalizeReportNumber(reportNumber + 1)}`,
-      queue_num: reportNumber + 1,
+      )}${normalizeReportNumber(parseInt(reportNumber))}`,
+      queue_num: parseInt(reportNumber),
       warehouse_id: whId,
-      operator_id : optNrp,
-      fuelman_id : fmNrp,
+      operator_id: optNrp,
+      fuelman_id: fmNrp,
       qty_sj: flowmeterqty,
-      qty_flowmeter_before : flowmeterBefore,
-      qty_flowmeter_after : flowmeterAfter,
+      qty_flowmeter_before: flowmeterBefore,
+      qty_flowmeter_after: flowmeterAfter,
       qty_sonding: qtySonding,
       qty_sonding_before: qtySondingBefore,
       qty_sonding_after: qtySondingAfter,
@@ -362,36 +359,39 @@ const RitationReport: React.FC = () => {
     }
   };
 
-  const handleShareInformation = async(e: any) => {
+  const handleShareInformation = async (e: any) => {
     e.preventDefault();
-    const newReportNumber = await getReportNumber();
+    const newReportNumber = parseInt(reportNumber);
 
     const no_surat_jalan = `G${formatDateToDdMmyy(
       new Date(),
     )}${normalizeReportNumber(newReportNumber || 0)}`;
 
     const { data, error } = await supabase
-    .from('ritasi_fuel')
-    .select('ritation_date,qty_sonding_before, qty_sonding_after, qty_sonding, qty_flowmeter_before, qty_flowmeter_after')
-    .eq('no_surat_jalan', no_surat_jalan);
-    
-    if(error){
-      alert (error.message);
+      .from('ritasi_fuel')
+      .select(
+        'ritation_date,qty_sonding_before, qty_sonding_after, qty_sonding, qty_flowmeter_before, qty_flowmeter_after',
+      )
+      .eq('no_surat_jalan', no_surat_jalan);
+
+    if (error) {
+      alert(error.message);
       return;
     }
     console.log(no_surat_jalan);
-    
+
     console.log(data);
 
     const flowmeterqty =
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
-   
-    const url = `https://fff-project.vercel.app/reporting/ritation/${no_surat_jalan}`
-     
-    const averageTeraBefore = (parseFloat(teraDepanBefore)+parseFloat(teraBelakangBefore))/2;
-    const averageTeraAfter = (parseFloat(teraDepanAfter)+parseFloat(teraBelakangAfter))/2;
-    const information =
-    `LAPORAN RITASI\n
+
+    const url = `https://fff-project.vercel.app/reporting/ritation/${no_surat_jalan}`;
+
+    const averageTeraBefore =
+      (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) / 2;
+    const averageTeraAfter =
+      (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
+    const information = `LAPORAN RITASI\n
     *====== Data Ritasi =======*
     Tanggal : ${formatDateToIndonesianByDate(new Date(data[0].ritation_date))}
     No. Surat jalan : ${no_surat_jalan}
@@ -411,21 +411,29 @@ const RitationReport: React.FC = () => {
     *====== Flowmeter =======*
     Before : ${data[0].qty_flowmeter_before}
     After : ${data[0].qty_flowmeter_after}
-    Selisih : ${data[0].qty_flowmeter_after - data[0].qty_flowmeter_before} liter
+    Selisih : ${
+      data[0].qty_flowmeter_after - data[0].qty_flowmeter_before
+    } liter
     *====== Summary =======*
     Qty by Sonding ${data[0].qty_sonding} liter
     Qty by SJ : ${flowmeterqty} liter
     \nDetail : ${url}
-    `
+    `;
 
     const message = encodeURIComponent(information);
-  
-  // WhatsApp API link
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${message}`;
-  
-  // Open the URL
-  window.open(whatsappUrl, '_blank');
+
+    // WhatsApp API link
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${message}`;
+
+    // Open the URL
+    window.open(whatsappUrl, '_blank');
   };
+
+  const handleChangeReportNumber = (e:any) =>{
+    setReportNumber(e.target.value)
+    console.log(e.target.value);
+    
+  }
 
   return isLoading ? (
     <div>
@@ -449,7 +457,9 @@ const RitationReport: React.FC = () => {
               </h1>
               {isComplete ? (
                 <div>
-                  <h1 className='mt-3'>Selesai, silahkan share ke group dengan klik tombol di bawah</h1>
+                  <h1 className="mt-3">
+                    Selesai, silahkan share ke group dengan klik tombol di bawah
+                  </h1>
                   <button
                     onClick={handleShareInformation}
                     className="bg-primary text-white py-2 rounded hover:bg-blue-700 w-full"
@@ -469,10 +479,20 @@ const RitationReport: React.FC = () => {
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <h1 className="block text-gray-700 mb-6">
-          Nomor Ritasi : {reportNumber + 1}
-        </h1>
-        <div className="mb-4">
+
+        <div className="header-input flex flex-row w-full gap-4 mb-2">
+        <div className="input__sj-number w-full">
+          <label htmlFor="input_tera_before_front">Nomor Surat Jalan</label>
+          <input
+            value={reportNumber}
+            onChange={handleChangeReportNumber}
+            pattern="[0-9]*\.?[0-9]*"
+            inputMode="decimal"
+            type="text"
+            className="input_tera_before_front w-full p-2 border rounded"
+          />
+        </div>
+        <div className=" w-full">
           <label className="block text-gray-700">Nomor FT :</label>
           <Autosuggest
             suggestions={suggestions}
@@ -484,7 +504,7 @@ const RitationReport: React.FC = () => {
               placeholder: 'Ketik Kode Unit',
               value: equipNumber,
               onChange: onEquipNumberChange,
-              className: 'w-full p-2 mt-1 border rounded',
+              className: 'w-full p-2  border rounded',
               required: true,
             }}
             theme={{
@@ -497,6 +517,8 @@ const RitationReport: React.FC = () => {
             }}
           />
         </div>
+        </div>
+        
         <div className="data_menpower-ritasi flex flex-row justify-between grow gap-4 mb-4">
           <div className="w-full">
             <label className="block text-gray-700">Fuelman:</label>
