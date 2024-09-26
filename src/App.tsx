@@ -32,6 +32,7 @@ import LeaveList from './pages/Dashboard/Manpower/Leave/LeaveList';
 import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 import StockReporting from './pages/Reporting/DailyReport/components/StockReporting';
 import StockTaking from './pages/Reporting/DailyReport/components/StockTaking';
+import Ritation from './pages/Dashboard/Operational/Ritation/Ritation';
 
 function App() {
   return (
@@ -88,6 +89,19 @@ function App() {
                 <>
                   <PageTitle title="FFF Dashboard | Operational Dashboard" />
                   <Operational />
+                </>
+              }
+            />
+          }
+        />
+        <Route
+          path="/operational/ritation"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Ritation Dashboard" />
+                  <Ritation />
                 </>
               }
             />
