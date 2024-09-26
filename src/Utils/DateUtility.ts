@@ -29,6 +29,14 @@ const formatDate = (date:number) => {
     return `${day}${month}${year}`;
   };
 
+  const formatDateToYyMmDd = (date: Date) => {
+    // Format the day, month, and year components with leading zeros if necessary
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2); 
+    return `${year}${month}${day}`;
+  };
+
   const formatDateToIndonesian = (date: number) => {
     // Create a new Date object and add 8 hours to get UTC+8
     const utcDate = new Date(date + 8 * 60 * 60 * 1000);
@@ -77,4 +85,4 @@ const formatDate = (date:number) => {
     return `${year}-${month}-${day}`;
   };
 
-  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate, formatDateToISO, formatDateToString, formatDateToDdMmyy }
+  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate, formatDateToISO, formatDateToString, formatDateToDdMmyy, formatDateToYyMmDd }

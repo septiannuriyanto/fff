@@ -7,6 +7,7 @@ import {
   formatDateToDdMmyy,
   formatDateToIndonesianByDate,
   formatDateToString,
+  formatDateToYyMmDd,
 } from '../../../../Utils/DateUtility';
 import DropZone from './DropZone';
 import { uploadImage } from '../../../../services/ImageUploader';
@@ -172,7 +173,7 @@ const RitationReport: React.FC = () => {
 
     //construct the query
     let query = {
-      no_surat_jalan: `G${formatDateToDdMmyy(
+      no_surat_jalan: `G${formatDateToYyMmDd(
         new Date(),
       )}${normalizeReportNumber(parseInt(reportNumber))}`,
       queue_num: parseInt(reportNumber),
