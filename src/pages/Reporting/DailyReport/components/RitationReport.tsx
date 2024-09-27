@@ -11,9 +11,12 @@ import {
 } from '../../../../Utils/DateUtility';
 import DropZone from './DropZone';
 import { uploadImage } from '../../../../services/ImageUploader';
-import { getQtyByHeight } from '../../../../functions/Interpolate';
+
 import LogoIcon from '../../../../images/logo/logo-icon.svg';
 import { getNrpFromName } from '../../../../functions/get_nrp';
+import { shareMessageToWhatsapp } from '../../../../functions/share_message';
+import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
+import { getQtyByHeight } from '../../../../functions/interpolate';
 // Define the types
 interface PopulationData {
   unit_id: string;
@@ -121,11 +124,7 @@ const RitationReport: React.FC = () => {
   //   fetchReportNumber();
   // }, []);
 
-  const normalizeReportNumber = (param: number) => {
-    if (param < 10) {
-      return `0${param}`;
-    } else return param;
-  };
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -138,21 +137,21 @@ const RitationReport: React.FC = () => {
     const flowmeterBeforeUrl = await uploadImage(
       flowmeterBeforeFile!,
       'fm-before',
-      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
         parseInt(reportNumber),
       )}`,
     );
     const flowmeterAfterUrl = await uploadImage(
       flowmeterAfterFile!,
       'fm-after',
-      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
         parseInt(reportNumber),
       )}`,
     );
     const suratJalanUrl = await uploadImage(
       suratJalanFile!,
       'surat-jalan',
-      `G${formatDateToDdMmyy(new Date())}${normalizeReportNumber(
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
         parseInt(reportNumber),
       )}`,
     );
@@ -175,7 +174,7 @@ const RitationReport: React.FC = () => {
     let query = {
       no_surat_jalan: `G${formatDateToYyMmDd(
         new Date(),
-      )}${normalizeReportNumber(parseInt(reportNumber))}`,
+      )}${normalizeToTwoDigit(parseInt(reportNumber))}`,
       queue_num: parseInt(reportNumber),
       warehouse_id: whId,
       operator_id: optNrp,
@@ -366,12 +365,12 @@ const RitationReport: React.FC = () => {
 
     const no_surat_jalan = `G${formatDateToYyMmDd(
       new Date(),
-    )}${normalizeReportNumber(newReportNumber || 0)}`;
+    )}${normalizeToTwoDigit(newReportNumber || 0)}`;
 
     const { data, error } = await supabase
       .from('ritasi_fuel')
       .select(
-        'ritation_date,qty_sonding_before, qty_sonding_after, qty_sonding, qty_flowmeter_before, qty_flowmeter_after',
+        'ritation_date, qty_sonding_before, qty_sonding_after, qty_sonding, qty_flowmeter_before, qty_flowmeter_after',
       )
       .eq('no_surat_jalan', no_surat_jalan);
 
@@ -421,14 +420,11 @@ const RitationReport: React.FC = () => {
     \nDetail : ${url}
     `;
 
-    const message = encodeURIComponent(information);
-
-    // WhatsApp API link
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${message}`;
-
-    // Open the URL
-    window.open(whatsappUrl, '_blank');
+    shareMessageToWhatsapp(information);
   };
+
+
+
 
   const handleChangeReportNumber = (e:any) =>{
     setReportNumber(e.target.value)
