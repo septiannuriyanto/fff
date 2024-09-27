@@ -2,11 +2,10 @@ import { supabase } from "../db/SupabaseClient";
 import { formatDateToYyMmDd } from "../Utils/DateUtility";
 import { normalizeToTwoDigit } from "../Utils/NumberUtility";
 
-const constructMessage = async (ritationData:RitasiFuelData) =>{
-
+const constructMessage = (ritationData:RitasiFuelData) =>{
     const averageTeraBefore = (ritationData.sonding_before_front + ritationData.sonding_before_rear)/2;
     const averageTeraAfter = (ritationData.sonding_after_front + ritationData.sonding_after_rear)/2;
-   
+    const url = `https://fff-project.vercel.app/reporting/ritation/${ritationData.no_surat_jalan}`;
     const information = `LAPORAN RITASI\n
     *====== Data Ritasi =======*
     Tanggal : ${ritationData.ritation_date}
@@ -35,8 +34,6 @@ const constructMessage = async (ritationData:RitasiFuelData) =>{
     Qty by SJ : ${ritationData.qty_sj} liter
     \nDetail : ${url}
     `;
-
-
     return information;
 
 }
@@ -53,4 +50,4 @@ const shareMessageToWhatsapp =(information:any)=>{
 }
 
 
-export { shareMessageToWhatsapp }
+export { constructMessage, shareMessageToWhatsapp }

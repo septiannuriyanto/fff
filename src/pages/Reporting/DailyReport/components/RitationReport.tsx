@@ -15,8 +15,8 @@ import { uploadImage } from '../../../../services/ImageUploader';
 import LogoIcon from '../../../../images/logo/logo-icon.svg';
 import { getNrpFromName } from '../../../../functions/get_nrp';
 import { shareMessageToWhatsapp } from '../../../../functions/share_message';
-import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
-import { getQtyByHeight } from '../../../../functions/interpolate';
+import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';  
+import { getQtyByHeight } from '../../../../functions/Interpolate';
 // Define the types
 interface PopulationData {
   unit_id: string;

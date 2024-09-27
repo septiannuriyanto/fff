@@ -6,6 +6,7 @@ import RitationAction from '../components/RitationAction';
 import toast, { Toaster } from 'react-hot-toast';
 import CardDataStats from '../../../../components/CardDataStats';
 import { formatNumberWithSeparator } from '../../../../Utils/NumberUtility';
+import { constructMessage, shareMessageToWhatsapp } from '../../../../functions/share_message';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -90,6 +91,15 @@ const Ritation = () => {
       ),
     );
   };
+
+
+  const handleShare = (row:any)=>{
+    const info = constructMessage(row);
+    console.log(info);
+    shareMessageToWhatsapp(info);
+    
+    
+  }
 
   const toggleEvidencePanel = (id: string) => {
     setExpandedRow(expandedRow === id ? null : id);
@@ -202,7 +212,7 @@ const Ritation = () => {
                                     </button>
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
-                                    <RitationAction onApprove={() => handleApprove(row.no_surat_jalan)} />
+                                    <RitationAction onApprove={() => handleApprove(row.no_surat_jalan)} onShare={()=> handleShare(row)} />
                                   </td>
                                 </tr>
                                 {/* Toggle evidence panel */}

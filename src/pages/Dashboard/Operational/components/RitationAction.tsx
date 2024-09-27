@@ -8,6 +8,7 @@ import {
   faEllipsisH,
   faEdit,
   faRemove,
+  faShare,
 } from '@fortawesome/free-solid-svg-icons';
 import { Email } from './EmailTemplate';
 import HardcopyLeaveLetterTemplate from './HardcopyLeaveLetterTemplate';
@@ -18,7 +19,7 @@ interface RitationActionCellRendererProps {
   onApprove: (id: number) => void;
   onMail: (data: any) => void;
   onPrint: (data: any) => void;
-  onMore: (data: any) => void;
+  onShare: (data: any) => void;
 }
 
 const RitationAction: React.FC<RitationActionCellRendererProps> = (props) => {
@@ -26,7 +27,7 @@ const RitationAction: React.FC<RitationActionCellRendererProps> = (props) => {
   const handleApprove = () => props.onApprove(props.data);
   const handleMail = () => props.onMail(props.data);
   const handlePrint = () => props.onPrint(props.data);
-  const handleMore = () => props.onMore(props.data);
+  const handleShare = () => props.onShare(props.data);
 
  
 
@@ -56,10 +57,10 @@ const RitationAction: React.FC<RitationActionCellRendererProps> = (props) => {
         </button>
         <button
           className="bg-transparent border-none cursor-pointer p-2 text-gray-700 hover:text-yellow-500 transition-colors duration-300"
-          title="More"
-          onClick={handleMore}
+          title="Share"
+          onClick={handleShare}
         >
-          <FontAwesomeIcon icon={faEllipsisH} />
+          <FontAwesomeIcon icon={faShare} />
         </button>
       </div>
     </div>
