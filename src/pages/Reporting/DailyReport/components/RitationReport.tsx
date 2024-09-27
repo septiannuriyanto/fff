@@ -199,8 +199,8 @@ const RitationReport: React.FC = () => {
     const { error } = await supabase.from('ritasi_fuel').insert([query]);
 
     if (error) {
-      console.error(error);
-      alert(error);
+      console.error(error.message);
+      alert(error.message);
       setIsComplete(false);
       setIsLoading(false);
     } else {
@@ -364,7 +364,7 @@ const RitationReport: React.FC = () => {
     e.preventDefault();
     const newReportNumber = parseInt(reportNumber);
 
-    const no_surat_jalan = `G${formatDateToDdMmyy(
+    const no_surat_jalan = `G${formatDateToYyMmDd(
       new Date(),
     )}${normalizeReportNumber(newReportNumber || 0)}`;
 

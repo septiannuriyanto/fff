@@ -4,6 +4,8 @@ import { formatDateToString } from '../../../../Utils/DateUtility';
 import { supabase } from '../../../../db/SupabaseClient';
 import RitationAction from '../components/RitationAction';
 import toast, { Toaster } from 'react-hot-toast';
+import CardDataStats from '../../../../components/CardDataStats';
+import { formatNumberWithSeparator } from '../../../../Utils/NumberUtility';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -11,6 +13,13 @@ const Ritation = () => {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedImageId, setExpandedImageId] = useState<string | null>(null);
   const [rotationAngle, setRotationAngle] = useState<{ [key: string]: number }>({});
+  const [ritationQtyTotal, setRitationQtyTotal] = useState<number>(0);
+
+
+  const calculateTotalQtySj = (data: RitasiFuelData[]): number => {
+    return data.reduce((total, item) => total + item.qty_sj, 0);
+  };
+  
 
   const fetchRitationReport = async () => {
     const { data, error } = await supabase
@@ -37,6 +46,10 @@ const Ritation = () => {
       operator_name: item.operator?.nama || 'Unknown',
       unit: item.unit?.unit_id || 'Unknown',
     }));
+
+    const totalRitasi = calculateTotalQtySj(enrichedData as RitasiFuelData[])
+
+    setRitationQtyTotal(totalRitasi);
 
     setDataRitasi(enrichedData as RitasiFuelData[]);
   };
@@ -123,6 +136,16 @@ const Ritation = () => {
               </div>
 
               <div className="ritation__table w-full">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
+                <CardDataStats
+                title="Ritation Qty (liter)"
+                total={ formatNumberWithSeparator(ritationQtyTotal) }
+                rate="0.43%"
+                levelUpBad
+                >
+                  <div></div>
+                </CardDataStats>
+              </div>
                 <div className="flex flex-col">
                   <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
