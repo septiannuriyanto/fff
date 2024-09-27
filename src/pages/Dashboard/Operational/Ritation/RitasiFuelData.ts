@@ -22,6 +22,7 @@ interface RitasiFuelData {
     sonding_before_front: number;
     sonding_before_rear: number;
     warehouse_id: string;
+    unit:string;
   }
 
   
