@@ -4,17 +4,18 @@ import Autosuggest from 'react-autosuggest';
 import { sendMessageToChannel } from '../../../../services/TelegramSender';
 import {
   formatDate,
+  formatDateToDdMmyy,
   formatDateToIndonesianByDate,
   formatDateToString,
   formatDateToYyMmDd,
 } from '../../../../Utils/DateUtility';
 import DropZone from './DropZone';
-import { baseStorageUrl, getFileFromUrl, uploadImage } from '../../../../services/ImageUploader';
+import { uploadImage } from '../../../../services/ImageUploader';
 
 import LogoIcon from '../../../../images/logo/logo-icon.svg';
 import { getNrpFromName } from '../../../../functions/get_nrp';
 import { shareMessageToWhatsapp } from '../../../../functions/share_message';
-import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
+import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';  
 import { getQtyByHeight } from '../../../../functions/Interpolate';
 import { useParams } from 'react-router-dom';
 // Define the types
@@ -28,9 +29,6 @@ interface ManpowerData {
 }
 
 const RitationReport: React.FC = () => {
-
-  
-  const [fetchedData, setFetchedData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [reportNumber, setReportNumber] = useState('');
@@ -50,56 +48,9 @@ const RitationReport: React.FC = () => {
 
   const { id } = useParams<{ id: string }>();
 
-
-
   useEffect(() => {
-    const fetchDetailReport = async (id: string) => {
-      const { data, error } = await supabase
-        .from('ritasi_fuel')
-        .select('*')
-        .eq('no_surat_jalan', id);
-      if (error) {
-        console.error(error);
-        return;
-      }
-      if (data.length == 0) {
-        console.log('No Data Found!');
-        return;
-      }
-      renderFoundData(data);
-      setFetchedData(data);
-    };
-
-    const renderFoundData = async (data: any) => {
-      const foundData = data[0];
-      console.log(foundData);
-      setReportNumber(
-        parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
-      );
-      setEquipNumber(foundData.warehouse_id);
-      setFuelman(foundData.fuelman_id);
-      setOperator(foundData.operator_id);
-      setTeraDepanBefore(foundData.sonding_before_front);
-      setTeraBelakangBefore(foundData.sonding_before_rear);
-      setFlowmeterBefore(foundData.qty_flowmeter_before);
-      setTeraDepanAfter(foundData.sonding_after_front);
-      setTeraBelakangAfter(foundData.sonding_after_rear);
-      setFlowmeterAfter(foundData.qty_flowmeter_after);
-      if (foundData.flowmeter_before_url !== null) {
-        setFlowmeterBeforeFile(
-          await getFileFromUrl(foundData.flowmeter_before_url),
-        );
-      }
-      if (foundData.flowmeter_after_url !== null) {
-        setFlowmeterAfterFile(
-          await getFileFromUrl(foundData.flowmeter_after_url),
-        );
-      }
-      if (foundData.sj_url !== null) {
-        setSuratJalanFile(await getFileFromUrl(foundData.sj_url));
-      }
-    };
-
+    console.log(id);
+    
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
         .from('storage')
@@ -108,6 +59,7 @@ const RitationReport: React.FC = () => {
       if (error) {
         console.error(error);
       } else {
+
         const units = data?.map((item) => item.unit_id) || [];
         const whs = data?.map((item) => item.warehouse_id) || [];
 
@@ -141,11 +93,6 @@ const RitationReport: React.FC = () => {
       }
     };
 
-    if (id) {
-      fetchDetailReport(id);
-      return;
-    }
-
     fetchCodeNumbers();
     fetchFuelman();
     fetchOperator();
@@ -154,25 +101,32 @@ const RitationReport: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (id) {
-      console.log('Updating Records');
-
-      return;
-    }
-
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
     setIsLoading(true);
     //Upload Image
-    const sjNumber = `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+    const flowmeterBeforeUrl = await uploadImage(
+      flowmeterBeforeFile!,
+      'fm-before',
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
         parseInt(reportNumber),
-      )}`;
-    const imageUrl = `${baseStorageUrl}${new Date().getFullYear()}/${sjNumber}/`;
-
-    const flowmeterBeforeUrl = `${imageUrl}/fm-before`;
-    const flowmeterAfterUrl = `${imageUrl}/fm-after`;
-    const suratJalanUrl = `${imageUrl}/surat-jalan`;
+      )}`,
+    );
+    const flowmeterAfterUrl = await uploadImage(
+      flowmeterAfterFile!,
+      'fm-after',
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
+        parseInt(reportNumber),
+      )}`,
+    );
+    const suratJalanUrl = await uploadImage(
+      suratJalanFile!,
+      'surat-jalan',
+      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
+        parseInt(reportNumber),
+      )}`,
+    );
 
     //Count required data
     const flowmeterqty =
@@ -190,9 +144,9 @@ const RitationReport: React.FC = () => {
 
     //construct the query
     let query = {
-      no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
+      no_surat_jalan: `G${formatDateToYyMmDd(
+        new Date(),
+      )}${normalizeToTwoDigit(parseInt(reportNumber))}`,
       queue_num: parseInt(reportNumber),
       warehouse_id: whId,
       operator_id: optNrp,
@@ -310,125 +264,21 @@ const RitationReport: React.FC = () => {
   );
   const [suratJalanFile, setSuratJalanFile] = useState<File | null>(null);
 
-  const [uploadProgressFmBefore, setUploadProgressFmBefore] = useState<number | null>(null);
-  const [uploadProgressFmAfter, setUploadProgressFmAfter] = useState<number | null>(null);
-  const [uploadProgressSuratJalan, setUploadProgressSuratJalan] = useState<number | null>(null);
-
   const handleFlowmeterBeforeUpload = async (file: File) => {
-    if (!reportNumber) {
-      alert('Isikan nomor surat jalan terlebih dahulu');
-      return;
-    }
-  
     setFlowmeterBeforeFile(file);
-    setUploadProgressFmBefore(0); // Set initial progress to 0
-  
-    try {
-      const { imageUrl, error } = await uploadImage(
-        file,
-        'fm-before',
-        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(parseInt(reportNumber))}`,
-        (progress: number) => {
-          console.log(progress);
-          
-          setUploadProgressFmBefore(progress); // Update upload progress
-        }
-      );
-  
-      if (error) {
-        alert(error);
-        return;
-      }
-  
-      console.log('Flowmeter Before Uploaded:', imageUrl);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file, please try again.');
-    } finally {
-      setUploadProgressFmBefore(null); // Remove the progress when complete
-    }
+    // You can add additional logic here, like validating the file or processing it
+    console.log('Flowmeter Before Uploaded:', file);
   };
-  
-  const handleFlowmeterAfterUpload = async (file: File) => {
-    if (!reportNumber) {
-      alert('Isikan nomor surat jalan terlebih dahulu');
-      return;
-    }
-  
+  const handleFlowmeterAfterUpload = (file: File) => {
     setFlowmeterAfterFile(file);
-    setUploadProgressFmAfter(0); // Set initial progress to 0
-  
-    try {
-      const { imageUrl, error } = await uploadImage(
-        file,
-        'fm-after',
-        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(parseInt(reportNumber))}`,
-        (progress: number) => {
-          console.log(progress);
-          
-          setUploadProgressFmAfter(progress); // Update upload progress
-        }
-      );
-  
-      if (error) {
-        alert(error);
-        return;
-      }
-  
-      console.log('Flowmeter After Uploaded:', imageUrl);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file, please try again.');
-    } finally {
-      setUploadProgressFmAfter(null); // Remove the progress when complete
-    }
+    // You can add additional logic here, like validating the file or processing it
+    console.log('Flowmeter After Uploaded:', file);
   };
-  // const handleFlowmeterAfterUpload = (file: File) => {
-  //   setFlowmeterAfterFile(file);
-  //   // You can add additional logic here, like validating the file or processing it
-  //   console.log('Flowmeter After Uploaded:', file);
-  // };
-
-  const handleSuratJalanUpload = async (file: File) => {
-    if (!reportNumber) {
-      alert('Isikan nomor surat jalan terlebih dahulu');
-      return;
-    }
-  
+  const handleSuratJalanUpload = (file: File) => {
     setSuratJalanFile(file);
-    setUploadProgressSuratJalan(0); // Set initial progress to 0
-  
-    try {
-      const { imageUrl, error } = await uploadImage(
-        file,
-        'surat-jalan',
-        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(parseInt(reportNumber))}`,
-        (progress: number) => {
-          console.log(progress);
-          
-          setUploadProgressSuratJalan(progress); // Update upload progress
-        }
-      );
-  
-      if (error) {
-        alert(error);
-        return;
-      }
-  
-      console.log('Surat Jalan Uploaded:', imageUrl);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file, please try again.');
-    } finally {
-      setUploadProgressSuratJalan(null); // Remove the progress when complete
-    }
+    // You can add additional logic here, like validating the file or processing it
+    console.log('Surat Jalan uploaded:', file);
   };
-
-  // const handleSuratJalanUpload = (file: File) => {
-  //   setSuratJalanFile(file);
-  //   // You can add additional logic here, like validating the file or processing it
-  //   console.log('Surat Jalan uploaded:', file);
-  // };
 
   //HANDLE RITATION DATA
   const [teraDepanBefore, setTeraDepanBefore] = React.useState('');
@@ -545,10 +395,14 @@ const RitationReport: React.FC = () => {
     shareMessageToWhatsapp(information);
   };
 
-  const handleChangeReportNumber = (e: any) => {
-    setReportNumber(e.target.value);
+
+
+
+  const handleChangeReportNumber = (e:any) =>{
+    setReportNumber(e.target.value)
     console.log(e.target.value);
-  };
+    
+  }
 
   return isLoading ? (
     <div>
@@ -592,50 +446,48 @@ const RitationReport: React.FC = () => {
     </div>
   ) : (
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
-      <h1 className="text-center text-2xl font-bold mb-5">
-        {id ? `Update Ritasi` : `Input Ritasi`}
-      </h1>
+      <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-        <div className="header-input flex flex-row w-full gap-4 mb-2">
-          <div className="input__sj-number w-full">
-            <label htmlFor="input_tera_before_front">Nomor Surat Jalan</label>
-            <input
-              disabled={id ? true : false}
-              value={reportNumber}
-              onChange={handleChangeReportNumber}
-              pattern="[0-9]*\.?[0-9]*"
-              inputMode="decimal"
-              type="text"
-              className="input_tera_before_front w-full p-2 border rounded"
-            />
-          </div>
-          <div className=" w-full">
-            <label className="block text-gray-700">Nomor FT :</label>
-            <Autosuggest
-              suggestions={suggestions}
-              onSuggestionsFetchRequested={onSuggestionsFetchRequested}
-              onSuggestionsClearRequested={onSuggestionsClearRequested}
-              getSuggestionValue={getSuggestionValue}
-              renderSuggestion={renderSuggestion}
-              inputProps={{
-                placeholder: 'Ketik Kode Unit',
-                value: equipNumber,
-                onChange: onEquipNumberChange,
-                className: 'w-full p-2  border rounded',
-                required: true,
-              }}
-              theme={{
-                container: 'relative',
-                suggestionsContainerOpen:
-                  'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
-                suggestion: 'p-2 hover:bg-gray-200',
-                suggestionHighlighted: 'bg-gray-300',
-                input: 'w-full p-2 border rounded',
-              }}
-            />
-          </div>
-        </div>
 
+        <div className="header-input flex flex-row w-full gap-4 mb-2">
+        <div className="input__sj-number w-full">
+          <label htmlFor="input_tera_before_front">Nomor Surat Jalan</label>
+          <input
+            value={reportNumber}
+            onChange={handleChangeReportNumber}
+            pattern="[0-9]*\.?[0-9]*"
+            inputMode="decimal"
+            type="text"
+            className="input_tera_before_front w-full p-2 border rounded"
+          />
+        </div>
+        <div className=" w-full">
+          <label className="block text-gray-700">Nomor FT :</label>
+          <Autosuggest
+            suggestions={suggestions}
+            onSuggestionsFetchRequested={onSuggestionsFetchRequested}
+            onSuggestionsClearRequested={onSuggestionsClearRequested}
+            getSuggestionValue={getSuggestionValue}
+            renderSuggestion={renderSuggestion}
+            inputProps={{
+              placeholder: 'Ketik Kode Unit',
+              value: equipNumber,
+              onChange: onEquipNumberChange,
+              className: 'w-full p-2  border rounded',
+              required: true,
+            }}
+            theme={{
+              container: 'relative',
+              suggestionsContainerOpen:
+                'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
+              suggestion: 'p-2 hover:bg-gray-200',
+              suggestionHighlighted: 'bg-gray-300',
+              input: 'w-full p-2 border rounded',
+            }}
+          />
+        </div>
+        </div>
+        
         <div className="data_menpower-ritasi flex flex-row justify-between grow gap-4 mb-4">
           <div className="w-full">
             <label className="block text-gray-700">Fuelman:</label>
@@ -759,90 +611,25 @@ const RitationReport: React.FC = () => {
           </div>
           <div className="data_menpower-ritasi flex flex-row justify-between grow gap-4 mb-4">
             <div className="foto__flowmeter-before w-full">
-
               {flowmeterBeforeFile ? (
                 <div className="file-preview1">
-                <h2>Uploaded File:</h2>
-                <div className="upload-image-container relative"> {/* Add relative positioning here */}
-                  {uploadProgressFmBefore !== null && (
-                    <div
-                      className="absolute upload-overlay z-2 bg-white"
-                      style={{
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
-                        opacity: 0.5, // Optional: Adjust the opacity to make it semi-transparent
-                      }}
-                    ></div>
-                  )}
-              
+                  <h2>Uploaded File:</h2>
                   <img
-                    src={URL.createObjectURL(flowmeterBeforeFile)}
-                    alt="Flowmeter Before"
-                    className="upload-image"
-                  />
-                </div>
-              </div>
-              
-              ) : (
-                <div>
-                  <DropZone
                     id="fm-before"
-                    title="Flowmeter Before"
-                    onFileUpload={handleFlowmeterBeforeUpload}
-                    uploadProgress={uploadProgressFmBefore}
-                    file={flowmeterBeforeFile}
+                    src={URL.createObjectURL(flowmeterBeforeFile)}
+                    alt={flowmeterBeforeFile.name}
+                    className="thumbnail w-full h-auto"
                   />
                 </div>
-              )}
-
-            </div>
-            {/* //============================================================================================ */}
-            <div className="foto__flowmeter-after w-full">
-
-              {flowmeterAfterFile ? (
-                <div className="file-preview2">
-                <h2>Uploaded File:</h2>
-                <div className="upload-image-container relative"> {/* Add relative positioning here */}
-                  {uploadProgressFmAfter !== null && (
-                    <div
-                      className="absolute upload-overlay z-2 bg-white"
-                      style={{
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: `${100 - uploadProgressFmAfter}%`, // Gradually decrease height as upload progresses
-                        opacity: 0.5, // Optional: Adjust the opacity to make it semi-transparent
-                      }}
-                    ></div>
-                  )}
-              
-                  <img
-                    src={URL.createObjectURL(flowmeterAfterFile)}
-                    alt="Flowmeter After"
-                    className="upload-image"
-                  />
-                </div>
-              </div>
-              
               ) : (
-                <div>
-                  <DropZone
-                    id="fm-after"
-                    title="Flowmeter After"
-                    onFileUpload={handleFlowmeterAfterUpload}
-                    uploadProgress={uploadProgressFmAfter}
-                    file={flowmeterAfterFile}
-                  />
-                </div>
+                <DropZone
+                  id="fm-before"
+                  title="Flowmeter Before"
+                  onFileUpload={handleFlowmeterBeforeUpload}
+                />
               )}
-              
             </div>
-            {/* //============================================================================================ */}
-            {/* <div className="foto__flowmeter-after w-full">
+            <div className="foto__flowmeter-after w-full">
               {flowmeterAfterFile ? (
                 <div className="file-preview2">
                   <h2>Uploaded File:</h2>
@@ -860,8 +647,7 @@ const RitationReport: React.FC = () => {
                   onFileUpload={handleFlowmeterAfterUpload}
                 />
               )}
-            </div> */}
-            {/* //============================================================================================ */}
+            </div>
             <div className="foto__surat-jalan w-full">
               {suratJalanFile ? (
                 <div className="file-preview3">
@@ -886,11 +672,9 @@ const RitationReport: React.FC = () => {
 
         <button
           type="submit"
-          className={`${
-            id ? 'bg-green-500' : 'bg-primary'
-          } text-white py-2 rounded hover:bg-blue-700`}
+          className="bg-primary text-white py-2 rounded hover:bg-blue-700"
         >
-          {id ? `Update` : `Submit`}
+          Submit
         </button>
       </form>
     </div>

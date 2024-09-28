@@ -1,0 +1,131 @@
+import React, { useEffect, useState } from 'react';
+import Chart from 'react-apexcharts';
+
+interface DailyRitationChartProps {
+  groupedData: { date: string; total: number }[]; // Data grouped by date
+  totalPlan: number; // Total plan for the month
+}
+
+const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
+  groupedData,
+  totalPlan,
+}) => {
+  // Prepare data for the chart
+  const [date, setDate] = useState<string[]>([]);
+  const [qty, setQty] = useState<number[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<number[]>([]);
+  const [cumulativePlan, setCumulativePlan] = useState<number[]>([]);
+  const [cumulativeRitation, setCumulativeRitation] = useState<number[]>([]); // New state for cumulative daily ritation
+
+  useEffect(() => {
+    const daysInMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      0,
+    ).getDate();
+
+    const dates: string[] = [];
+    const qtys: number[] = [];
+
+    // Fill in the dates and quantities from groupedData
+    for (let index = 0; index < groupedData.length; index++) {
+      dates.push(new Date(groupedData[index].date).getDate().toString());
+      qtys.push(groupedData[index].total);
+    }
+
+    const dailyTarget = totalPlan / daysInMonth;
+
+    // Calculate daily targets, cumulative plan, and cumulative ritation
+    let dailyTotal = 0;
+    let cumulativePlanData: number[] = [];
+    let cumulativeRitationData: number[] = [];
+
+    for (let index = 0; index < daysInMonth; index++) {
+      dailyTotal += dailyTarget;
+      cumulativePlanData.push(dailyTotal); // Add to cumulative plan
+      
+      // Calculate cumulative ritation
+      if (index < qtys.length) {
+        cumulativeRitationData.push(
+          (cumulativeRitationData[index - 1] || 0) + qtys[index]
+        ); // Add the current qty to the last cumulative ritation
+      } else {
+        cumulativeRitationData.push(cumulativeRitationData[index - 1] || 0); // Keep the last cumulative ritation if no data for that day
+      }
+    }
+
+    setDate(dates);
+    setQty(qtys);
+    setCumulativePlan(cumulativePlanData); // Update cumulative plan state
+    setCumulativeRitation(cumulativeRitationData); // Update cumulative ritation state
+  }, [groupedData]);
+
+  // Create an array for the daily target line
+  const chartData = {
+    series: [
+      {
+        name: 'Daily Ritation',
+        type: 'bar',
+        data: qty,
+      },
+      {
+        name: 'Cumulative Daily Plan',
+        type: 'line',
+        data: cumulativePlan,
+      },
+      {
+        name: 'Cumulative Daily Ritation',
+        type: 'line',
+        data: cumulativeRitation, // Use cumulative ritation for the line chart
+      },
+    ],
+    options: {
+      chart: {
+        height: 350,
+        type: 'line',
+        stacked: false,
+      },
+      stroke: {
+        width: [0, 3, 3], // No stroke for bar, but lines for targets
+      },
+      plotOptions: {
+        bar: {
+          columnWidth: '50%', // Width of the bars
+        },
+      },
+      xaxis: {
+        categories: date,
+        title: {
+          text: 'Date',
+        },
+      },
+      yaxis: {
+        title: {
+          text: 'Ritation (Liters)',
+        },
+        labels: {
+          formatter: (value) => value.toString(), // Remove commas by converting to string
+        },
+      },
+      legend: {
+        position: 'bottom',
+      },
+    },
+  };
+
+  return (
+    <div className="rounded-sm border bg-white py-2 px-2 shadow-default border-stroke dark:border-strokedark dark:bg-boxdark items-left">
+      <h1 className="font-bold text-bodydark">Daily Ritation Chart</h1>
+      <div className="flex flex-col">
+        <Chart
+          options={chartData.options}
+          series={chartData.series}
+          type="line"
+          height={350}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default DailyRitationChart;

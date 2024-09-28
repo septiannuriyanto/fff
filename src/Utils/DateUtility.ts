@@ -85,4 +85,16 @@ const formatDate = (date:number) => {
     return `${year}-${month}-${day}`;
   };
 
-  export { formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate, formatDateToISO, formatDateToString, formatDateToDdMmyy, formatDateToYyMmDd }
+  function convertDateToYYYYMM(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Ensure month is 2 digits
+    return `${year}${month}`;
+  }
+  function convertDateToYYMM(date: Date): string {
+    const year = (date.getFullYear() % 100).toString().padStart(2, '0'); // Get last two digits of the year
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Ensure month is 2 digits
+    return `${year}${month}`;
+  }
+  
+
+  export { convertDateToYYMM, convertDateToYYYYMM, formatDate, formatDateForSupabase, formatDateToIndonesian, formatDateToIndonesianByDate, formatDateToISO, formatDateToString, formatDateToDdMmyy, formatDateToYyMmDd }

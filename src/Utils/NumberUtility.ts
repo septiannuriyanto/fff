@@ -1,5 +1,5 @@
 const formatNumberWithSeparator = (number: number): string => {
-    return new Intl.NumberFormat('en-US').format(number);
+    return new Intl.NumberFormat('id-ID').format(number);
   };
 
 

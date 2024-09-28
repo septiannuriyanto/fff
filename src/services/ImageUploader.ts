@@ -1,13 +1,16 @@
 import { supabase } from "../db/SupabaseClient";
 import imageCompression from "browser-image-compression";
 
-const supabaseStorageName = 'ritation_upload';
 
-export const uploadImage = async (
+
+const supabaseStorageName = 'ritation_upload';
+const baseStorageUrl = `https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/${supabaseStorageName}`;
+ const uploadImage = async (
   file: File,
   fileTitle: string,
-  folderName: string // New parameter for folder name
-): Promise<{ imageUrl: string | null, error: string | null }> => {
+  folderName: string,
+  onProgress: (progress: number) => void // Added parameter
+): Promise<{ imageUrl: string | null; error: string | null }> => {
   let imageUrl: string | null = null;
   let error: string | null = null;
 
@@ -17,19 +20,15 @@ export const uploadImage = async (
 
   let fileToUpload = file;
 
-  // Check if the file size is above 100KB (100 * 1024 bytes)
   if (file.size > 100 * 1024) {
-    // Compress the image if it's larger than 100KB
     const options = {
-      maxSizeMB: 0.15, // Max size in MB (150KB)
-      maxWidthOrHeight: 800, // Max width or height for resizing (you can adjust this)
-      useWebWorker: true, // Use web worker for better performance
+      maxSizeMB: 0.15,
+      maxWidthOrHeight: 800,
+      useWebWorker: true,
     };
 
     try {
       fileToUpload = await imageCompression(file, options);
-
-      // Check if the compressed file is still over the size limit
       if (fileToUpload.size > 150 * 1024) {
         return { imageUrl, error: "Compressed file size exceeds 150KB limit." };
       }
@@ -39,27 +38,55 @@ export const uploadImage = async (
     }
   }
 
-  // Use the provided folder name and file title to create the full file path
   const fileName = `${new Date().getFullYear()}/${folderName}/${fileTitle}`;
 
-  // Upload to Supabase Storage
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(supabaseStorageName)
-    .upload(fileName, fileToUpload);
+  try {
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(supabaseStorageName)
+      .upload(fileName, fileToUpload, {
+        cacheControl: '3600', // optional, set cache control if needed
+        upsert: true // Enable overwriting existing file
+      });
 
-  if (uploadError) {
-    return { imageUrl, error: `Upload failed: ${uploadError.message}` };
+    if (uploadError) {
+      return { imageUrl, error: `Upload failed: ${uploadError.message}` };
+    }
+
+    const { data } = supabase.storage.from(supabaseStorageName).getPublicUrl(fileName);
+    if (!data.publicUrl) {
+      return { imageUrl, error: "Failed to get public URL." };
+    }
+
+    imageUrl = data.publicUrl;
+    return { imageUrl, error };
+  } catch (err) {
+    return { imageUrl, error: `Upload failed: ${err.message}` };
   }
-
-  // Get the public URL of the uploaded image
-  const { data } = supabase.storage
-    .from(supabaseStorageName)
-    .getPublicUrl(fileName);
-
-  if (!data.publicUrl) {
-    return { imageUrl, error: "Failed to get public URL." };
-  }
-
-  imageUrl = data.publicUrl; // Return the public URL of the uploaded image
-  return { imageUrl, error };
 };
+
+
+const checkImageUrl = async (url: string): Promise<boolean> => {
+  try {
+    const response = await fetch(url, { method: 'HEAD' }); // Use HEAD to get the headers without downloading the image
+    return response.ok; // Returns true if the response status is in the range 200-299
+  } catch (error) {
+    console.error("Error fetching image:", error);
+    return false; // Return false if there's an error during the fetch
+  }
+};
+
+const getFileFromUrl = async (url: any) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob(); // Get the blob from the response
+    const fileName = url.split('/').pop(); // Extract the filename from the URL
+    const file = new File([blob], fileName, { type: blob.type }); // Create a File object
+    return file;
+  } catch (error) {
+    console.error('Error fetching the file:', error);
+    return null;
+  }
+};
+
+
+export { uploadImage, checkImageUrl, getFileFromUrl, baseStorageUrl }
