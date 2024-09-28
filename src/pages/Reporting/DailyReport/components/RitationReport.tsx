@@ -86,17 +86,25 @@ const RitationReport: React.FC = () => {
       setTeraBelakangAfter(foundData.sonding_after_rear);
       setFlowmeterAfter(foundData.qty_flowmeter_after);
       if (foundData.flowmeter_before_url !== null) {
-        setFlowmeterBeforeFile(
-          await getFileFromUrl(foundData.flowmeter_before_url),
-        );
+        const imgData = await getFileFromUrl(foundData.flowmeter_before_url);
+        if(imgData==null){
+          return;
+        }
+        setFlowmeterBeforeFile(imgData);
       }
       if (foundData.flowmeter_after_url !== null) {
-        setFlowmeterAfterFile(
-          await getFileFromUrl(foundData.flowmeter_after_url),
-        );
+        const imgData = await getFileFromUrl(foundData.flowmeter_after_url);
+        if(imgData==null){
+          return;
+        }
+        setFlowmeterAfterFile(imgData);
       }
       if (foundData.sj_url !== null) {
-        setSuratJalanFile(await getFileFromUrl(foundData.sj_url));
+        const imgData = await getFileFromUrl(foundData.sj_url);
+        if(imgData==null){
+          return;
+        }
+        setSuratJalanFile(imgData);
       }
     };
 
@@ -883,15 +891,26 @@ const RitationReport: React.FC = () => {
             </div>
           </div>
         </div>
+            
 
-        <button
+        {id ? <div></div> : <button
+          type="submit"
+          className={`${
+            id ? 'bg-green-500' : 'bg-primary'
+          } text-white py-2 rounded hover:bg-blue-700`}
+        >Submit
+          
+        </button>}
+        
+
+        {/* <button
           type="submit"
           className={`${
             id ? 'bg-green-500' : 'bg-primary'
           } text-white py-2 rounded hover:bg-blue-700`}
         >
           {id ? `Update` : `Submit`}
-        </button>
+        </button> */}
       </form>
     </div>
   );

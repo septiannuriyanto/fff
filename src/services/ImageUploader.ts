@@ -78,6 +78,11 @@ const checkImageUrl = async (url: string): Promise<boolean> => {
 const getFileFromUrl = async (url: any) => {
   try {
     const response = await fetch(url);
+    console.log(response.status);
+    if(response.status==400){
+      return null;
+    }
+    
     const blob = await response.blob(); // Get the blob from the response
     const fileName = url.split('/').pop(); // Extract the filename from the URL
     const file = new File([blob], fileName, { type: blob.type }); // Create a File object
