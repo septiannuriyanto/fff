@@ -33,6 +33,7 @@ import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 import StockReporting from './pages/Reporting/DailyReport/components/StockReporting';
 import StockTaking from './pages/Reporting/DailyReport/components/StockTaking';
 import Ritation from './pages/Dashboard/Operational/Ritation/Ritation';
+import FuelTruckMaintenanceRequest from './pages/Dashboard/Operational/components/FueltruckMaintenanceRequest';
 
 function App() {
   return (
@@ -391,6 +392,15 @@ function App() {
             <>
               <PageTitle title="FFF Dashboard | Pressureless Reporting" />
               <PressurelessReport />
+            </>
+          }
+        />
+        <Route
+          path="/reporting/ftmaintenancerequest"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | FT Maintenance Request" />
+              <FuelTruckMaintenanceRequest />
             </>
           }
         />

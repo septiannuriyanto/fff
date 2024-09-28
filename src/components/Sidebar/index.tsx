@@ -532,6 +532,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                               Stock Taking
                             </NavLink>
                           </li>
+                          <li>
+                            <NavLink
+                              to="/reporting/ftmaintenancerequest"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              FT Maintenance Req
+                            </NavLink>
+                          </li>
                         </ul>
                       </div>
                       {/* <!-- Dropdown Menu End --> */}

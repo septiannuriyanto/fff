@@ -28,7 +28,6 @@ import {
   baseStorageUrl,
   uploadImage,
 } from '../../../../services/ImageUploader';
-import { Link } from 'react-router-dom';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -321,11 +320,15 @@ const Ritation = () => {
                 />
               </div>
 
-              <div className="ritation__table w-full">
-                <DailyRitationChart
+              <div className="ritation__table h-23 w-full">
+        
+
+               <DailyRitationChart
                   groupedData={ritationDaily}
                   totalPlan={ritationQtyPlan}
                 />
+           
+               
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3 2xl:gap-7.5 mt-2">
                   {/* <CardDataStats
                 title="Ritation Qty (liter)"

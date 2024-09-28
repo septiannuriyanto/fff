@@ -114,7 +114,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
   };
 
   return (
-    <div className="rounded-sm border bg-white py-2 px-2 shadow-default border-stroke dark:border-strokedark dark:bg-boxdark items-left">
+    <div className=" rounded-sm border bg-white py-2 px-2 shadow-default border-stroke dark:border-strokedark dark:bg-boxdark items-left">
       <h1 className="font-bold text-bodydark">Daily Ritation Chart</h1>
       <div className="flex flex-col">
         <Chart
