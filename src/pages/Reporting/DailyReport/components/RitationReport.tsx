@@ -631,11 +631,13 @@ const RitationReport: React.FC = () => {
               getSuggestionValue={getSuggestionValue}
               renderSuggestion={renderSuggestion}
               inputProps={{
+                
                 placeholder: 'Ketik Kode Unit',
                 value: equipNumber,
                 onChange: onEquipNumberChange,
                 className: 'w-full p-2  border rounded',
                 required: true,
+                disabled: id ? true : false
               }}
               theme={{
                 container: 'relative',
@@ -653,6 +655,7 @@ const RitationReport: React.FC = () => {
           <div className="w-full">
             <label className="block text-gray-700">Fuelman:</label>
             <Autosuggest
+            
               suggestions={fuelmanSuggestions}
               onSuggestionsFetchRequested={onFuelmanSuggestionsFetchRequested}
               onSuggestionsClearRequested={onFuelmanSuggestionsClearRequested}
@@ -664,6 +667,7 @@ const RitationReport: React.FC = () => {
                 onChange: onFuelmanChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
+                disabled: id ? true : false
               }}
               theme={{
                 container: 'relative',
@@ -672,6 +676,7 @@ const RitationReport: React.FC = () => {
                 suggestion: 'p-2 hover:bg-gray-200',
                 suggestionHighlighted: 'bg-gray-300',
                 input: 'w-full p-2 border rounded',
+                
               }}
             />
           </div>
@@ -689,6 +694,7 @@ const RitationReport: React.FC = () => {
                 onChange: onOperatorChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
+                disabled: id ? true : false
               }}
               theme={{
                 container: 'relative',
@@ -709,6 +715,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_before_front">Tera Depan</label>
               <input
+              disabled={id ? true : false}
                 value={teraDepanBefore}
                 onChange={handleTeraDepanBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -718,6 +725,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_before_front">Tera Belakang</label>
               <input
+              disabled={id ? true : false}
                 value={teraBelakangBefore}
                 onChange={handleTeraBelakangBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -727,6 +735,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input__flowmeter-before">Flowmeter Awal</label>
               <input
+              disabled={id ? true : false}
                 value={flowmeterBefore}
                 onChange={handleFlowmeterBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -742,6 +751,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_after_front">Tera Depan</label>
               <input
+              disabled={id ? true : false}
                 value={teraDepanAfter}
                 onChange={handleTeraDepanAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -751,6 +761,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_after_front">Tera Belakang</label>
               <input
+              disabled={id ? true : false}
                 value={teraBelakangAfter}
                 onChange={handleTeraBelakangAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -762,6 +773,7 @@ const RitationReport: React.FC = () => {
                 Flowmeter Akhir
               </label>
               <input
+              disabled={id ? true : false}
                 value={flowmeterAfter}
                 onChange={handleFlowmeterAfterChange}
                 inputMode="decimal"
