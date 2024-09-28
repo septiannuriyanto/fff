@@ -207,9 +207,9 @@ const RitationReport: React.FC = () => {
       sonding_before_rear: teraBelakangBefore,
       sonding_after_front: teraDepanAfter,
       sonding_after_rear: teraBelakangAfter,
-      flowmeter_before_url: flowmeterBeforeUrl.imageUrl,
-      flowmeter_after_url: flowmeterAfterUrl.imageUrl,
-      sj_url: suratJalanUrl.imageUrl,
+      flowmeter_before_url: flowmeterBeforeUrl,
+      flowmeter_after_url: flowmeterAfterUrl,
+      sj_url: suratJalanUrl,
       ritation_date: formatDateToString(new Date()),
     };
 
