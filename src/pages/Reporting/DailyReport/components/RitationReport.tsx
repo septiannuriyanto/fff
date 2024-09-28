@@ -17,6 +17,7 @@ import { shareMessageToWhatsapp } from '../../../../functions/share_message';
 import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
 import { useParams } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 // Define the types
 interface PopulationData {
   unit_id: string;
@@ -354,6 +355,7 @@ const RitationReport: React.FC = () => {
       alert('Error uploading file, please try again.');
     } finally {
       setUploadProgressFmBefore(null); // Remove the progress when complete
+      toast.success('File Uploaded');
     }
   };
   
@@ -389,6 +391,7 @@ const RitationReport: React.FC = () => {
       alert('Error uploading file, please try again.');
     } finally {
       setUploadProgressFmAfter(null); // Remove the progress when complete
+      toast.success('File Uploaded');
     }
   };
   // const handleFlowmeterAfterUpload = (file: File) => {
@@ -429,6 +432,7 @@ const RitationReport: React.FC = () => {
       alert('Error uploading file, please try again.');
     } finally {
       setUploadProgressSuratJalan(null); // Remove the progress when complete
+      toast.success('File Uploaded');
     }
   };
 
@@ -561,6 +565,7 @@ const RitationReport: React.FC = () => {
   return isLoading ? (
     <div>
       <div className="flex flex-col">
+      <Toaster />
         <div className="flex h-screen items-center justify-center bg-white">
           {isComplete ? (
             <div></div>
