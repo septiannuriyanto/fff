@@ -16,7 +16,7 @@ import {
 } from '../../../../services/ImageUploader';
 
 import LogoIcon from '../../../../images/logo/logo-icon.svg';
-import { getNrpFromName } from '../../../../functions/get_nrp';
+import { getFTFromWH, getNameFromNrp, getNrpFromName } from '../../../../functions/get_nrp';
 import { shareMessageToWhatsapp } from '../../../../functions/share_message';
 import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
@@ -70,14 +70,19 @@ const RitationReport: React.FC = () => {
     };
 
     const renderFoundData = async (data: any) => {
+      
       const foundData = data[0];
       console.log(foundData);
       setReportNumber(
         parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
       );
-      setEquipNumber(foundData.warehouse_id);
-      setFuelman(foundData.fuelman_id);
-      setOperator(foundData.operator_id);
+      const ft = await getFTFromWH(foundData.warehouse_id)
+      const fuelman = await getNameFromNrp(foundData.fuelman_id)
+      const opt = await getNameFromNrp(foundData.operator_id)
+
+      setEquipNumber(ft);
+      setFuelman(fuelman);
+      setOperator(opt);
       setTeraDepanBefore(foundData.sonding_before_front);
       setTeraBelakangBefore(foundData.sonding_before_rear);
       setFlowmeterBefore(foundData.qty_flowmeter_before);
