@@ -346,8 +346,9 @@ const RitationReport: React.FC = () => {
         return;
       }
 
-      toast.success('Flowmeter Before Uploaded');
-      window.location.reload();
+      if(id){
+        window.location.reload();
+      }
 
 
       console.log('Flowmeter Before Uploaded:', imageUrl);
@@ -387,8 +388,9 @@ const RitationReport: React.FC = () => {
         alert(error);
         return;
       }
-      toast.success('Flowmeter After Uploaded');
-      window.location.reload();
+      if(id){
+        window.location.reload();
+      }
 
       console.log('Flowmeter After Uploaded:', imageUrl);
     } catch (error) {
@@ -433,8 +435,9 @@ const RitationReport: React.FC = () => {
         return;
       }
 
-      toast.success('Surat Jalan Uploaded');
-      window.location.reload();
+      if(id){
+        window.location.reload();
+      }
 
       console.log('Surat Jalan Uploaded:', imageUrl);
     } catch (error) {
