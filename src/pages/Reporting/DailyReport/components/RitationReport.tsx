@@ -22,6 +22,7 @@ import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
 import { useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
+import LoaderLogo, { LoaderLogoFlex } from '../../../../common/Loader/LoaderLogo';
 // Define the types
 interface PopulationData {
   unit_id: string;
@@ -806,22 +807,24 @@ const RitationReport: React.FC = () => {
                     {' '}
                     {/* Add relative positioning here */}
                     {uploadProgressFmBefore !== null && (
-                      <div
-                        className="absolute upload-overlay z-2 bg-white"
-                        style={{
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
-                          opacity: 0.5, // Optional: Adjust the opacity to make it semi-transparent
-                        }}
-                      ></div>
+                       <div
+                       className="absolute upload-overlay z-2 bg-white"
+                       style={{
+                         top: 0,
+                         left: 0,
+                         right: 0,
+                         bottom: 0,
+                         height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
+                         opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                       }}
+                     >
+                      <LoaderLogoFlex />
+                     </div>
                     )}
                     <img
                       src={URL.createObjectURL(flowmeterBeforeFile)}
                       alt="Flowmeter Before"
-                      className="upload-image"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
                     />
                   </div>
                 </div>
@@ -854,14 +857,16 @@ const RitationReport: React.FC = () => {
                           right: 0,
                           bottom: 0,
                           height: `${100 - uploadProgressFmAfter}%`, // Gradually decrease height as upload progresses
-                          opacity: 0.5, // Optional: Adjust the opacity to make it semi-transparent
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
                         }}
-                      ></div>
+                      >
+                         <LoaderLogoFlex />
+                      </div>
                     )}
                     <img
                       src={URL.createObjectURL(flowmeterAfterFile)}
                       alt="Flowmeter After"
-                      className="upload-image"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
                     />
                   </div>
                 </div>
@@ -878,45 +883,49 @@ const RitationReport: React.FC = () => {
               )}
             </div>
             {/* //============================================================================================ */}
-            {/* <div className="foto__flowmeter-after w-full">
-              {flowmeterAfterFile ? (
-                <div className="file-preview2">
-                  <h2>Uploaded File:</h2>
-                  <img
-                    id="fm-after"
-                    src={URL.createObjectURL(flowmeterAfterFile)}
-                    alt={flowmeterAfterFile.name}
-                    className="thumbnail w-full h-auto"
-                  />
-                </div>
-              ) : (
-                <DropZone
-                  id="fm-after"
-                  title="Flowmeter After"
-                  onFileUpload={handleFlowmeterAfterUpload}
-                />
-              )}
-            </div> */}
-            {/* //============================================================================================ */}
             <div className="foto__surat-jalan w-full">
               {suratJalanFile ? (
                 <div className="file-preview3">
                   <h2>Uploaded File:</h2>
-                  <img
-                    id="surat-jalan"
-                    src={URL.createObjectURL(suratJalanFile)}
-                    alt={suratJalanFile.name}
-                    className="thumbnail w-full h-auto"
-                  />
+                  <div className="upload-image-container relative">
+                    {' '}
+                    {/* Add relative positioning here */}
+                    {uploadProgressSuratJalan !== null && (
+                      <div
+                        className="absolute upload-overlay z-2 bg-white"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: `${100 - uploadProgressSuratJalan}%`, // Gradually decrease height as upload progresses
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                        }}
+                      >
+                         <LoaderLogoFlex />
+                      </div>
+                    )}
+                    <img
+                      src={URL.createObjectURL(suratJalanFile)}
+                      alt="Surat Jalan"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
+                    />
+                  </div>
                 </div>
               ) : (
-                <DropZone
-                  id="surat-jalan"
-                  title="Surat Jalan"
-                  onFileUpload={handleSuratJalanUpload}
-                />
+                <div>
+                  <DropZone
+                    id="surat-jalan"
+                    title="Surat Jalan"
+                    onFileUpload={handleSuratJalanUpload}
+                    uploadProgress={uploadProgressSuratJalan}
+                    file={suratJalanFile}
+                  />
+                </div>
               )}
             </div>
+
+
           </div>
         </div>
 

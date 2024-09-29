@@ -16,7 +16,7 @@ import {
   getLastMonthDates,
 } from '../../../Utils/TimeUtility.ts';
 
-import LoaderLogo from '../../../common/Loader/LoaderLogo.tsx';
+import { LoaderLogo } from '../../../common/Loader/LoaderLogo.tsx';
 
 interface ResponseModel {
   CN: string; // Replace with your actual columns

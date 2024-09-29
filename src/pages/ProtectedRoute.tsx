@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../db/SupabaseClient'; // Adjust the import path as necessary
-import Loader from '../common/Loader/LoaderLogo'
+import Loader from '../common/Loader'
 import { Session } from '@supabase/supabase-js'; // Import Session type
 
 interface ProtectedRouteProps {

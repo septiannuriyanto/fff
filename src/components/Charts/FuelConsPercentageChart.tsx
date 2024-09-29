@@ -1,7 +1,7 @@
 import { ApexOptions } from 'apexcharts';
 import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
-import LoaderLogo from '../../common/Loader/LoaderLogo';
+import { LoaderLogo } from '../../common/Loader/LoaderLogo';
 
 //---------------------------------------------------------------------------------------
 
