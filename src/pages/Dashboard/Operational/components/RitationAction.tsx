@@ -17,16 +17,16 @@ interface RitationActionCellRendererProps {
   value: any; // You might want to define a more specific type here
   data: any;  // The row data
   onApprove: (id: number) => void;
-  onMail: (data: any) => void;
-  onPrint: (data: any) => void;
+  onEdit: (data: any) => void;
+  onDelete: (data: any) => void;
   onShare: (data: any) => void;
 }
 
 const RitationAction: React.FC<RitationActionCellRendererProps> = (props) => {
 
   const handleApprove = () => props.onApprove(props.data);
-  const handleMail = () => props.onMail(props.data);
-  const handlePrint = () => props.onPrint(props.data);
+  const handleEdit = () => props.onEdit(props.data);
+  const handleDelete = () => props.onDelete(props.data);
   const handleShare = () => props.onShare(props.data);
 
  
@@ -44,14 +44,14 @@ const RitationAction: React.FC<RitationActionCellRendererProps> = (props) => {
         <button
           className="bg-transparent border-none cursor-pointer p-2 text-gray-700 hover:text-sky-400 transition-colors duration-300"
           title="Edit"
-          onClick={handleMail}
+          onClick={handleEdit}
         >
           <FontAwesomeIcon icon={faEdit} />
         </button>
         <button
-          className="bg-transparent border-none cursor-pointer p-2 text-gray-700 hover:text-orange-400 transition-colors duration-300"
+          className="bg-transparent border-none cursor-pointer p-2 text-gray-700 hover:text-red-600 transition-colors duration-300"
           title="Delete"
-          onClick={handlePrint}
+          onClick={handleDelete}
         >
           <FontAwesomeIcon icon={faRemove} />
         </button>

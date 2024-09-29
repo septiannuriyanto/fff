@@ -28,6 +28,7 @@ import {
   baseStorageUrl,
   uploadImage,
 } from '../../../../services/ImageUploader';
+import Swal from 'sweetalert2';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -173,6 +174,87 @@ const Ritation = () => {
   const handleDateChange = async (date: Date | null) => {
     setDate(date);
   };
+
+
+  // const handleDelete = async (id: string) => {
+  //   console.log(id);
+  
+  // }
+  
+
+const handleDelete = async (id: string) => {
+  // Use SweetAlert2 for the confirmation dialog
+
+  console.log(id);
+  Swal.fire({
+    title: 'Delete?',
+    text: "Tindakan ini tidak dapat dibatalkan",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Ya, Hapus Record!'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        // Step 1: Delete the files within the folder (folder name is the 'id')
+        const { data: fileList, error: listFilesError } = await supabase.storage
+          .from('ritation_upload') // Replace with your actual bucket name
+          .list(`${extractFullYear(id)}/${id}`); // List all files in the folder (the folder name is `id`)
+
+        if (listFilesError) {
+          console.error('Error listing folder contents:', listFilesError);
+          Swal.fire('Error', 'Error listing folder contents.', 'error');
+          return;
+        }
+        
+
+        if (fileList && fileList.length > 0) {
+          const filePaths = fileList.map((file) => `${extractFullYear(id)}/${id}/${file.name}`);
+          const { error: deleteFilesError } = await supabase.storage
+            .from('ritation_upload')
+            .remove(filePaths);
+
+          if (deleteFilesError) {
+            console.error('Error deleting files from storage:', deleteFilesError);
+            Swal.fire('Error', 'Error deleting files from storage.', 'error');
+            return;
+          }
+
+          console.log('All files deleted from the folder.');
+        } else {
+          console.log('Folder is already empty or does not exist.');
+          toast.error('Folder is already empty or does not exist.');
+        }
+
+        console.log('Folder deleted from Supabase storage.');
+
+         // Step 2: Delete the record from Supabase
+         const { error: deleteRecordError } = await supabase
+         .from('ritasi_fuel') // Replace with your actual table name
+         .delete()
+         .eq('no_surat_jalan', id);
+
+       if (deleteRecordError) {
+         console.error('Error deleting record:', deleteRecordError);
+         toast.error('Terjadi kesalahan saat menghapus record');
+         return;
+       }
+       console.log('Record deleted from Supabase.');
+
+
+        // Step 3: Remove from client-side records
+        setDataRitasi((prevRecords) => prevRecords.filter((record) => record.no_surat_jalan !== id));
+        
+        toast.success('Record Deleted');
+      } catch (error) {
+        console.error('Error during deletion process:', error);
+        toast.error('Terjadi kesalahan saat menghapus record');
+      }
+    }
+  });
+};
+
 
   const handleApprove = async (id: string) => {
     const targetRow = dataRitasi.find((row) => row.no_surat_jalan === id);
@@ -475,6 +557,7 @@ const Ritation = () => {
                                       onApprove={() =>
                                         handleApprove(row.no_surat_jalan)
                                       }
+                                      onDelete={()=>handleDelete(row.no_surat_jalan)}
                                       onShare={() => handleShare(row)}
                                     />
                                   </td>
