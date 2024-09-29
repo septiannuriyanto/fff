@@ -55,8 +55,8 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
 
     setDate(dates);
     setQty(qtys);
-    setCumulativePlan(cumulativePlanData); // Update cumulative plan state
-    setCumulativeRitation(cumulativeRitationData); // Update cumulative ritation state
+    // setCumulativePlan(cumulativePlanData); // Update cumulative plan state
+    // setCumulativeRitation(cumulativeRitationData); // Update cumulative ritation state
   }, [chartDataInput]);
 
   // Create an array for the daily target line
@@ -80,7 +80,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     ],
     options: {
       chart: {
-        height: 350,
+        height: 200,
         type: 'line',
         stacked: false,
       },
@@ -120,7 +120,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
           options={chartData.options}
           series={chartData.series}
           type="line"
-          height={350}
+          height={200}
         />
       </div>
     </div>
