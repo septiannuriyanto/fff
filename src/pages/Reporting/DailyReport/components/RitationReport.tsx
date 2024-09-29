@@ -166,11 +166,11 @@ const RitationReport: React.FC = () => {
     const sjNumber = `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
       parseInt(reportNumber),
     )}`;
-    const imageUrl = `${baseStorageUrl}${new Date().getFullYear()}/${sjNumber}/`;
+    const imageUrl = `${baseStorageUrl}/${new Date().getFullYear()}/${sjNumber}/`;
 
-    const flowmeterBeforeUrl = `${imageUrl}/fm-before`;
-    const flowmeterAfterUrl = `${imageUrl}/fm-after`;
-    const suratJalanUrl = `${imageUrl}/surat-jalan`;
+    const flowmeterBeforeUrl = `${imageUrl}fm-before`;
+    const flowmeterAfterUrl = `${imageUrl}fm-after`;
+    const suratJalanUrl = `${imageUrl}surat-jalan`;
 
     //Count required data
     const flowmeterqty =
@@ -346,6 +346,10 @@ const RitationReport: React.FC = () => {
         return;
       }
 
+      toast.success('Flowmeter Before Uploaded');
+      window.location.reload();
+
+
       console.log('Flowmeter Before Uploaded:', imageUrl);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -383,6 +387,8 @@ const RitationReport: React.FC = () => {
         alert(error);
         return;
       }
+      toast.success('Flowmeter After Uploaded');
+      window.location.reload();
 
       console.log('Flowmeter After Uploaded:', imageUrl);
     } catch (error) {
@@ -426,6 +432,9 @@ const RitationReport: React.FC = () => {
         alert(error);
         return;
       }
+
+      toast.success('Surat Jalan Uploaded');
+      window.location.reload();
 
       console.log('Surat Jalan Uploaded:', imageUrl);
     } catch (error) {

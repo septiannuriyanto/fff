@@ -173,7 +173,7 @@ const FuelTruckMaintenanceRequest = () => {
       image_url : ''
     };
 
-    const { error } = await supabase.from('ft_maintenance').insert([query]);
+    const { error } = await supabase.from('unit_maintenance').insert([query]);
 
     if (error) {
       if (error.code === '23505') {
@@ -190,22 +190,10 @@ const FuelTruckMaintenanceRequest = () => {
       setDescription('');
       setRequestEvidenceFile(null);
 
-      const message = `PENGAJUAN MAINTENANCE\n\nDate Submit : ${formatDate(
-        Date.now(),
-      )}\nReported by : ${name}
-      \nEquipment Number : ${equipNumber}
-      \nDate Start : ${
-        startDate
-          ? startDate.toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            })
-          : ''
-      }\nArea Trouble : ${areaTrouble}
-      \nProblem : ${problem}
-      \nDescription : ${description}
-      \nVisit : https://fff-project.vercel.app/reporting/ftmaintenance/${reqId}`;
+      const message =
+      `PENGAJUAN MAINTENANCE\n\nDate Submit : ${formatDate(Date.now(),)}\nReported by : ${name}\nEquipment Number : ${equipNumber}
+      \nArea Trouble : ${areaTrouble}\nProblem : ${problem}\nDescription : ${description}
+      \nDetail : https://fff-project.vercel.app/reporting/ftmaintenance/${reqId}`;
       sendMessageToChannel(message);
     }
   };
