@@ -15,7 +15,7 @@ const Loader = (title:any) => {
 
           <div className="relative top-25 text-center">
             <h1 className='font-bold text-black'>Fuel Feasibility for Fleet</h1>
-            <h4>{title || 'Now Loading....'}</h4>
+            {/* <h4>{title || 'Now Loading....'}</h4> */}
           </div>
 
         </div>

@@ -406,7 +406,7 @@ const handleDelete = async (id: string) => {
         
 
                <DailyRitationChart
-                  groupedData={ritationDaily}
+                  chartDataInput={ritationDaily}
                   totalPlan={ritationQtyPlan}
                 />
            

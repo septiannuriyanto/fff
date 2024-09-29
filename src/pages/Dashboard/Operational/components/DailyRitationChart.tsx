@@ -2,18 +2,17 @@ import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 
 interface DailyRitationChartProps {
-  groupedData: { date: string; total: number }[]; // Data grouped by date
+  chartDataInput: { date: string; total: number }[]; // Data grouped by date
   totalPlan: number; // Total plan for the month
 }
 
 const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
-  groupedData,
+  chartDataInput,
   totalPlan,
 }) => {
   // Prepare data for the chart
   const [date, setDate] = useState<string[]>([]);
   const [qty, setQty] = useState<number[]>([]);
-  const [dailyTotals, setDailyTotals] = useState<number[]>([]);
   const [cumulativePlan, setCumulativePlan] = useState<number[]>([]);
   const [cumulativeRitation, setCumulativeRitation] = useState<number[]>([]); // New state for cumulative daily ritation
 
@@ -27,10 +26,10 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     const dates: string[] = [];
     const qtys: number[] = [];
 
-    // Fill in the dates and quantities from groupedData
-    for (let index = 0; index < groupedData.length; index++) {
-      dates.push(new Date(groupedData[index].date).getDate().toString());
-      qtys.push(groupedData[index].total);
+    // Fill in the dates and quantities from chartDataInput
+    for (let index = 0; index < chartDataInput.length; index++) {
+      dates.push(new Date(chartDataInput[index].date).getDate().toString());
+      qtys.push(chartDataInput[index].total);
     }
 
     const dailyTarget = totalPlan / daysInMonth;
@@ -58,7 +57,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     setQty(qtys);
     setCumulativePlan(cumulativePlanData); // Update cumulative plan state
     setCumulativeRitation(cumulativeRitationData); // Update cumulative ritation state
-  }, [groupedData]);
+  }, [chartDataInput]);
 
   // Create an array for the daily target line
   const chartData = {

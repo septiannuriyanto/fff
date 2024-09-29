@@ -13,7 +13,9 @@ import {
 import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import moment from 'moment';
 import { getQtyByHeight } from '../../../../functions/Interpolate';
-import FluidMeter from '../../../../components/FluidMeterComponent/FluidMeterComponent';
+import FluidMeter from '../../../../components/FluidMeterComponent/LiquidMeter';
+import LiquidGaugeComponent from '../../../../components/FluidMeterComponent/LiquidMeter';
+import LiquidMeter from '../../../../components/FluidMeterComponent/LiquidMeter';
 
 const StockTaking: React.FC = () => {
   const fullColumns = [
@@ -327,7 +329,7 @@ const StockTaking: React.FC = () => {
   return (
     <>
       <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-      <FluidMeter filled={40} max={100} options={{ drawText: true }} />
+      
         <div className="flex flex-wrap items-center">
           <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">
