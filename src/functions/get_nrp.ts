@@ -29,6 +29,20 @@ export const getNameFromNrp = async (nrp:string)=>{
     return data[0].nama;
 }
 
+export const getPositionFromPositionCode = async (positionId:string)=>{
+    const { data, error } = await supabase
+    .from('incumbent')
+    .select('incumbent')
+    .eq('id', positionId)
+    if(error){
+        console.log(error.message);
+        return null;
+    }
+    console.log(data);
+    
+    return data[0].incumbent;
+}
+
 export const getFTFromWH = async (whId:string)=>{
     const { data, error } = await supabase
     .from('storage')

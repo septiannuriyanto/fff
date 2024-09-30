@@ -1,7 +1,7 @@
 import React from 'react'
 import StockReporting from './components/StockReporting'
-import RitationReporting from './components/RitationReport'
-import TmrReporting from './components/TMRReport'
+import RitationReporting from '../RitationReport/RitationReport'
+import TmrReporting from '../TMRReport/TMRReport'
 
 const DailyReport = () => {
   return (

@@ -7,7 +7,7 @@ import {
   formatDateToYyMmDd,
 } from '../../../../Utils/DateUtility';
 import { sendMessageToChannel } from '../../../../services/TelegramSender';
-import DropZone from '../../../Reporting/DailyReport/components/DropZone';
+import DropZone from '../../../../components/DropZones/DropZone';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface ManpowerData {

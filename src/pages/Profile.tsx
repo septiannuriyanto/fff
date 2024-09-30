@@ -1,20 +1,77 @@
+import { useEffect, useState } from 'react';
 import Breadcrumb from '../components/Breadcrumbs/Breadcrumb';
 import CoverOne from '../images/cover/cover-01.png';
 import userSix from '../images/user/user-06.png';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { supabase } from '../db/SupabaseClient';
+import toast from 'react-hot-toast';
+import { Manpower } from '../types/manpower';
+import { getFileFromUrl, profileImageBaseUrl } from '../services/ImageUploader';
+import { getPositionFromPositionCode } from '../functions/get_nrp';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faBackward } from '@fortawesome/free-solid-svg-icons';
 
 const Profile = () => {
+  const [profileData, setProfileData] = useState<Manpower>();
+
+  const { id } = useParams<{ id: string }>();
+
+  const fetchSingleProfile = async () => {
+    const { data, error } = await supabase
+      .from('manpower')
+      .select('*')
+      .eq('nrp', id);
+
+    if (error) {
+      console.error(error.message);
+      toast.error(error.message);
+      return;
+    }
+
+    const updatedData = await Promise.all(
+      data.map(async (item) => ({
+        ...item,
+        status: 'Onsite',
+        nama: item.nama
+          .toLowerCase()
+          .split(' ')
+          .map((word: any) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' '),
+        image: (await getFileFromUrl(`${profileImageBaseUrl}/${item.nrp}`))
+          ? `${profileImageBaseUrl}/${item.nrp}`
+          : null,
+        position: await getPositionFromPositionCode(item.position),
+      })),
+    );
+
+    console.log(updatedData);
+    setProfileData(updatedData[0] as Manpower);
+  };
+
+  useEffect(() => {
+    fetchSingleProfile();
+  }, []);
+
+  const handleBack = () =>{
+    window.history.back();
+  }
+
   return (
     <>
-      <Breadcrumb pageName="Profile" />
-
       <div className="overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="relative z-20 h-35 md:h-65">
           <img
-            src={CoverOne}
+            src={profileData?.image}
             alt="profile cover"
             className="h-full w-full rounded-tl-sm rounded-tr-sm object-cover object-center"
           />
+          <div className="absolute top-2 left-4 h-8 w-8 flex">
+            <button
+            onClick={handleBack}
+            className="h-8 w-8 flex items-center justify-center">
+              <FontAwesomeIcon icon={faArrowLeft} className="text-xxl" />
+            </button>
+          </div>
           <div className="absolute bottom-1 right-1 z-10 xsm:bottom-4 xsm:right-4">
             <label
               htmlFor="cover"
@@ -51,7 +108,7 @@ const Profile = () => {
         <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11.5">
           <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-44 sm:p-3">
             <div className="relative drop-shadow-2">
-              <img src={userSix} alt="profile" />
+              <img src={profileData?.image} alt="profile" />
               <label
                 htmlFor="profile"
                 className="absolute bottom-0 right-0 flex h-8.5 w-8.5 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
@@ -88,9 +145,9 @@ const Profile = () => {
           </div>
           <div className="mt-4">
             <h3 className="mb-1.5 text-2xl font-semibold text-black dark:text-white">
-              Danish Heilium
+              {profileData?.nama}
             </h3>
-            <p className="font-medium">Ui/Ux Designer</p>
+            <p className="font-medium">{profileData?.position}</p>
             <div className="mx-auto mt-4.5 mb-5.5 grid max-w-94 grid-cols-3 rounded-md border border-stroke py-2.5 shadow-1 dark:border-strokedark dark:bg-[#37404F]">
               <div className="flex flex-col items-center justify-center gap-1 border-r border-stroke px-4 dark:border-strokedark xsm:flex-row">
                 <span className="font-semibold text-black dark:text-white">

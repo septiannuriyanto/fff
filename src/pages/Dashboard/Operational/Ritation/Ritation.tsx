@@ -533,9 +533,9 @@ const handleDelete = async (id: string) => {
                                     <br />({row.warehouse_id})
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4 text-right">
-                                    {row.qty_flowmeter_before}
+                                    {formatNumberWithSeparator(row.qty_flowmeter_before)}
                                     <br />
-                                    {row.qty_flowmeter_after}
+                                    {formatNumberWithSeparator(row.qty_flowmeter_after)}
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
                                     {row.qty_sj}

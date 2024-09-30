@@ -13,8 +13,8 @@ import Alerts from './pages/UiElements/Alerts';
 import Buttons from './pages/UiElements/Buttons';
 import DefaultLayout from './layout/DefaultLayout';
 import DailyReport from './pages/Reporting/DailyReport/DailyReport';
-import RitationReport from './pages/Reporting/DailyReport/components/RitationReport';
-import TMRReport from './pages/Reporting/DailyReport/components/TMRReport';
+import RitationReport from './pages/Reporting/RitationReport/RitationReport';
+import TMRReport from './pages/Reporting/TMRReport/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
 import FuelConsumption from './pages/Dashboard/FuelConsumption/FuelConsumption';
 import ProtectedRoute from './pages/ProtectedRoute'; // Adjust the import path as necessary
@@ -31,9 +31,13 @@ import SchedulerExample from './pages/Dashboard/Manpower/Roster/SchedulerExample
 import LeaveList from './pages/Dashboard/Manpower/Leave/LeaveList';
 import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 import StockReporting from './pages/Reporting/DailyReport/components/StockReporting';
-import StockTaking from './pages/Reporting/DailyReport/components/StockTaking';
+import StockTaking from './pages/Reporting/DailyReport/StockTaking/StockTaking';
 import Ritation from './pages/Dashboard/Operational/Ritation/Ritation';
 import FuelTruckMaintenanceRequest from './pages/Dashboard/Operational/components/FueltruckMaintenanceRequest';
+import Logsheet from './pages/Reporting/Logsheet/Logsheet';
+import ComponentTester from './pages/MasterData/ComponentLibrary';
+import ComponentLibrary from './pages/MasterData/ComponentLibrary';
+import MasterManpower from './pages/MasterData/MasterManpower';
 
 function App() {
   return (
@@ -43,6 +47,7 @@ function App() {
         <Route path="/auth/signup" element={<SignUp />} />
 
         {/* Protected Routes */}
+        {/*============================================================================================================== DASHBOARDS  */}
         <Route
           path="/"
           element={
@@ -217,7 +222,7 @@ function App() {
           }
         />
         <Route
-          path="/profile"
+          path="/profile/:id"
           element={
             <ProtectedRoute
               element={
@@ -269,7 +274,7 @@ function App() {
           }
         />
         <Route
-          path="/settings"
+          path="/settings/:id"
           element={
             <ProtectedRoute
               element={
@@ -320,6 +325,7 @@ function App() {
             />
           }
         />
+        {/*============================================================================================================== REPORTING  */}
         <Route
           path="/reporting/dailyreport"
           element={
@@ -328,6 +334,19 @@ function App() {
                 <>
                   <PageTitle title="FFF Dashboard | Daily Report" />
                   <DailyReport />
+                </>
+              }
+            />
+          }
+        />
+         <Route
+          path="/reporting/logsheet"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Logsheet" />
+                  <Logsheet />
                 </>
               }
             />
@@ -401,6 +420,43 @@ function App() {
             <>
               <PageTitle title="FFF Dashboard | FT Maintenance Request" />
               <FuelTruckMaintenanceRequest />
+            </>
+          }
+        />
+        {/*============================================================================================================== MASTER DATA  */}
+        <Route
+          path="/master/manpower"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Manpower Master Data" />
+              <MasterManpower></MasterManpower>
+            </>
+          }
+        />
+         <Route
+          path="/master/equipment"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Equipment Master Data" />
+              
+            </>
+          }
+        />
+         <Route
+          path="/master/fueltruck"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | FT Master Data" />
+              
+            </>
+          }
+        />
+         <Route
+          path="/master/library"
+          element={
+            <>
+              <PageTitle title="FFF Dashboard | Component Library" />
+              <ComponentLibrary></ComponentLibrary>
             </>
           }
         />

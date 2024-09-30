@@ -17,7 +17,7 @@ useEffect(()=>{},[
                 Replace With New Title
               </h2>
   
-              <div className="change-to-your-class h-100 w-full">
+              <div className="main-content h-100 w-full">
                 
               </div>
             </div>

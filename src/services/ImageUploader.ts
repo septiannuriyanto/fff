@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { supabase } from "../db/SupabaseClient";
 import imageCompression from "browser-image-compression";
 
@@ -5,6 +6,7 @@ import imageCompression from "browser-image-compression";
 
 const supabaseStorageName = 'ritation_upload';
 const baseStorageUrl = `https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/${supabaseStorageName}`;
+const profileImageBaseUrl = 'https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/images/profile';
  const uploadImage = async (
   file: File,
   fileTitle: string,
@@ -78,7 +80,6 @@ const checkImageUrl = async (url: string): Promise<boolean> => {
 const getFileFromUrl = async (url: any) => {
   try {
     const response = await fetch(url);
-    console.log(response.status);
     if(response.status==400){
       return null;
     }
@@ -94,4 +95,21 @@ const getFileFromUrl = async (url: any) => {
 };
 
 
-export { uploadImage, checkImageUrl, getFileFromUrl, baseStorageUrl }
+const uploadImageGeneral = async (file: File, bucketName: string, fullPath: string) => {
+  const { data, error } = await supabase.storage.from(bucketName).upload(fullPath, file,  {
+    cacheControl: '3600', // optional, set cache control if needed
+    upsert: true // Enable overwriting existing file
+  });
+
+  if (error) {
+    toast.error(`Error uploading file: ${error.message}`)
+    return null
+  }
+  console.log('Upload successful:', data);
+  toast.success('Upload successful');
+  return file;
+};
+
+
+
+export { uploadImage, checkImageUrl, getFileFromUrl, baseStorageUrl,profileImageBaseUrl, uploadImageGeneral }

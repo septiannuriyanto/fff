@@ -1,37 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../../../db/SupabaseClient';
+import { supabase } from '../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
-import { sendMessageToChannel } from '../../../../services/TelegramSender';
 import {
-  formatDate,
   formatDateToIndonesianByDate,
   formatDateToString,
   formatDateToYyMmDd,
-} from '../../../../Utils/DateUtility';
-import DropZone from './DropZone';
+} from '../../../Utils/DateUtility';
+import DropZone from '../../../components/DropZones/DropZone';
 import {
   baseStorageUrl,
   getFileFromUrl,
   uploadImage,
-} from '../../../../services/ImageUploader';
+} from '../../../services/ImageUploader';
 
-import LogoIcon from '../../../../images/logo/logo-icon.svg';
-import { getFTFromWH, getNameFromNrp, getNrpFromName } from '../../../../functions/get_nrp';
-import { shareMessageToWhatsapp } from '../../../../functions/share_message';
-import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';
-import { getQtyByHeight } from '../../../../functions/Interpolate';
+import LogoIcon from '../../../images/logo/logo-icon.svg'
+import { getFTFromWH, getNameFromNrp, getNrpFromName } from '../../../functions/get_nrp';
+import { shareMessageToWhatsapp } from '../../../functions/share_message';
+import { normalizeToTwoDigit } from '../../../Utils/NumberUtility';
+import { getQtyByHeight } from '../../../functions/Interpolate';
 import { useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import LoaderLogo, { LoaderLogoFlex } from '../../../../common/Loader/LoaderLogo';
-// Define the types
-interface PopulationData {
-  unit_id: string;
-  warehouse_id: string;
-}
-
-interface ManpowerData {
-  nama: string;
-}
+import { LoaderLogoFlex } from '../../../common/Loader/LoaderLogo';
 
 const RitationReport: React.FC = () => {
   const [fetchedData, setFetchedData] = useState<any[]>([]);

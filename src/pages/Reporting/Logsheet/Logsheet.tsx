@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import MasterManpowerList from '../../components/Tables/MasterManpowerList';
-const MasterManpower = () => {
+import { useEffect } from "react";
+
+const Logsheet = () => {
 
 useEffect(()=>{},[
 
@@ -15,11 +15,12 @@ useEffect(()=>{},[
           <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">
             <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full">
-                Master Manpower
+                Logsheet
               </h2>
-  
-              <div className="main-content  w-full">
-                  <MasterManpowerList></MasterManpowerList>
+
+
+              <div className="main-content h-100 w-full">
+              
               </div>
             </div>
           </div>
@@ -29,4 +30,4 @@ useEffect(()=>{},[
   );
 };
 
-export default MasterManpower;
+export default Logsheet;
