@@ -20,6 +20,9 @@ import RitationValidationChart from '../components/RitationValidationChart';
 import DailyRitationChart from '../components/DailyRitationChart';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faFileCsv,
+  faFileExcel,
+  faFileExport,
   faRotateLeft,
   faRotateRight,
   faUpload,
@@ -29,6 +32,9 @@ import {
   uploadImage,
 } from '../../../../services/ImageUploader';
 import Swal from 'sweetalert2';
+import { DateRangePicker } from 'rsuite';
+import './datestyles.css';
+import { predefinedRanges } from './dateRanges';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -44,6 +50,33 @@ const Ritation = () => {
   const [ritationDaily, setRitationDaily] = useState<Record<string, number>>(
     {},
   );
+
+  type DateValue = {
+    startDate: Date | null;
+    endDate: Date | null;
+  };
+
+  // Initialize the state with null values
+  const [dateValue, setDateValue] = useState<DateValue>({
+    startDate: null,
+    endDate: null,
+  });
+
+  const handleRangeDateChange = (newValue: DateValue) => {
+    // Check if the newValue contains valid dates
+    const isValidStartDate =
+      newValue.startDate instanceof Date &&
+      !isNaN(newValue.startDate.getTime());
+    const isValidEndDate =
+      newValue.endDate instanceof Date && !isNaN(newValue.endDate.getTime());
+
+    if (isValidStartDate && isValidEndDate) {
+      console.log('Selected dates: ', newValue);
+      setDateValue(newValue); // Update the state with the new date value
+    } else {
+      console.warn('Invalid date selected');
+    }
+  };
 
   const calculateTotalQtySj = (data: RitasiFuelData[]): number => {
     return data.reduce((total, item) => total + item.qty_sj, 0);
@@ -175,86 +208,89 @@ const Ritation = () => {
     setDate(date);
   };
 
-
   // const handleDelete = async (id: string) => {
   //   console.log(id);
-  
+
   // }
-  
 
-const handleDelete = async (id: string) => {
-  // Use SweetAlert2 for the confirmation dialog
+  const handleDelete = async (id: string) => {
+    // Use SweetAlert2 for the confirmation dialog
 
-  console.log(id);
-  Swal.fire({
-    title: 'Delete?',
-    text: "Tindakan ini tidak dapat dibatalkan",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Ya, Hapus Record!'
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        // Step 1: Delete the files within the folder (folder name is the 'id')
-        const { data: fileList, error: listFilesError } = await supabase.storage
-          .from('ritation_upload') // Replace with your actual bucket name
-          .list(`${extractFullYear(id)}/${id}`); // List all files in the folder (the folder name is `id`)
+    console.log(id);
+    Swal.fire({
+      title: 'Delete?',
+      text: 'Tindakan ini tidak dapat dibatalkan',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Hapus Record!',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          // Step 1: Delete the files within the folder (folder name is the 'id')
+          const { data: fileList, error: listFilesError } =
+            await supabase.storage
+              .from('ritation_upload') // Replace with your actual bucket name
+              .list(`${extractFullYear(id)}/${id}`); // List all files in the folder (the folder name is `id`)
 
-        if (listFilesError) {
-          console.error('Error listing folder contents:', listFilesError);
-          Swal.fire('Error', 'Error listing folder contents.', 'error');
-          return;
-        }
-        
-
-        if (fileList && fileList.length > 0) {
-          const filePaths = fileList.map((file) => `${extractFullYear(id)}/${id}/${file.name}`);
-          const { error: deleteFilesError } = await supabase.storage
-            .from('ritation_upload')
-            .remove(filePaths);
-
-          if (deleteFilesError) {
-            console.error('Error deleting files from storage:', deleteFilesError);
-            Swal.fire('Error', 'Error deleting files from storage.', 'error');
+          if (listFilesError) {
+            console.error('Error listing folder contents:', listFilesError);
+            Swal.fire('Error', 'Error listing folder contents.', 'error');
             return;
           }
 
-          console.log('All files deleted from the folder.');
-        } else {
-          console.log('Folder is already empty or does not exist.');
-          toast.error('Folder is already empty or does not exist.');
+          if (fileList && fileList.length > 0) {
+            const filePaths = fileList.map(
+              (file) => `${extractFullYear(id)}/${id}/${file.name}`,
+            );
+            const { error: deleteFilesError } = await supabase.storage
+              .from('ritation_upload')
+              .remove(filePaths);
+
+            if (deleteFilesError) {
+              console.error(
+                'Error deleting files from storage:',
+                deleteFilesError,
+              );
+              Swal.fire('Error', 'Error deleting files from storage.', 'error');
+              return;
+            }
+
+            console.log('All files deleted from the folder.');
+          } else {
+            console.log('Folder is already empty or does not exist.');
+            toast.error('Folder is already empty or does not exist.');
+          }
+
+          console.log('Folder deleted from Supabase storage.');
+
+          // Step 2: Delete the record from Supabase
+          const { error: deleteRecordError } = await supabase
+            .from('ritasi_fuel') // Replace with your actual table name
+            .delete()
+            .eq('no_surat_jalan', id);
+
+          if (deleteRecordError) {
+            console.error('Error deleting record:', deleteRecordError);
+            toast.error('Terjadi kesalahan saat menghapus record');
+            return;
+          }
+          console.log('Record deleted from Supabase.');
+
+          // Step 3: Remove from client-side records
+          setDataRitasi((prevRecords) =>
+            prevRecords.filter((record) => record.no_surat_jalan !== id),
+          );
+
+          toast.success('Record Deleted');
+        } catch (error) {
+          console.error('Error during deletion process:', error);
+          toast.error('Terjadi kesalahan saat menghapus record');
         }
-
-        console.log('Folder deleted from Supabase storage.');
-
-         // Step 2: Delete the record from Supabase
-         const { error: deleteRecordError } = await supabase
-         .from('ritasi_fuel') // Replace with your actual table name
-         .delete()
-         .eq('no_surat_jalan', id);
-
-       if (deleteRecordError) {
-         console.error('Error deleting record:', deleteRecordError);
-         toast.error('Terjadi kesalahan saat menghapus record');
-         return;
-       }
-       console.log('Record deleted from Supabase.');
-
-
-        // Step 3: Remove from client-side records
-        setDataRitasi((prevRecords) => prevRecords.filter((record) => record.no_surat_jalan !== id));
-        
-        toast.success('Record Deleted');
-      } catch (error) {
-        console.error('Error during deletion process:', error);
-        toast.error('Terjadi kesalahan saat menghapus record');
       }
-    }
-  });
-};
-
+    });
+  };
 
   const handleApprove = async (id: string) => {
     const targetRow = dataRitasi.find((row) => row.no_surat_jalan === id);
@@ -384,6 +420,17 @@ const handleDelete = async (id: string) => {
     };
   };
 
+
+  const [ dateStart, setDateStart ] = useState<string>();
+  const [ dateEnd, setDateEnd ] = useState<string>();
+
+  function handleChangeDate(value: any) {
+      console.log(value);
+      setDateStart(formatDateToString(value[0]));
+      setDateEnd(formatDateToString(value[1]));
+      
+  }
+
   return (
     <>
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
@@ -403,14 +450,11 @@ const handleDelete = async (id: string) => {
               </div>
 
               <div className="ritation__table h-23 w-full">
-        
-
-               <DailyRitationChart
+                <DailyRitationChart
                   chartDataInput={ritationDaily}
                   totalPlan={ritationQtyPlan}
                 />
-           
-               
+
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3 2xl:gap-7.5 mt-2">
                   {/* <CardDataStats
                 title="Ritation Qty (liter)"
@@ -458,6 +502,28 @@ const handleDelete = async (id: string) => {
                 <div className="flex flex-col">
                   <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
+                    <div className="my-6">
+                          <h4>Specify date range to download report</h4>
+                          <div className="export__segment flex w-full items-start gap-2">
+                            <DateRangePicker
+                              size="lg"
+                              format="dd.MM.yyyy"
+                              ranges={predefinedRanges}
+                              placeholder="Select Date Range"
+                              onShortcutClick={(shortcut, event) => {
+                                handleChangeDate(shortcut.value);
+                              }}
+                            />
+                            <button className="inline-flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4">
+                              <span>
+                                <FontAwesomeIcon
+                                  icon={faFileExport}
+                                ></FontAwesomeIcon>
+                              </span>
+                              Export to File
+                            </button>
+                          </div>
+                        </div>
                       <div className="overflow-hidden">
                         <table className="min-w-full text-left text-sm font-light text-surface dark:text-white">
                           <thead className="border-b border-neutral-200 font-medium dark:border-white/10">
@@ -533,9 +599,13 @@ const handleDelete = async (id: string) => {
                                     <br />({row.warehouse_id})
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4 text-right">
-                                    {formatNumberWithSeparator(row.qty_flowmeter_before)}
+                                    {formatNumberWithSeparator(
+                                      row.qty_flowmeter_before,
+                                    )}
                                     <br />
-                                    {formatNumberWithSeparator(row.qty_flowmeter_after)}
+                                    {formatNumberWithSeparator(
+                                      row.qty_flowmeter_after,
+                                    )}
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
                                     {row.qty_sj}
@@ -557,7 +627,9 @@ const handleDelete = async (id: string) => {
                                       onApprove={() =>
                                         handleApprove(row.no_surat_jalan)
                                       }
-                                      onDelete={()=>handleDelete(row.no_surat_jalan)}
+                                      onDelete={() =>
+                                        handleDelete(row.no_surat_jalan)
+                                      }
                                       onShare={() => handleShare(row)}
                                     />
                                   </td>
@@ -661,6 +733,7 @@ const handleDelete = async (id: string) => {
                             ))}
                           </tbody>
                         </table>
+                       
                       </div>
                     </div>
                   </div>
