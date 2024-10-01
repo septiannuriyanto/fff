@@ -294,7 +294,7 @@ const Logsheet = () => {
   return (
     <>
       <Toaster />
-      <div className="max-w-lg mx-auto p-0 font-sans  dark:bg-boxdark">
+      <div className="max-w-lg mx-auto p-0 font-sans  ">
         <div className="flex flex-wrap items-center">
           <div className="w-full">
             <div className="w-full p-4 sm:p-12.5 xl:p-5">
@@ -302,7 +302,7 @@ const Logsheet = () => {
                 Logsheet
               </h2>
 
-              <div className=" w-full  bg-white rounded-2xl p-4 mb-4">
+              <div className=" w-full  bg-white dark:bg-boxdark rounded-2xl p-4 mb-4">
                 <h2 className="mb-2 font-bold text-black dark:text-white sm:text-body-sm w-full">
                   Data Petugas FAO
                 </h2>
@@ -333,7 +333,7 @@ const Logsheet = () => {
                 ></SuggestionText>
               </div>
 
-              <div className=" w-full  bg-white rounded-2xl p-4">
+              <div className=" w-full  bg-white dark:bg-boxdark rounded-2xl p-4">
                 <h2 className="mb-2 font-bold text-black dark:text-white sm:text-body-sm w-full">
                   Data Refueling
                 </h2>
