@@ -21,6 +21,7 @@ import {
 } from '../../services/ImageUploader';
 import DropZoneMini from '../DropZones/DropZoneMini';
 import { getPositionFromPositionCode } from '../../functions/get_nrp';
+import Loader from '../../common/Loader/Loader';
 
 const MasterManpowerList = () => {
   
@@ -254,7 +255,7 @@ const MasterManpowerList = () => {
         </div>
       </div>
 
-      {dataRow.map((manpower, key) => (
+      { dataRow?  dataRow.map((manpower, key) => (
         <div
           className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5"
           key={key}
@@ -354,7 +355,9 @@ const MasterManpowerList = () => {
             />
           </div>
         </div>
-      ))}
+      )) : <div className='w-full'>
+        <Loader></Loader>
+      </div> }
     </div>
   );
 };

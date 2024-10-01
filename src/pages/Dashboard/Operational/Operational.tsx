@@ -26,7 +26,7 @@ const Operational = () => {
         </h2>
       </div>
       <div className="content-container">
-        <Ritation />
+        
         <RefuelingAnomaly allowColumnsEdit={session != null} />
       </div>
     </div>

@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import Ritation from '../Operational/Ritation/Ritation';
 const StockManagement = () => {
-
-useEffect(()=>{},[
-
-
-]);
+  useEffect(() => {}, []);
 
   return (
     <>
@@ -15,12 +12,9 @@ useEffect(()=>{},[
               <h2 className="mb-9 text-title-md font-bold text-black dark:text-white sm:text-title-xl2 w-full">
                 Stock Management
               </h2>
-  
-              <div
-                className="main-content h-100 w-full"
-               
-              >
-                
+
+              <div className="main-content w-full">
+                <Ritation />
               </div>
             </div>
           </div>

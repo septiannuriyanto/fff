@@ -6,10 +6,6 @@ import moment from 'moment';
 import { formatDate, formatDateForSupabase } from '../../../../Utils/DateUtility';
 import { sendMessageToChannel } from '../../../../services/TelegramSender';
 
-interface ManpowerData {
-  nrp?: string;
-  nama?: string;
-}
 
 const LeaveRequest = () => {
   const [name, setName] = useState<string>('');

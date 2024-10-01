@@ -61,6 +61,13 @@ function getWeekStartAndEndDate(year: number, weekNumber: number): { startDate: 
   
     return { startDate, endDate };
   }
+
+  function formatTimeStamp(timeStamp:any) {
+    const date = new Date(timeStamp);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
   
 
-export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, }
+export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, formatTimeStamp }

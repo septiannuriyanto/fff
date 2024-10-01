@@ -285,7 +285,14 @@ const RitationReport: React.FC = () => {
     { newValue }: { newValue: string },
   ) => {
     setFuelman(newValue);
+    localStorage.setItem('fuelman', newValue); 
   };
+  useEffect(() => {
+    const savedFuelman = localStorage.getItem('fuelman');
+    if (savedFuelman) {
+      setFuelman(savedFuelman);
+    }
+  }, []); // Empty dependency array means this runs once on mount
 
   const onOperatorChange = (
     event: React.FormEvent<HTMLElement>,
