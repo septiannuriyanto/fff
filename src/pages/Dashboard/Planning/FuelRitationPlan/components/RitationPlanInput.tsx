@@ -21,7 +21,11 @@ interface RitationPoData{
   doc_url:string;
 }
 
-const RitationPlanInput = () => {
+interface RitationPlanInputProps{
+  onPreview:(file:File) =>void;
+}
+
+const RitationPlanInput:React.FC<RitationPlanInputProps>=({ onPreview }) => {
   const [period, setPeriod] = useState('');
   const [planOb, setPlanOb] = useState('');
   const [planCoal, setPlanCoal] = useState('');
@@ -30,6 +34,7 @@ const RitationPlanInput = () => {
 
   const [docRequest, setDocRequest] = useState<File | null>(null);
   const [docPo, setDocPo] = useState<File | null>(null);
+
 
   const handleSelect = (e: any) => {
     setPeriod(e);
@@ -50,11 +55,13 @@ const RitationPlanInput = () => {
 
   const handleUploadDocRequest = async (file: File) => {
     setDocRequest(file);
+    onPreview(file);
     console.log(file);
     
   }
   const handleUploadDocPO = async (file: File) => {
     setDocPo(file);
+    onPreview(file);
     console.log(file);
   }
 
@@ -175,7 +182,17 @@ const RitationPlanInput = () => {
             </div>
           </div>
 
-          <div className="mb-4.5 flex flex-col gap-6 xl:flex-row">
+
+
+          <div className="upload__file gap-2 mb-8">
+            <DropZoneReusable
+            fileTypes='.pdf, .jpeg, .jpg, .png'
+            id='file_ba'
+            file={docRequest}
+            onFileUpload={handleUploadDocRequest}
+            title="" />
+
+<div className="mt-10 mb-4 flex flex-col gap-6 xl:flex-row">
             <div className="w-full xl:w-1/2">
               <label className="mb-2.5 block text-black dark:text-white">
                 No PO<span className="text-meta-1">*</span>
@@ -202,20 +219,12 @@ const RitationPlanInput = () => {
             </div>
           </div>
 
-          <div className="upload__file gap-2 mb-8">
-            <DropZoneReusable
-            fileTypes='.pdf, .jpeg, .jpg, .png'
-            id='file_ba'
-            file={docRequest}
-            onFileUpload={handleUploadDocRequest}
-            title="Upload BA Plan Ritasi" />
-
             <DropZoneReusable
             fileTypes='.pdf, .jpeg, .jpg, .png'
             id='file_po'
             file={docPo}
             onFileUpload={handleUploadDocPO}
-            title="Upload PO" />
+            title="" />
           </div>
           <button
           onClick={handleSubmit}

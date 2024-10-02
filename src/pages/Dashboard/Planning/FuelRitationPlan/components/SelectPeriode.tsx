@@ -19,7 +19,7 @@ const SelectPeriode: React.FC<SelectPeriodeProps> = ({ value, onSelect }) => {
     const currentDate = new Date();
     
     // Loop to get the last five months
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 12; i++) {
       const month = new Date(currentDate.getFullYear(), currentDate.getMonth() - i);
       const formattedMonth = `${month.getFullYear()}${String(month.getMonth() + 1).padStart(2, '0')}`;
       options.push(formattedMonth);

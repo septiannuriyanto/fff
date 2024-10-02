@@ -710,7 +710,146 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   );
                 }}
               </SidebarLinkGroup>
-              {/* <!-- Menu Item Master Data Pages --> */}
+              {/* <!-- Menu Item Export --> */}
+
+              <SidebarLinkGroup
+                activeCondition={
+                  pathname === '/export' || pathname.includes('export')
+                }
+              >
+                {(handleClick, open) => {
+                  return (
+                    <React.Fragment>
+                      <NavLink
+                        to="#"
+                        className={`group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark2 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
+                          (pathname === '/export' ||
+                            pathname.includes('export')) &&
+                          'bg-graydark dark:bg-meta-4'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          sidebarExpanded
+                            ? handleClick()
+                            : setSidebarExpanded(true);
+                        }}
+                      >
+                        <svg
+                        width="18px"
+                        height="19px"
+                        opacity="50%"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                          <g
+                            id="SVGRepo_tracerCarrier"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          ></g>
+                          <g id="SVGRepo_iconCarrier">
+                            {' '}
+                            <path
+                              d="M4 18V6"
+                              stroke="#1C274C"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            ></path>{' '}
+                            <path
+                              d="M20 6V18"
+                              stroke="#1C274C"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            ></path>{' '}
+                            <path
+                              d="M12 10C16.4183 10 20 8.20914 20 6C20 3.79086 16.4183 2 12 2C7.58172 2 4 3.79086 4 6C4 8.20914 7.58172 10 12 10Z"
+                              stroke="#1C274C"
+                              strokeWidth="1.5"
+                            ></path>{' '}
+                            <path
+                              d="M20 12C20 14.2091 16.4183 16 12 16C7.58172 16 4 14.2091 4 12"
+                              stroke="#1C274C"
+                              strokeWidth="1.5"
+                            ></path>{' '}
+                            <path
+                              d="M20 18C20 20.2091 16.4183 22 12 22C7.58172 22 4 20.2091 4 18"
+                              stroke="#1C274C"
+                              strokeWidth="1.5"
+                            ></path>{' '}
+                          </g>
+                        </svg>
+                        Export
+                        <svg
+                          className={`absolute right-4 top-1/2 -translate-y-1/2 fill-current ${
+                            open && 'rotate-180'
+                          }`}
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            clipRule="evenodd"
+                            d="M4.41107 6.9107C4.73651 6.58527 5.26414 6.58527 5.58958 6.9107L10.0003 11.3214L14.4111 6.91071C14.7365 6.58527 15.2641 6.58527 15.5896 6.91071C15.915 7.23614 15.915 7.76378 15.5896 8.08922L10.5896 13.0892C10.2641 13.4147 9.73651 13.4147 9.41107 13.0892L4.41107 8.08922C4.08563 7.76378 4.08563 7.23614 4.41107 6.9107Z"
+                            fill=""
+                          />
+                        </svg>
+                      </NavLink>
+                      {/* <!-- Dropdown Menu Start --> */}
+                      <div
+                        className={`translate transform overflow-hidden ${
+                          !open && 'hidden'
+                        }`}
+                      >
+                        <ul className="mt-4 mb-5.5 flex flex-col gap-2.5 pl-6">
+                          <li>
+                            <NavLink
+                              to="/export/bastfuel"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              BAST Fuel
+                            </NavLink>
+                          </li>
+
+                          <li>
+                            <NavLink
+                              to="/export/bastoli"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              BAST Oli
+                            </NavLink>
+                          </li>
+
+                          <li>
+                            <NavLink
+                              to="/export/reconcilefuelowner"
+                              className={({ isActive }) =>
+                                'group relative flex items-center gap-2.5 rounded-md px-4 font-medium text-bodydark duration-300 ease-in-out hover:text-blue-300 ' +
+                                (isActive && '!text-body')
+                              }
+                            >
+                              BA Reconcile BC
+                            </NavLink>
+                          </li>
+
+                          
+                        </ul>
+                      </div>
+                      {/* <!-- Dropdown Menu End --> */}
+                    </React.Fragment>
+                  );
+                }}
+              </SidebarLinkGroup>
+              {/* <!-- Menu Item Export --> */}
 
               {/* <!-- Menu Item Auth Pages --> */}
               <SidebarLinkGroup
