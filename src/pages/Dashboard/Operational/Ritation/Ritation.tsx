@@ -35,6 +35,9 @@ import Swal from 'sweetalert2';
 import { DateRangePicker } from 'rsuite';
 import './datestyles.css';
 import { predefinedRanges } from './dateRanges';
+import { downloadExcel } from '../../../../services/ExportToExcel';
+import AlertError from '../../../UiElements/Alerts/AlertError';
+import { useNavigate } from 'react-router-dom';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -50,6 +53,8 @@ const Ritation = () => {
   const [ritationDaily, setRitationDaily] = useState<Record<string, number>>(
     {},
   );
+
+  const navigate = useNavigate();
 
   type DateValue = {
     startDate: Date | null;
@@ -428,7 +433,17 @@ const Ritation = () => {
       console.log(value);
       setDateStart(formatDateToString(value[0]));
       setDateEnd(formatDateToString(value[1]));
-      
+  }
+
+  const handleExportToFile = async ()=>{
+    if(!dateStart || !dateEnd){
+      toast.error('Isi range tanggal terlebih dahulu!');
+      return;
+    }
+    console.log(dateStart);
+    console.log(dateEnd);
+    await downloadExcel(dateStart!, dateEnd!);
+    
   }
 
   return (
@@ -465,7 +480,14 @@ const Ritation = () => {
                   <div></div>
                 </CardDataStats> */}
                   <div className="flex flex-col justify-between gap-2">
-                    <LeftRightEnhancedPanel
+                    { ritationQtyPlan<=0 ?
+                    <AlertError
+                    title='Plan Ritasi Belum Terinput'
+                    subtitle='Upload berita acara plan ritasi bulan ini'
+                    onClickEvent={()=> navigate('/plan/fuelritationplan') }
+                    />
+                  :
+<LeftRightEnhancedPanel
                       panelTitle="Monthly Progress (Liter)"
                       titleLeft="Progress Fulfill"
                       totalLeft={
@@ -486,6 +508,8 @@ const Ritation = () => {
                         ritationQtyPlan,
                       )}
                     />
+                  }
+                    
 
                     <LeftRightPanel
                       panelTitle="Daily Ritation Stats (Liter)"
@@ -500,11 +524,10 @@ const Ritation = () => {
                   <RitationValidationChart data={dataRitasi} />
                 </div>
                 <div className="flex flex-col">
-                  <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                    <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
-                    <div className="my-6">
+                <div className="my-6">
                           <h4>Specify date range to download report</h4>
-                          <div className="export__segment flex w-full items-start gap-2">
+                          <div className="export__segment flex flex-col lg:flex-row w-full items-start gap-2  lg:flex lg:mb-2 mb-2">
+                            <div className='flex w-full'>
                             <DateRangePicker
                               size="lg"
                               format="dd.MM.yyyy"
@@ -514,7 +537,10 @@ const Ritation = () => {
                                 handleChangeDate(shortcut.value);
                               }}
                             />
-                            <button className="inline-flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4">
+                            </div>
+                            <button
+                            onClick={handleExportToFile}
+                            className="w-full lg:w-1/5 lg:flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4">
                               <span>
                                 <FontAwesomeIcon
                                   icon={faFileExport}
@@ -524,6 +550,8 @@ const Ritation = () => {
                             </button>
                           </div>
                         </div>
+                  <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
+                    <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
                       <div className="overflow-hidden">
                         <table className="min-w-full text-left text-sm font-light text-surface dark:text-white">
                           <thead className="border-b border-neutral-200 font-medium dark:border-white/10">

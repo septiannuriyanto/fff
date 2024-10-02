@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+
+
+
 const PanelTemplate = () => {
 
 useEffect(()=>{},[
@@ -17,7 +20,7 @@ useEffect(()=>{},[
                 Replace With New Title
               </h2>
   
-              <div className="main-content h-100 w-full">
+              <div className="main-content  w-full">
                 
               </div>
             </div>

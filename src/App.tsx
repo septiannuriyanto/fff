@@ -38,6 +38,7 @@ import Logsheet from './pages/Reporting/Logsheet/Logsheet';
 import ComponentTester from './pages/MasterData/ComponentLibrary';
 import ComponentLibrary from './pages/MasterData/ComponentLibrary';
 import MasterManpower from './pages/MasterData/MasterManpower';
+import FuelRitationPlan from './pages/Dashboard/Planning/FuelRitationPlan/FuelRitationPlan';
 
 function App() {
   return (
@@ -320,6 +321,20 @@ function App() {
                 <>
                   <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
                   <Buttons />
+                </>
+              }
+            />
+          }
+        />
+         {/*============================================================================================================== PLANNING  */}
+         <Route
+          path="/plan/fuelritationplan"
+          element={
+            <ProtectedRoute
+              element={
+                <>
+                  <PageTitle title="FFF Dashboard | Fuel Ritation Plan" />
+                  <FuelRitationPlan />
                 </>
               }
             />
