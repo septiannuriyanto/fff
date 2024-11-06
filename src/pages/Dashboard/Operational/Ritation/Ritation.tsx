@@ -297,6 +297,11 @@ const Ritation = () => {
     });
   };
 
+  const handleEdit = async (id: string) => {
+    console.log(id);
+    navigate('')
+  }
+
   const handleApprove = async (id: string) => {
     const targetRow = dataRitasi.find((row) => row.no_surat_jalan === id);
 
@@ -652,6 +657,7 @@ const Ritation = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
                                     <RitationAction
+                                    onEdit={()=>handleEdit(row.no_surat_jalan)}
                                       onApprove={() =>
                                         handleApprove(row.no_surat_jalan)
                                       }

@@ -6,9 +6,11 @@ interface DatePickerOneProps {
   handleChange: (date: Date | null) => void;
   setValue: string;
   enabled: boolean;
+  startDate?:  Date;
+  endDate?: Date;
 }
 
-const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,enabled }) => {
+const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,enabled, startDate, endDate }) => {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -23,10 +25,11 @@ const DatePickerOne: React.FC<DatePickerOneProps> = ({ handleChange, setValue,en
     if (inputRef.current) {
       if (enabled) {
         flatpickr(inputRef.current, {
+          defaultDate: today,
           mode: 'single',
           dateFormat: 'd/m/Y',
-          minDate: startOfMonth,  // Start date: first day of the month
-          maxDate: endOfMonth,    // End date: last day of the month
+          minDate: startDate,  // Start date: first day of the month
+          maxDate: endDate,    // End date: last day of the month
           onChange: (selectedDates: Date[]) => {
             if (!enabled) return;
             handleChange(selectedDates.length ? selectedDates[0] : null);

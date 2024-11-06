@@ -11,6 +11,7 @@ module.exports = {
   theme: {
     fontFamily: {
       satoshi: ['Satoshi', 'sans-serif'],
+      serif: ['Lora', 'serif'],
     },
     screens: {
       '2xsm': '375px',

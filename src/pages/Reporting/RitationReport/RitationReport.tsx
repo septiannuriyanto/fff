@@ -13,14 +13,19 @@ import {
   uploadImage,
 } from '../../../services/ImageUploader';
 
-import LogoIcon from '../../../images/logo/logo-icon.svg'
-import { getFTFromWH, getNameFromNrp, getNrpFromName } from '../../../functions/get_nrp';
+import LogoIcon from '../../../images/logo/logo-icon.svg';
+import {
+  getFTFromWH,
+  getNameFromNrp,
+  getNrpFromName,
+} from '../../../functions/get_nrp';
 import { shareMessageToWhatsapp } from '../../../functions/share_message';
 import { normalizeToTwoDigit } from '../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../functions/Interpolate';
 import { useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { LoaderLogoFlex } from '../../../common/Loader/LoaderLogo';
+import { Session } from '@supabase/supabase-js';
 
 const RitationReport: React.FC = () => {
   const [fetchedData, setFetchedData] = useState<any[]>([]);
@@ -41,6 +46,24 @@ const RitationReport: React.FC = () => {
 
   const { id } = useParams<{ id: string }>();
 
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        console.log(session);
+
+        setSession(session);
+      } catch (error) {
+        console.error('Error fetching session:', error);
+      }
+    };
+
+    fetchSession();
+  }, []);
+
   useEffect(() => {
     const fetchDetailReport = async (id: string) => {
       const { data, error } = await supabase
@@ -60,15 +83,14 @@ const RitationReport: React.FC = () => {
     };
 
     const renderFoundData = async (data: any) => {
-      
       const foundData = data[0];
       console.log(foundData);
       setReportNumber(
         parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
       );
-      const ft = await getFTFromWH(foundData.warehouse_id)
-      const fuelman = await getNameFromNrp(foundData.fuelman_id)
-      const opt = await getNameFromNrp(foundData.operator_id)
+      const ft = await getFTFromWH(foundData.warehouse_id);
+      const fuelman = await getNameFromNrp(foundData.fuelman_id);
+      const opt = await getNameFromNrp(foundData.operator_id);
 
       setEquipNumber(ft);
       setFuelman(fuelman);
@@ -147,11 +169,12 @@ const RitationReport: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (id) {
-      console.log('Updating Records');
+    //check variables existence
+    console.log();
+    
 
-      return;
-    }
+
+
 
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
@@ -181,31 +204,51 @@ const RitationReport: React.FC = () => {
     const qtySondingAfter = (await getQtyByHeight(avgQtyAfter, whId)) || 0;
     const qtySonding = qtySondingAfter - qtySondingBefore;
 
-    //construct the query
-    let query = {
-      no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
-      queue_num: parseInt(reportNumber),
-      warehouse_id: whId,
-      operator_id: optNrp,
-      fuelman_id: fmNrp,
-      qty_sj: flowmeterqty,
-      qty_flowmeter_before: flowmeterBefore,
-      qty_flowmeter_after: flowmeterAfter,
-      qty_sonding: qtySonding,
-      qty_sonding_before: qtySondingBefore,
-      qty_sonding_after: qtySondingAfter,
-      sonding_before_front: teraDepanBefore,
-      sonding_before_rear: teraBelakangBefore,
-      sonding_after_front: teraDepanAfter,
-      sonding_after_rear: teraBelakangAfter,
-      flowmeter_before_url: flowmeterBeforeUrl,
-      flowmeter_after_url: flowmeterAfterUrl,
-      sj_url: suratJalanUrl,
-      ritation_date: formatDateToString(new Date()),
-    };
+    // Construct the query object with data to insert or update
+let query = {
+  no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(parseInt(reportNumber))}`,
+  queue_num: parseInt(reportNumber),
+  warehouse_id: whId,
+  operator_id: optNrp,
+  fuelman_id: fmNrp,
+  qty_sj: flowmeterqty,
+  qty_flowmeter_before: flowmeterBefore,
+  qty_flowmeter_after: flowmeterAfter,
+  qty_sonding: qtySonding,
+  qty_sonding_before: qtySondingBefore,
+  qty_sonding_after: qtySondingAfter,
+  sonding_before_front: teraDepanBefore,
+  sonding_before_rear: teraBelakangBefore,
+  sonding_after_front: teraDepanAfter,
+  sonding_after_rear: teraBelakangAfter,
+  flowmeter_before_url: flowmeterBeforeUrl,
+  flowmeter_after_url: flowmeterAfterUrl,
+  sj_url: suratJalanUrl,
+  ritation_date: formatDateToString(new Date()),
+};
 
+try {
+  if (session) {
+    // Modify the record if there is an active session
+    console.log(query);
+    
+    return;
+    const { error } = await supabase
+      .from('ritasi_fuel')
+      .update(query)
+      .eq('no_surat_jalan', query.no_surat_jalan); // Update based on a unique identifier
+
+    if (error) {
+      console.error(error.message);
+      alert(error.message);
+      setIsComplete(false);
+      setIsLoading(false);
+    } else {
+      setIsComplete(true); // Update successful
+    }
+    window.history.back();
+  } else {
+    // Insert a new record if no session
     const { error } = await supabase.from('ritasi_fuel').insert([query]);
 
     if (error) {
@@ -214,18 +257,16 @@ const RitationReport: React.FC = () => {
       setIsComplete(false);
       setIsLoading(false);
     } else {
-      //Ditch loading screen
-      setIsComplete(true);
-
-      // setEquipNumber('');
-      // setPressurelessCondition(1);
-      // setReportBy('');
-      // const message = `PRESSURELESS REPORT\n\nLast Checked :${formatDate(
-      //   Date.now(),
-      // )}\nReported by : ${reportBy}\nUnit : ${equipNumber}\nCondition : ${pressurelessCondition}\nVisit : https://fff-project.vercel.app/pressureless`;
-      // sendMessageToChannel(message);
+      setIsComplete(true); // Insertion successful
     }
-  };
+  }
+} catch (error) {
+  console.error("Unexpected error:", error);
+} finally {
+  setIsLoading(false);
+}
+
+  }; //end submit form
 
   //SUGGESTION GETTER & RENDERER
   const getSuggestions = (value: string, list: string[]): string[] => {
@@ -285,7 +326,7 @@ const RitationReport: React.FC = () => {
     { newValue }: { newValue: string },
   ) => {
     setFuelman(newValue);
-    localStorage.setItem('fuelman', newValue); 
+    localStorage.setItem('fuelman', newValue);
   };
   useEffect(() => {
     const savedFuelman = localStorage.getItem('fuelman');
@@ -348,10 +389,9 @@ const RitationReport: React.FC = () => {
         return;
       }
 
-      if(id){
+      if (id) {
         window.location.reload();
       }
-
 
       console.log('Flowmeter Before Uploaded:', imageUrl);
     } catch (error) {
@@ -390,7 +430,7 @@ const RitationReport: React.FC = () => {
         alert(error);
         return;
       }
-      if(id){
+      if (id) {
         window.location.reload();
       }
 
@@ -437,7 +477,7 @@ const RitationReport: React.FC = () => {
         return;
       }
 
-      if(id){
+      if (id) {
         window.location.reload();
       }
 
@@ -651,7 +691,7 @@ const RitationReport: React.FC = () => {
                 onChange: onEquipNumberChange,
                 className: 'w-full p-2  border rounded',
                 required: true,
-                disabled: id ? true : false,
+                disabled: id && !session ? true : false,
               }}
               theme={{
                 container: 'relative',
@@ -680,7 +720,7 @@ const RitationReport: React.FC = () => {
                 onChange: onFuelmanChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
-                disabled: id ? true : false,
+                disabled: id && !session ? true : false,
               }}
               theme={{
                 container: 'relative',
@@ -706,7 +746,7 @@ const RitationReport: React.FC = () => {
                 onChange: onOperatorChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
-                disabled: id ? true : false,
+                disabled: id && !session ? true : false,
               }}
               theme={{
                 container: 'relative',
@@ -727,7 +767,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_before_front">Tera Depan</label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={teraDepanBefore}
                 onChange={handleTeraDepanBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -737,7 +777,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_before_front">Tera Belakang</label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={teraBelakangBefore}
                 onChange={handleTeraBelakangBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -747,7 +787,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input__flowmeter-before">Flowmeter Awal</label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={flowmeterBefore}
                 onChange={handleFlowmeterBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -763,7 +803,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_after_front">Tera Depan</label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={teraDepanAfter}
                 onChange={handleTeraDepanAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -773,7 +813,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_after_front">Tera Belakang</label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={teraBelakangAfter}
                 onChange={handleTeraBelakangAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -785,7 +825,7 @@ const RitationReport: React.FC = () => {
                 Flowmeter Akhir
               </label>
               <input
-                disabled={id ? true : false}
+                disabled={id && !session ? true : false}
                 value={flowmeterAfter}
                 onChange={handleFlowmeterAfterChange}
                 inputMode="decimal"
@@ -803,19 +843,19 @@ const RitationReport: React.FC = () => {
                     {' '}
                     {/* Add relative positioning here */}
                     {uploadProgressFmBefore !== null && (
-                       <div
-                       className="absolute upload-overlay z-2 bg-white"
-                       style={{
-                         top: 0,
-                         left: 0,
-                         right: 0,
-                         bottom: 0,
-                         height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
-                         opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
-                       }}
-                     >
-                      <LoaderLogoFlex />
-                     </div>
+                      <div
+                        className="absolute upload-overlay z-2 bg-white"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                        }}
+                      >
+                        <LoaderLogoFlex />
+                      </div>
                     )}
                     <img
                       src={URL.createObjectURL(flowmeterBeforeFile)}
@@ -856,7 +896,7 @@ const RitationReport: React.FC = () => {
                           opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
                         }}
                       >
-                         <LoaderLogoFlex />
+                        <LoaderLogoFlex />
                       </div>
                     )}
                     <img
@@ -898,7 +938,7 @@ const RitationReport: React.FC = () => {
                           opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
                         }}
                       >
-                         <LoaderLogoFlex />
+                        <LoaderLogoFlex />
                       </div>
                     )}
                     <img
@@ -920,13 +960,20 @@ const RitationReport: React.FC = () => {
                 </div>
               )}
             </div>
-
-
           </div>
         </div>
 
         {id ? (
-          <div></div>
+          session ? (
+            <button
+              type="submit"
+              className="bg-green-400 py-2 rounded text-white"
+            >
+              Edit
+            </button>
+          ) : (
+            <div></div>
+          )
         ) : (
           <button
             type="submit"

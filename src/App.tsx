@@ -39,6 +39,10 @@ import ComponentTester from './pages/MasterData/ComponentLibrary';
 import ComponentLibrary from './pages/MasterData/ComponentLibrary';
 import MasterManpower from './pages/MasterData/MasterManpower';
 import FuelRitationPlan from './pages/Dashboard/Planning/FuelRitationPlan/FuelRitationPlan';
+import BastFuel from './pages/Export/BastFuel/BastFuel';
+import BastOli from './pages/Export/BastOli/BastOli';
+import BaReconcile from './pages/Export/BaReconcile/BaReconcile';
+import BreakdownRfuReport from './pages/Reporting/Breakdown/BreakdownRfuReport';
 
 function App() {
   return (
@@ -55,7 +59,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Dashboard />
                 </>
               }
@@ -68,7 +72,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <FuelConsumption />
                 </>
               }
@@ -81,7 +85,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <StockManagement />
                 </>
               }
@@ -94,7 +98,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Operational Dashboard" />
+                  <PageTitle title="FFF | Operational Dashboard" />
                   <Operational />
                 </>
               }
@@ -107,7 +111,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Ritation Dashboard" />
+                  <PageTitle title="FFF | Ritation Dashboard" />
                   <Ritation />
                 </>
               }
@@ -118,7 +122,7 @@ function App() {
           path="/anomaly"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Anomaly Refueling" />
+              <PageTitle title="FFF | Anomaly Refueling" />
               <RefuelingAnomaly />
             </>
           }
@@ -129,7 +133,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Infrastructure />
                 </>
               }
@@ -140,7 +144,7 @@ function App() {
           path="/pressureless"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Pressureless Summary" />
+              <PageTitle title="FFF | Pressureless Summary" />
               <PressurelessSummary />
             </>
           }
@@ -151,7 +155,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Manpower />
                 </>
               }
@@ -162,7 +166,7 @@ function App() {
           path="/induksi"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Input Data Induksi" />
+              <PageTitle title="FFF | Input Data Induksi" />
               <Induction />
             </>
           }
@@ -171,7 +175,7 @@ function App() {
           path="/roster"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Roster Manpower" />
+              <PageTitle title="FFF | Roster Manpower" />
               <Roster />
             </>
           }
@@ -180,7 +184,7 @@ function App() {
           path="/scheduler"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Scheduler Example" />
+              <PageTitle title="FFF | Scheduler Example" />
               <SchedulerExample />
             </>
           }
@@ -190,7 +194,7 @@ function App() {
           path="/formcuti"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Form Pengajuan Cuti" />
+              <PageTitle title="FFF | Form Pengajuan Cuti" />
               <LeaveRequest />
             </>
           }
@@ -201,7 +205,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Daftar Cuti" />
+                  <PageTitle title="FFF | Daftar Cuti" />
                   <LeaveList />
                 </>
               }
@@ -215,7 +219,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Calendar />
                 </>
               }
@@ -228,7 +232,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Profile />
                 </>
               }
@@ -241,7 +245,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <FormElements />
                 </>
               }
@@ -254,7 +258,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <FormLayout />
                 </>
               }
@@ -267,7 +271,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Tables />
                 </>
               }
@@ -280,7 +284,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Settings />
                 </>
               }
@@ -293,7 +297,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Chart />
                 </>
               }
@@ -306,7 +310,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Alerts />
                 </>
               }
@@ -319,7 +323,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Feasibility for Fleet" />
+                  <PageTitle title="FFF | Fuel Feasibility for Fleet" />
                   <Buttons />
                 </>
               }
@@ -333,7 +337,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Fuel Ritation Plan" />
+                  <PageTitle title="FFF | Fuel Ritation Plan" />
                   <FuelRitationPlan />
                 </>
               }
@@ -347,7 +351,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Daily Report" />
+                  <PageTitle title="FFF | Daily Report" />
                   <DailyReport />
                 </>
               }
@@ -360,7 +364,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Logsheet" />
+                  <PageTitle title="FFF | Logsheet" />
                   <Logsheet />
                 </>
               }
@@ -373,7 +377,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | Stock Reporting" />
+                  <PageTitle title="FFF | Stock Reporting" />
                   <StockReporting />
                 </>
               }
@@ -384,7 +388,7 @@ function App() {
           path="/reporting/stocktaking"
           element={
             <>
-            <PageTitle title="FFF Dashboard | Stock Taking" />
+            <PageTitle title="FFF | Stock Taking" />
             <StockTaking />
           </>
           }
@@ -393,7 +397,7 @@ function App() {
           path="/reporting/ritation"
           element={
                 <>
-                  <PageTitle title="FFF Dashboard | Ritation Report" />
+                  <PageTitle title="FFF | Ritation Report" />
                   <RitationReport />
                 </>
           }
@@ -402,7 +406,7 @@ function App() {
           path="/reporting/ritation/:id"
           element={
                 <>
-                  <PageTitle title="FFF Dashboard | Ritation Detail" />
+                  <PageTitle title="FFF | Ritation Detail" />
                   <RitationReport />
                 </>
           }
@@ -413,7 +417,7 @@ function App() {
             <ProtectedRoute
               element={
                 <>
-                  <PageTitle title="FFF Dashboard | TMR Report" />
+                  <PageTitle title="FFF | TMR Report" />
                   <TMRReport />
                 </>
               }
@@ -424,8 +428,17 @@ function App() {
           path="/reporting/pressureless"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Pressureless Reporting" />
+              <PageTitle title="FFF | Pressureless Reporting" />
               <PressurelessReport />
+            </>
+          }
+        />
+        <Route
+          path="/reporting/ftbdrfu"
+          element={
+            <>
+              <PageTitle title="FFF | FT Breakdown - RFU" />
+              <BreakdownRfuReport></BreakdownRfuReport>
             </>
           }
         />
@@ -433,8 +446,38 @@ function App() {
           path="/reporting/ftmaintenancerequest"
           element={
             <>
-              <PageTitle title="FFF Dashboard | FT Maintenance Request" />
+              <PageTitle title="FFF | FT Maintenance Request" />
               <FuelTruckMaintenanceRequest />
+            </>
+          }
+        />
+
+
+        {/*============================================================================================================== EXPORTS  */}
+        <Route
+          path="/export/bastfuel"
+          element={
+            <>
+              <PageTitle title="FFF | Export BAST Fuel" />
+              <BastFuel/>
+            </>
+          }
+        />
+        <Route
+          path="/export/bastoli"
+          element={
+            <>
+              <PageTitle title="FFF | Export BAST Oli" />
+              <BastOli/>
+            </>
+          }
+        />
+        <Route
+          path="/export/reconcilefuelowner"
+          element={
+            <>
+              <PageTitle title="FFF | Export BA Reconcile Owner" />
+              <BaReconcile/>
             </>
           }
         />
@@ -443,7 +486,7 @@ function App() {
           path="/master/manpower"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Manpower Master Data" />
+              <PageTitle title="FFF | Manpower Master Data" />
               <MasterManpower></MasterManpower>
             </>
           }
@@ -452,7 +495,7 @@ function App() {
           path="/master/equipment"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Equipment Master Data" />
+              <PageTitle title="FFF | Equipment Master Data" />
               
             </>
           }
@@ -461,7 +504,7 @@ function App() {
           path="/master/fueltruck"
           element={
             <>
-              <PageTitle title="FFF Dashboard | FT Master Data" />
+              <PageTitle title="FFF | FT Master Data" />
               
             </>
           }
@@ -470,7 +513,7 @@ function App() {
           path="/master/library"
           element={
             <>
-              <PageTitle title="FFF Dashboard | Component Library" />
+              <PageTitle title="FFF | Component Library" />
               <ComponentLibrary></ComponentLibrary>
             </>
           }

@@ -14,7 +14,7 @@ import { Email } from './EmailTemplate';
 import HardcopyLeaveLetterTemplate from './HardcopyLeaveLetterTemplate';
 
 interface RitationActionCellRendererProps {
-  value: any; // You might want to define a more specific type here
+
   data: any;  // The row data
   onApprove: (id: number) => void;
   onEdit: (data: any) => void;
