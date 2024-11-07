@@ -180,7 +180,6 @@ const RitationReport: React.FC = () => {
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
-    // setIsLoading(true);
 
     //Upload Image
     const sjNumber = `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
@@ -265,12 +264,13 @@ const RitationReport: React.FC = () => {
           setIsLoading(false);
         } else {
           setIsComplete(true); // Insertion successful
+          navigate(`/reporting/ritation/${sjNumber}`)
         }
       }
     } catch (error) {
       console.error('Unexpected error:', error);
     } finally {
-      setIsLoading(false);
+      
     }
   }; //end submit form
 
@@ -629,8 +629,6 @@ const RitationReport: React.FC = () => {
     const shareData = await fetchDetailReport(id)
     const info = constructMessage(shareData[0]);
     shareMessageToWhatsapp(info);
-    
-    
   };
 
   return isLoading ? (
