@@ -299,7 +299,7 @@ const Ritation = () => {
 
   const handleEdit = async (id: string) => {
     console.log(id);
-    navigate('')
+    navigate(`/reporting/ritation/${id}`)
   }
 
   const handleApprove = async (id: string) => {
@@ -333,7 +333,6 @@ const Ritation = () => {
 
   const handleShare = (row: any) => {
     const info = constructMessage(row);
-    console.log(info);
     shareMessageToWhatsapp(info);
   };
 

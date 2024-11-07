@@ -18,17 +18,18 @@ import {
   getFTFromWH,
   getNameFromNrp,
   getNrpFromName,
+  getWHFromFT,
 } from '../../../functions/get_nrp';
-import { shareMessageToWhatsapp } from '../../../functions/share_message';
+import { constructMessage, shareMessageToWhatsapp } from '../../../functions/share_message';
 import { normalizeToTwoDigit } from '../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../functions/Interpolate';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { LoaderLogoFlex } from '../../../common/Loader/LoaderLogo';
 import { Session } from '@supabase/supabase-js';
 
 const RitationReport: React.FC = () => {
-  const [fetchedData, setFetchedData] = useState<any[]>([]);
+  const [fetchedData, setFetchedData] = useState<RitasiFuelData>();
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [reportNumber, setReportNumber] = useState('');
@@ -47,6 +48,9 @@ const RitationReport: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
   const [session, setSession] = useState<Session | null>(null);
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -64,56 +68,60 @@ const RitationReport: React.FC = () => {
     fetchSession();
   }, []);
 
+
+  const fetchDetailReport = async (id: string) => {
+    const { data, error } = await supabase
+      .from('ritasi_fuel')
+      .select('*')
+      .eq('no_surat_jalan', id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    if (data.length == 0) {
+      console.log('No Data Found!');
+      return;
+    }
+    renderFoundData(data);
+    return data;
+    
+  };
+
+  const renderFoundData = async (data: any) => {
+    const foundData = data[0];
+    console.log(foundData);
+    setReportNumber(
+      parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
+    );
+    const ft = await getFTFromWH(foundData.warehouse_id);
+    const fuelman = await getNameFromNrp(foundData.fuelman_id);
+    const opt = await getNameFromNrp(foundData.operator_id);
+
+    setEquipNumber(ft);
+    setFuelman(fuelman);
+    setOperator(opt);
+    setTeraDepanBefore(foundData.sonding_before_front);
+    setTeraBelakangBefore(foundData.sonding_before_rear);
+    setFlowmeterBefore(foundData.qty_flowmeter_before);
+    setTeraDepanAfter(foundData.sonding_after_front);
+    setTeraBelakangAfter(foundData.sonding_after_rear);
+    setFlowmeterAfter(foundData.qty_flowmeter_after);
+    if (foundData.flowmeter_before_url !== null) {
+      const imgData = await getFileFromUrl(foundData.flowmeter_before_url);
+      setFlowmeterBeforeFile(imgData);
+    }
+    if (foundData.flowmeter_after_url !== null) {
+      const imgData = await getFileFromUrl(foundData.flowmeter_after_url);
+      setFlowmeterAfterFile(imgData);
+    }
+    if (foundData.sj_url !== null) {
+      const imgData = await getFileFromUrl(foundData.sj_url);
+      setSuratJalanFile(imgData);
+    }
+  };
+
   useEffect(() => {
-    const fetchDetailReport = async (id: string) => {
-      const { data, error } = await supabase
-        .from('ritasi_fuel')
-        .select('*')
-        .eq('no_surat_jalan', id);
-      if (error) {
-        console.error(error);
-        return;
-      }
-      if (data.length == 0) {
-        console.log('No Data Found!');
-        return;
-      }
-      renderFoundData(data);
-      setFetchedData(data);
-    };
-
-    const renderFoundData = async (data: any) => {
-      const foundData = data[0];
-      console.log(foundData);
-      setReportNumber(
-        parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
-      );
-      const ft = await getFTFromWH(foundData.warehouse_id);
-      const fuelman = await getNameFromNrp(foundData.fuelman_id);
-      const opt = await getNameFromNrp(foundData.operator_id);
-
-      setEquipNumber(ft);
-      setFuelman(fuelman);
-      setOperator(opt);
-      setTeraDepanBefore(foundData.sonding_before_front);
-      setTeraBelakangBefore(foundData.sonding_before_rear);
-      setFlowmeterBefore(foundData.qty_flowmeter_before);
-      setTeraDepanAfter(foundData.sonding_after_front);
-      setTeraBelakangAfter(foundData.sonding_after_rear);
-      setFlowmeterAfter(foundData.qty_flowmeter_after);
-      if (foundData.flowmeter_before_url !== null) {
-        const imgData = await getFileFromUrl(foundData.flowmeter_before_url);
-        setFlowmeterBeforeFile(imgData);
-      }
-      if (foundData.flowmeter_after_url !== null) {
-        const imgData = await getFileFromUrl(foundData.flowmeter_after_url);
-        setFlowmeterAfterFile(imgData);
-      }
-      if (foundData.sj_url !== null) {
-        const imgData = await getFileFromUrl(foundData.sj_url);
-        setSuratJalanFile(imgData);
-      }
-    };
+    
 
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
@@ -157,7 +165,7 @@ const RitationReport: React.FC = () => {
     };
 
     if (id) {
-      fetchDetailReport(id);
+       fetchDetailReport(id);
       return;
     }
 
@@ -169,17 +177,11 @@ const RitationReport: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    //check variables existence
-    console.log();
-    
-
-
-
-
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
-    setIsLoading(true);
+    // setIsLoading(true);
+
     //Upload Image
     const sjNumber = `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
       parseInt(reportNumber),
@@ -193,79 +195,83 @@ const RitationReport: React.FC = () => {
     //Count required data
     const flowmeterqty =
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
-    const whId = findWarehouseId(equipNumber);
+
+    const whId = await getWHFromFT(equipNumber);
+
+    console.log(whId);
 
     //Count the quantities
     const avgQtyBefore =
       (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) / 2;
     const avgQtyAfter =
       (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
+
     const qtySondingBefore = (await getQtyByHeight(avgQtyBefore, whId)) || 0;
+
     const qtySondingAfter = (await getQtyByHeight(avgQtyAfter, whId)) || 0;
+
     const qtySonding = qtySondingAfter - qtySondingBefore;
 
     // Construct the query object with data to insert or update
-let query = {
-  no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(parseInt(reportNumber))}`,
-  queue_num: parseInt(reportNumber),
-  warehouse_id: whId,
-  operator_id: optNrp,
-  fuelman_id: fmNrp,
-  qty_sj: flowmeterqty,
-  qty_flowmeter_before: flowmeterBefore,
-  qty_flowmeter_after: flowmeterAfter,
-  qty_sonding: qtySonding,
-  qty_sonding_before: qtySondingBefore,
-  qty_sonding_after: qtySondingAfter,
-  sonding_before_front: teraDepanBefore,
-  sonding_before_rear: teraBelakangBefore,
-  sonding_after_front: teraDepanAfter,
-  sonding_after_rear: teraBelakangAfter,
-  flowmeter_before_url: flowmeterBeforeUrl,
-  flowmeter_after_url: flowmeterAfterUrl,
-  sj_url: suratJalanUrl,
-  ritation_date: formatDateToString(new Date()),
-};
+    let query = {
+      no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+        parseInt(reportNumber),
+      )}`,
+      queue_num: parseInt(reportNumber),
+      warehouse_id: whId,
+      operator_id: optNrp,
+      fuelman_id: fmNrp,
+      qty_sj: flowmeterqty,
+      qty_flowmeter_before: flowmeterBefore,
+      qty_flowmeter_after: flowmeterAfter,
+      qty_sonding: qtySonding,
+      qty_sonding_before: qtySondingBefore,
+      qty_sonding_after: qtySondingAfter,
+      sonding_before_front: teraDepanBefore,
+      sonding_before_rear: teraBelakangBefore,
+      sonding_after_front: teraDepanAfter,
+      sonding_after_rear: teraBelakangAfter,
+      flowmeter_before_url: flowmeterBeforeUrl,
+      flowmeter_after_url: flowmeterAfterUrl,
+      sj_url: suratJalanUrl,
+      ritation_date: formatDateToString(new Date()),
+    };
 
-try {
-  if (session) {
-    // Modify the record if there is an active session
-    console.log(query);
-    
-    return;
-    const { error } = await supabase
-      .from('ritasi_fuel')
-      .update(query)
-      .eq('no_surat_jalan', query.no_surat_jalan); // Update based on a unique identifier
+    try {
+      if (session) {
+        // Modify the record if there is an active session
+        const { error } = await supabase
+          .from('ritasi_fuel')
+          .update(query)
+          .eq('no_surat_jalan', query.no_surat_jalan); // Update based on a unique identifier
 
-    if (error) {
-      console.error(error.message);
-      alert(error.message);
-      setIsComplete(false);
+        if (error) {
+          console.error(error.message);
+          alert(error.message);
+          setIsComplete(false);
+          setIsLoading(false);
+        } else {
+          setIsComplete(true); // Update successful
+        }
+        navigate('/stockmanagement');
+      } else {
+        // Insert a new record if no session
+        const { error } = await supabase.from('ritasi_fuel').insert([query]);
+
+        if (error) {
+          console.error(error.message);
+          alert(error.message);
+          setIsComplete(false);
+          setIsLoading(false);
+        } else {
+          setIsComplete(true); // Insertion successful
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    } finally {
       setIsLoading(false);
-    } else {
-      setIsComplete(true); // Update successful
     }
-    window.history.back();
-  } else {
-    // Insert a new record if no session
-    const { error } = await supabase.from('ritasi_fuel').insert([query]);
-
-    if (error) {
-      console.error(error.message);
-      alert(error.message);
-      setIsComplete(false);
-      setIsLoading(false);
-    } else {
-      setIsComplete(true); // Insertion successful
-    }
-  }
-} catch (error) {
-  console.error("Unexpected error:", error);
-} finally {
-  setIsLoading(false);
-}
-
   }; //end submit form
 
   //SUGGESTION GETTER & RENDERER
@@ -617,6 +623,16 @@ try {
     console.log(e.target.value);
   };
 
+  const handleShareReport = async (e: any) => {
+    e.preventDefault();
+    console.log(id);
+    const shareData = await fetchDetailReport(id)
+    const info = constructMessage(shareData[0]);
+    shareMessageToWhatsapp(info);
+    
+    
+  };
+
   return isLoading ? (
     <div>
       <div className="flex flex-col">
@@ -964,16 +980,24 @@ try {
         </div>
 
         {id ? (
-          session ? (
+          <div className="flex w-full flex-col gap-2">
+            {session ? (
+              <button
+                type="submit"
+                className="bg-green-400 py-2 rounded text-white"
+              >
+                Edit
+              </button>
+            ) : (
+              <div></div>
+            )}
             <button
-              type="submit"
-              className="bg-green-400 py-2 rounded text-white"
+              onClick={handleShareReport}
+              className="bg-slate-400 py-2 text-white"
             >
-              Edit
+              Share
             </button>
-          ) : (
-            <div></div>
-          )
+          </div>
         ) : (
           <button
             type="submit"

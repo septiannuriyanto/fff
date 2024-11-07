@@ -1,6 +1,3 @@
-import { supabase } from "../db/SupabaseClient";
-import { formatDateToYyMmDd } from "../Utils/DateUtility";
-import { normalizeToTwoDigit } from "../Utils/NumberUtility";
 
 const constructMessage = (ritationData:RitasiFuelData) =>{
     const averageTeraBefore = (ritationData.sonding_before_front + ritationData.sonding_before_rear)/2;

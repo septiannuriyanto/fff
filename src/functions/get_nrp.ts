@@ -59,7 +59,7 @@ export const getFTFromWH = async (whId:string)=>{
 
 export const getWHFromFT = async (ftNumber:string)=>{
     const { data, error } = await supabase
-    .from('storages')
+    .from('storage')
     .select('warehouse_id')
     .eq('unit_id', ftNumber)
     if(error){
