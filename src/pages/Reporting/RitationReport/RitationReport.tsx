@@ -194,6 +194,13 @@ const RitationReport: React.FC = () => {
     //Count required data
     const flowmeterqty =
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
+    
+      if(flowmeterqty < 0 || flowmeterqty > 20000){
+        console.log("Salah qty");
+        
+        toast.error('Cek kembali angka flowmeter anda')
+        return;
+      }
 
     const whId = await getWHFromFT(equipNumber);
 
@@ -633,8 +640,9 @@ const RitationReport: React.FC = () => {
 
   return isLoading ? (
     <div>
+      
       <div className="flex flex-col">
-        <Toaster />
+        
         <div className="flex h-screen items-center justify-center bg-white">
           {isComplete ? (
             <div></div>
@@ -674,6 +682,7 @@ const RitationReport: React.FC = () => {
     </div>
   ) : (
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
+      <Toaster />
       <h1 className="text-center text-2xl font-bold mb-5">
         {id ? `Update Ritasi` : `Input Ritasi`}
       </h1>
