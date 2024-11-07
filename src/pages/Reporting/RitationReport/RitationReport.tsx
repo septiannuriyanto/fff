@@ -20,7 +20,10 @@ import {
   getNrpFromName,
   getWHFromFT,
 } from '../../../functions/get_nrp';
-import { constructMessage, shareMessageToWhatsapp } from '../../../functions/share_message';
+import {
+  constructMessage,
+  shareMessageToWhatsapp,
+} from '../../../functions/share_message';
 import { normalizeToTwoDigit } from '../../../Utils/NumberUtility';
 import { getQtyByHeight } from '../../../functions/Interpolate';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -68,7 +71,6 @@ const RitationReport: React.FC = () => {
     fetchSession();
   }, []);
 
-
   const fetchDetailReport = async (id: string) => {
     const { data, error } = await supabase
       .from('ritasi_fuel')
@@ -82,9 +84,9 @@ const RitationReport: React.FC = () => {
       console.log('No Data Found!');
       return;
     }
+    setFetchedData(data[0]);
     renderFoundData(data);
     return data;
-    
   };
 
   const renderFoundData = async (data: any) => {
@@ -96,6 +98,8 @@ const RitationReport: React.FC = () => {
     const ft = await getFTFromWH(foundData.warehouse_id);
     const fuelman = await getNameFromNrp(foundData.fuelman_id);
     const opt = await getNameFromNrp(foundData.operator_id);
+
+    
 
     setEquipNumber(ft);
     setFuelman(fuelman);
@@ -121,8 +125,6 @@ const RitationReport: React.FC = () => {
   };
 
   useEffect(() => {
-    
-
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
         .from('storage')
@@ -165,7 +167,7 @@ const RitationReport: React.FC = () => {
     };
 
     if (id) {
-       fetchDetailReport(id);
+      fetchDetailReport(id);
       return;
     }
 
@@ -194,13 +196,13 @@ const RitationReport: React.FC = () => {
     //Count required data
     const flowmeterqty =
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
-    
-      if(flowmeterqty < 0 || flowmeterqty > 20000){
-        console.log("Salah qty");
-        
-        toast.error('Cek kembali angka flowmeter anda')
-        return;
-      }
+
+    if (flowmeterqty < 0 || flowmeterqty > 20000) {
+      console.log('Salah qty');
+
+      toast.error('Cek kembali angka flowmeter anda');
+      return;
+    }
 
     const whId = await getWHFromFT(equipNumber);
 
@@ -219,33 +221,33 @@ const RitationReport: React.FC = () => {
     const qtySonding = qtySondingAfter - qtySondingBefore;
 
     // Construct the query object with data to insert or update
-    let query = {
-      no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
-      queue_num: parseInt(reportNumber),
-      warehouse_id: whId,
-      operator_id: optNrp,
-      fuelman_id: fmNrp,
-      qty_sj: flowmeterqty,
-      qty_flowmeter_before: flowmeterBefore,
-      qty_flowmeter_after: flowmeterAfter,
-      qty_sonding: qtySonding,
-      qty_sonding_before: qtySondingBefore,
-      qty_sonding_after: qtySondingAfter,
-      sonding_before_front: teraDepanBefore,
-      sonding_before_rear: teraBelakangBefore,
-      sonding_after_front: teraDepanAfter,
-      sonding_after_rear: teraBelakangAfter,
-      flowmeter_before_url: flowmeterBeforeUrl,
-      flowmeter_after_url: flowmeterAfterUrl,
-      sj_url: suratJalanUrl,
-      ritation_date: formatDateToString(new Date()),
-    };
 
     try {
       if (session) {
+        let query = {
+          no_surat_jalan: id,
+          queue_num: parseInt(reportNumber),
+          warehouse_id: whId,
+          operator_id: optNrp,
+          fuelman_id: fmNrp,
+          qty_sj: flowmeterqty,
+          qty_flowmeter_before: flowmeterBefore,
+          qty_flowmeter_after: flowmeterAfter,
+          qty_sonding: qtySonding,
+          qty_sonding_before: qtySondingBefore,
+          qty_sonding_after: qtySondingAfter,
+          sonding_before_front: teraDepanBefore,
+          sonding_before_rear: teraBelakangBefore,
+          sonding_after_front: teraDepanAfter,
+          sonding_after_rear: teraBelakangAfter,
+          flowmeter_before_url: fetchedData!.flowmeter_before_url,
+          flowmeter_after_url: fetchedData!.flowmeter_after_url,
+          sj_url: fetchedData!.sj_url,
+          ritation_date:  fetchedData!.ritation_date,
+        };
         // Modify the record if there is an active session
+        console.log(query);
+
         const { error } = await supabase
           .from('ritasi_fuel')
           .update(query)
@@ -262,6 +264,30 @@ const RitationReport: React.FC = () => {
         navigate('/stockmanagement');
       } else {
         // Insert a new record if no session
+        let query = {
+          no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+        parseInt(reportNumber),
+      )}`,
+          queue_num: parseInt(reportNumber),
+          warehouse_id: whId,
+          operator_id: optNrp,
+          fuelman_id: fmNrp,
+          qty_sj: flowmeterqty,
+          qty_flowmeter_before: flowmeterBefore,
+          qty_flowmeter_after: flowmeterAfter,
+          qty_sonding: qtySonding,
+          qty_sonding_before: qtySondingBefore,
+          qty_sonding_after: qtySondingAfter,
+          sonding_before_front: teraDepanBefore,
+          sonding_before_rear: teraBelakangBefore,
+          sonding_after_front: teraDepanAfter,
+          sonding_after_rear: teraBelakangAfter,
+          flowmeter_before_url: flowmeterBeforeUrl,
+          flowmeter_after_url: flowmeterAfterUrl,
+          sj_url: suratJalanUrl,
+          ritation_date : formatDateToString(new Date()),
+        };
+
         const { error } = await supabase.from('ritasi_fuel').insert([query]);
 
         if (error) {
@@ -271,13 +297,12 @@ const RitationReport: React.FC = () => {
           setIsLoading(false);
         } else {
           setIsComplete(true); // Insertion successful
-          navigate(`/reporting/ritation/${sjNumber}`)
+          navigate(`/reporting/ritation/${sjNumber}`);
         }
       }
     } catch (error) {
       console.error('Unexpected error:', error);
     } finally {
-      
     }
   }; //end submit form
 
@@ -633,16 +658,14 @@ const RitationReport: React.FC = () => {
   const handleShareReport = async (e: any) => {
     e.preventDefault();
     console.log(id);
-    const shareData = await fetchDetailReport(id)
+    const shareData = await fetchDetailReport(id);
     const info = constructMessage(shareData[0]);
     shareMessageToWhatsapp(info);
   };
 
   return isLoading ? (
     <div>
-      
       <div className="flex flex-col">
-        
         <div className="flex h-screen items-center justify-center bg-white">
           {isComplete ? (
             <div></div>
