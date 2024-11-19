@@ -14,7 +14,6 @@ import SwitcherThree from "../../components/Switchers/SwitcherThree";
 import TableOne from "../../components/Tables/TableOne";
 import TableThree from "../../components/Tables/TableThree";
 import TableTwo from "../../components/Tables/TableTwo";
-import SchedulerExample from "../Dashboard/Manpower/Roster/SchedulerExample";
 import Calendar from "../Calendar";
 import Profile from "../Profile";
 import FormElements from "../Form/FormElements";
@@ -28,6 +27,7 @@ import DropdownDefault from "../../components/Dropdowns/DropdownDefault";
 import DropdownMessage from "../../components/Header/DropdownMessage";
 import DropdownNotification from "../../components/Header/DropdownNotification";
 import DropdownUser from "../../components/Header/DropdownUser";
+
 
 const ComponentLibrary = () => {
 

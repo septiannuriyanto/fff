@@ -1,43 +1,50 @@
 import React, { useState } from 'react';
+import { ComboBoxItem } from '../../../types/ComboboxItem';
 
-const SelectGroupOne: React.FC = () => {
+interface ComboBoxProps {
+  items: ComboBoxItem[];
+  caption: string;
+  placeholder: string;
+  onChange: (selectedValue: string) => void; // Callback function to send value to parent
+}
+
+const SelectGroupOne: React.FC<ComboBoxProps> = ({ items, caption, placeholder, onChange }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
-  const [isOptionSelected, setIsOptionSelected] = useState<boolean>(false);
 
-  const changeTextColor = () => {
-    setIsOptionSelected(true);
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setSelectedOption(value);
+    onChange(value); // Call the parent callback to pass the selected value
   };
 
   return (
     <div className="mb-4.5">
-      <label className="mb-2.5 block text-black dark:text-white">
-        {' '}
-        Subject{' '}
-      </label>
+      <label className="mb-2.5 block text-black dark:text-white">{caption}</label>
 
       <div className="relative z-20 bg-transparent dark:bg-form-input">
         <select
           value={selectedOption}
-          onChange={(e) => {
-            setSelectedOption(e.target.value);
-            changeTextColor();
-          }}
+          onChange={handleChange}
           className={`relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary ${
-            isOptionSelected ? 'text-black dark:text-white' : ''
+            selectedOption ? 'text-black dark:text-white' : ''
           }`}
         >
-          <option value="" disabled className="text-body dark:text-bodydark">
-            Select your subject
+          {/* Placeholder as the first option */}
+          <option value="" disabled>
+            {placeholder}
           </option>
-          <option value="USA" className="text-body dark:text-bodydark">
-            USA
-          </option>
-          <option value="UK" className="text-body dark:text-bodydark">
-            UK
-          </option>
-          <option value="Canada" className="text-body dark:text-bodydark">
-            Canada
-          </option>
+
+          {items.length === 0 ? (
+            <option value="" disabled>
+              No items available
+            </option>
+          ) : (
+            items.map((item) => (
+              <option key={item.value} value={item.value} className="text-body dark:text-bodydark">
+                {item.label}
+              </option>
+            ))
+          )}
         </select>
 
         <span className="absolute top-1/2 right-4 z-30 -translate-y-1/2">
@@ -54,8 +61,7 @@ const SelectGroupOne: React.FC = () => {
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M5.29289 8.29289C5.68342 7.90237 6.31658 7.90237 6.70711 8.29289L12 13.5858L17.2929 8.29289C17.6834 7.90237 18.3166 7.90237 18.7071 8.29289C19.0976 8.68342 19.0976 9.31658 18.7071 9.70711L12.7071 15.7071C12.3166 16.0976 11.6834 16.0976 11.2929 15.7071L5.29289 9.70711C4.90237 9.31658 4.90237 8.68342 5.29289 8.29289Z"
-                fill=""
-              ></path>
+              />
             </g>
           </svg>
         </span>

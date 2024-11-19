@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
 import { supabase } from '../../db/SupabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { AuthResponse, AuthSession } from '@supabase/supabase-js';
 import { useDispatch } from 'react-redux';
-import { setSession } from '../../store/sessionSlice';
+import { useAuth } from './AuthContext';
 
 const SignIn: React.FC = () => {
+
+  const { signIn } = useAuth();
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [nrp, setNrp] = useState<string>('');
@@ -73,41 +75,50 @@ const SignIn: React.FC = () => {
       return;
     }
 
+    if (!signIn) return;
     try {
-      // Perform login with Supabase
-      const { data, error: authError } =
-        (await supabase.auth.signInWithPassword({
-          email: email!,
-          password: password,
-        })) as AuthResponse;
-
-      if (authError) {
-        console.error('Error logging in:', authError.message);
-        throw authError;
-      } else {
-        const session = data.session;
-        const user = data.user;
-
-        if (session) {
-          console.log('Session:', session);
-          storeSession(session);
-        }
-
-        function storeSession(session: AuthSession) {
-          localStorage.setItem('supabaseSession', JSON.stringify(session));
-        }
-
-        // Handle successful login
-        console.log('Login successful');
-        // Store the session in Redux
-        dispatch(setSession(data.session));
-        window.location.href = '/';
-        // navigate('/');
-      }
-    } catch (error) {
-      console.error('Error logging in:', error);
-      setError('Login failed');
+      await signIn(email!, password, nrp!);
+      navigate('/'); // Redirect after successful login
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+    } finally {
     }
+
+    // try {
+    //   // Perform login with Supabase
+    //   const { data, error: authError } =
+    //     (await supabase.auth.signInWithPassword({
+    //       email: email!,
+    //       password: password,
+    //     })) as AuthResponse;
+
+    //   if (authError) {
+    //     console.error('Error logging in:', authError.message);
+    //     throw authError;
+    //   } else {
+    //     const session = data.session;
+    //     const user = data.user;
+
+    //     if (session) {
+    //       console.log('Session:', session);
+    //       storeSession(session);
+    //     }
+
+    //     function storeSession(session: AuthSession) {
+    //       localStorage.setItem('supabaseSession', JSON.stringify(session));
+    //     }
+
+    //     // Handle successful login
+    //     console.log('Login successful');
+    //     // Store the session in Redux
+    //     dispatch(setSession(data.session));
+    //     window.location.href = '/';
+    //     // navigate('/');
+    //   }
+    // } catch (error) {
+    //   console.error('Error logging in:', error);
+    //   setError('Login failed');
+    // }
   };
 
   return (
@@ -125,7 +136,7 @@ const SignIn: React.FC = () => {
                 />
               </Link>
 
-              <p className="2xl:px-20">Sign in menggunakan akun anda</p>
+              <p className="2xl:px-20">Masuk menggunakan akun anda</p>
 
               <span className="mt-15 inline-block">
                 <svg
@@ -374,13 +385,13 @@ const SignIn: React.FC = () => {
                   Sign in with Google
                 </button> */}
 
-                <div className="mt-6 text-center">
-                  <p>
-                    Belum Punya Akun ?{' '}
+                <div className="mt-6 text-center flex flex-row gap-4 items-center justify-center">
                     <Link to="/auth/signup" className="text-primary">
-                      Sign Up
+                      Daftar
                     </Link>
-                  </p>
+                    <Link to="/auth/forgotpassword" className="text-primary">
+                      Lupa Password
+                    </Link>
                 </div>
               </form>
             </div>

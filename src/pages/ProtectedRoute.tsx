@@ -1,40 +1,76 @@
-import { useEffect, useState, ReactNode } from 'react';
-import { Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '../db/SupabaseClient'; // Adjust the import path as necessary
-import Loader from '../common/Loader/Loader'
-import { Session } from '@supabase/supabase-js'; // Import Session type
+import React, { PropsWithChildren } from 'react';
+import Loader from '../common/Loader/Loader';
+import { User } from '../types/User';
+import { useAuth } from './Authentication/AuthContext';
+import { Navigate } from 'react-router-dom';
 
-interface ProtectedRouteProps {
-  element: ReactNode;
-}
+type ProtectedRouteProps = PropsWithChildren & {
+  allowedRoles?: User['role'][] | '*' | 'FUEL' | 'OIL' | 'SUPERVISOR' | 'ADMIN'; // Allow valid options
+};
 
-const ProtectedRoute = ({ element }: ProtectedRouteProps) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const location = useLocation();
+const ALL_ROLES: User['role'][] = [
+  'CREATOR',
+  'GROUP LEADER',
+  'OPERATOR FT',
+  'FUELMAN',
+  'FUEL AND OIL ADMIN',
+  'OILMAN',
+];
 
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+const FUEL_ROLES: User['role'][] = [
+  'CREATOR',
+  'GROUP LEADER',
+  'OPERATOR FT',
+  'FUELMAN',
+  'FUEL AND OIL ADMIN',
+];
 
-    fetchSession();
-  }, []);
+const OIL_ROLES: User['role'][] = [
+  'OILMAN',
+];
 
-  if (loading) return <Loader />;
+const SUPERVISOR: User['role'][] = [
+  'CREATOR',
+  'GROUP LEADER',
+];
 
-  return session ? (
-    <>{element}</>
-  ) : (
-    <Navigate to="/auth/signin" state={{ from: location }} />
-  );
+const ADMIN: User['role'][] = [
+  'CREATOR',
+  'GROUP LEADER',
+  'FUEL AND OIL ADMIN'
+];
+
+const ProtectedRoute = ({ allowedRoles, children }: ProtectedRouteProps) => {
+  const { currentUser } = useAuth();
+
+  if (currentUser === undefined) {
+    return <Loader />;
+  }
+
+  if (currentUser === null) {
+    return <Navigate to="/auth/signin" replace />;
+  }
+
+  // Determine the effective roles based on the `allowedRoles` value
+  const effectiveRoles =
+    allowedRoles === '*'
+      ? ALL_ROLES
+      : allowedRoles === 'FUEL'
+      ? FUEL_ROLES
+      : allowedRoles === 'OIL'
+      ? OIL_ROLES
+      : allowedRoles === 'SUPERVISOR'
+      ? SUPERVISOR
+      : allowedRoles === 'ADMIN'
+      ? ADMIN
+      : allowedRoles;
+
+  // Check if the current user's role is in the effectiveRoles array
+  if (effectiveRoles && !effectiveRoles.includes(currentUser!.role)) {
+    return <div className="text-lg font-bold text-center">Permission Denied</div>;
+  }
+
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

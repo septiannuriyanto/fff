@@ -1,51 +1,74 @@
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import Header from '../components/Header/index';
 import Sidebar from '../components/Sidebar/index';
+import { useAuth } from '../pages/Authentication/AuthContext';
 import { supabase } from '../db/SupabaseClient';
-import { Session } from '@supabase/supabase-js'; // Import Session type
+import toast from 'react-hot-toast';
+import getRole from '../functions/get.role';
 
 const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [session, setSession] = useState<Session | null>(null);
+  const { authToken, loading } = useAuth(); // Directly access `authToken` and `loading`
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
-    useEffect(() => {
-        // Function to fetch the session
-        const fetchSession = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                setSession(session);
-                console.log('Session:', session);
-            } catch (error) {
-                console.error('Error fetching session:', error);
-            }
-        };
+  const [stateRole, setStateRole] = useState<string | null>();
 
-        fetchSession();
-    }, []); // Empty dependency array ensures this runs once on mount
 
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+  const fetchRole = async()=>{
+    const nrp = localStorage.getItem('nrp');
+    if(nrp){
+      const role = await getRole({ nrp });
+      console.log(role);
+      
+      setStateRole(role!);
+    }
+   
+  }
 
+  useEffect(() => {
+    
+    fetchRole();
+
+  }, [getRole]);
+
+  // Display a loading screen if the authentication state is still being determined
+  if (loading) {
     return (
-        <div className="dark:bg-boxdark-2 dark:text-bodydark">
-            {/* Page Wrapper Start */}
-            <div className="flex h-screen overflow-hidden">
-                {/* Sidebar */}
-                {session && <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />}
-                
-                {/* Content Area */}
-                <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-                    {/* Header */}
-                    {session && <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />}
-                    
-                    {/* Main Content */}
-                    <main>
-                        <div className="mx-auto max-w-full p-4 md:p-6 2xl:p-2">
-                            {children}
-                        </div>
-                    </main>
-                </div>
-            </div>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <span>Loading...</span>
+      </div>
     );
+  }
+
+  return (
+    <div className="dark:bg-boxdark-2 dark:text-bodydark">
+      {/* Page Wrapper */}
+      <div className="flex h-full overflow-hidden">
+        {/* Sidebar */}
+        {authToken && stateRole && (
+          <Sidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            role={stateRole}
+          />
+        )}
+
+        {/* Content Area */}
+        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+          {/* Header */}
+          {authToken && (
+            <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          )}
+
+          {/* Main Content */}
+          <main>
+            <div className="mx-auto max-w-full p-4 md:p-6 2xl:p-2">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default DefaultLayout;

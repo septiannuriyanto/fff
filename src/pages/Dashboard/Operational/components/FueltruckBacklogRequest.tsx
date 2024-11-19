@@ -4,18 +4,21 @@ import Autosuggest from 'react-autosuggest';
 import {
   formatDate,
   formatDateForSupabase,
+  formatDateToIndonesianByDate,
   formatDateToYyMmDd,
 } from '../../../../Utils/DateUtility';
-import { sendMessageToChannel } from '../../../../services/TelegramSender';
+import { botToken, chatId, sendImageToTopic, sendMessageToChannel, superGroupId } from '../../../../services/TelegramSender';
 import DropZone from '../../../../components/DropZones/DropZone';
 import toast, { Toaster } from 'react-hot-toast';
+import { baseStorageUrl, bucketUrl, uploadImageGeneral, uploadImageGeneralGetUrl } from '../../../../services/ImageUploader';
+import { sitename } from '../../../../store/site';
 
 interface ManpowerData {
   nrp?: string;
   nama?: string;
 }
 
-const FuelTruckMaintenanceRequest = () => {
+const FuelTruckBacklogRequest = () => {
   const [name, setName] = useState<string>('');
   const [names, setNames] = useState<string[]>([]);
   const [namesSuggestions, setNamesSuggestions] = useState<string[]>([]);
@@ -101,13 +104,14 @@ const FuelTruckMaintenanceRequest = () => {
   const getSuggestions = (value: string, list: string[]): string[] => {
     const inputValue = value.trim().toLowerCase();
     const inputLength = inputValue.length;
-
+  
     return inputLength === 0
-      ? []
+      ? [] // If the input is empty, return no suggestions
       : list.filter(
-          (item) => item.toLowerCase().slice(0, inputLength) === inputValue,
+          (item) => item.toLowerCase().includes(inputValue) // Check if the item contains the input value
         );
   };
+  
 
   const onNameSuggestionsFetchRequested = ({ value }: { value: string }) => {
     setNamesSuggestions(getSuggestions(value, names));
@@ -131,6 +135,7 @@ const FuelTruckMaintenanceRequest = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
 
     // Check if `reportBy` exists in the `manpower` table
     const { data: manpowerData, error: fetchError } = await supabase
@@ -161,6 +166,14 @@ const FuelTruckMaintenanceRequest = () => {
 
     const reqId = `${startDateFormatted}${equipNumber}`;
 
+
+    const imgUrl = await uploadImageGeneralGetUrl(requestEvidenceFile!,"problems_evidence", `backlogs/${reqId}`);
+
+    if (!imgUrl){
+      toast.error("Error Uploading Image")
+      return;
+    }
+
     //update the table
     let query = {
       req_id : reqId,
@@ -170,10 +183,29 @@ const FuelTruckMaintenanceRequest = () => {
       problem : problem,
       description : description,
       area : areaTrouble,
-      image_url : ''
+      image_url : imgUrl
     };
 
+    const teleMessage =
+    `Backlog Request
+  Tanggal : ${ formatDateToIndonesianByDate(startDate) }
+    
+  Unit : ${equipNumber}
+  Report by : ${name}
+  Area : ${areaTrouble}
+  Problem : ${problem}
+  Description : ${description}
+
+  Backlog Register : ${sitename}/infrastructure/ftbacklog
+
+
+    `;
+
     const { error } = await supabase.from('unit_maintenance').insert([query]);
+
+
+  
+    await sendImageToTopic(imgUrl, teleMessage ,botToken ,superGroupId, "13")
 
     if (error) {
       if (error.code === '23505') {
@@ -321,4 +353,4 @@ const FuelTruckMaintenanceRequest = () => {
   );
 };
 
-export default FuelTruckMaintenanceRequest;
+export default FuelTruckBacklogRequest;
