@@ -23,7 +23,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ALL_ROLES, FUEL_ROLES, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -159,7 +159,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               {/* <!-- Menu Item Dashboard --> */}
               <SidebarGroup
                 currentRole={role!}
-                roles={SUPERVISOR}
+                roles={ADMIN}
                 title="Dashboard"
                 icon={<TbDashboard />}
                 pathname={pathname}
