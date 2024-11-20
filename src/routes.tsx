@@ -34,184 +34,196 @@ import ComponentLibrary from './pages/MasterData/ComponentLibrary';
 import MasterManpower from './pages/MasterData/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
+import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
+
 
 const routes = [
   {
     path: '/',
     component: <Dashboard />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['']
+    allowedRoles: ALL_ROLES
   },
 
   {
     path: '/auth/signin',
     component: <SignIn />,
+    allowedRoles: ALL_ROLES
   },
   {
     path: '/auth/signup',
     component: <SignUp />,
+    allowedRoles: ALL_ROLES
   },
   {
     path: '/auth/forgotpassword',
     component: <ForgotPassword />,
+    allowedRoles: ALL_ROLES
   },
 
 
   {
     path: '/auth/registrationlist',
     component: <RegistrationList />,
-    allowedRoles: ['CREATOR','GROUP LEADER']
+    allowedRoles: SUPERVISOR
   },
 
   {
     path: '/fuelcons',
     component: <FuelConsumption />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/stockmanagement',
     component: <StockManagement />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/operational',
     component: <Operational />,
     title: 'FFF | Operational Dashboard',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/operational/ritation',
     component: <RefuelingAnomaly allowColumnsEdit />,
     title: 'FFF | Ritation Dashboard',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/infrastructure',
     component: <Infrastructure />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/infrastructure/ftbacklog',
     component: <FuelTruckBacklog />,
     title: 'FFF | FT Backlog List',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
   {
     path: '/manpower',
     component: <Manpower />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['ADMIN']
+    allowedRoles: ADMIN
   },
 
   {
     path: '/profile/:id',
     component: <Profile />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['*']
+    allowedRoles: ALL_ROLES
   },
 
   {
     path: '/settings/:id',
     component: <Settings />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ['*']
+    allowedRoles: ALL_ROLES
   },
 
   {
     path: '/plan/fuelritationplan',
     component: <FuelRitationPlan />,
     title: 'FFF | Fuel Ritation Plan',
-    allowedRoles: ['CREATOR','GROUP LEADER']
+    allowedRoles: SUPERVISOR
   },
   // Reporting Routes
   {
     path: '/reporting/dailyreport',
     component: <DailyReport />,
     title: 'FFF | Daily Report',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/logsheet',
     component: <Logsheet />,
     title: 'FFF | Logsheet',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/stock',
     component: <StockReporting />,
     title: 'FFF | Stock Reporting',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/stocktaking',
     component: <StockTaking />,
     title: 'FFF | Stock Taking',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/ritation',
     component: <RitationReport />,
     title: 'FFF | Ritation Report',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/ritation/:id',
     component: <RitationReport />,
     title: 'FFF | Ritation Detail',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/tmr',
     component: <TMRReport />,
     title: 'FFF | TMR Report',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/pressureless',
     component: <PressurelessReport />,
     title: 'FFF | Pressureless Reporting',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
   },
   {
     path: '/reporting/ftbdrfu',
     component: <BreakdownRfuReport />,
     title: 'FFF | FT Breakdown - RFU',
-    allowedRoles: ['FUEL']
+    allowedRoles: FUEL_ROLES
+  },
+  {
+    path: '/reporting/ftbacklogreq',
+    component: <FuelTruckBacklogRequest />,
+    title: 'FFF | FT Backlog Request',
+    allowedRoles: FUEL_ROLES
   },
   // Export Routes
   {
     path: '/export/bastfuel',
     component: <BastFuel />,
     title: 'FFF | Export BAST Fuel',
-    allowedRoles: ['SUPERVISOR']
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/export/bastoli',
     component: <BastOli />,
     title: 'FFF | Export BAST Oli',
-    allowedRoles: ['SUPERVISOR']
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/export/reconcilefuelowner',
     component: <BaReconcile />,
     title: 'FFF | Export BA Reconcile Owner',
-    allowedRoles: ['SUPERVISOR']
+    allowedRoles: SUPERVISOR
   },
   // Master Data Routes
   {
     path: '/master/componentlibrary',
     component: <ComponentLibrary />,
     title: 'FFF | Component Library',
-    allowedRoles: ['SUPERVISOR']
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/master/manpower',
     component: <MasterManpower />,
     title: 'FFF | Master Manpower',
-    allowedRoles: ['SUPERVISOR']
+    allowedRoles: SUPERVISOR
   },
 
   //UI ROUTES
@@ -219,36 +231,43 @@ const routes = [
     path: '/chart',
     component: <Chart />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/calendar',
     component: <Calendar />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/forms/form-elements',
     component: <FormElements />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/forms/form-layout',
     component: <FormElements />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/tables',
     component: <Tables />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/ui/alerts',
     component: <Alerts />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
   {
     path: '/ui/buttons',
     component: <Buttons />,
     title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: SUPERVISOR
   },
 ];
 

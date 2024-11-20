@@ -23,6 +23,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
+import { FUEL_ROLES, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -158,7 +159,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               {/* <!-- Menu Item Dashboard --> */}
               <SidebarGroup
                 currentRole={role!}
-                roles={['CREATOR', 'GROUP LEADER']}
+                roles={SUPERVISOR}
                 title="Dashboard"
                 icon={<TbDashboard />}
                 pathname={pathname}
@@ -176,7 +177,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               {/* <!-- Menu Item Reporting Pages --> */}
               <SidebarGroup
               currentRole={role!}
-              roles={['CREATOR', 'GROUP LEADER', 'FUELMAN', 'OPERATOR FT', 'FUEL AND OIL ADMIN']}
+              roles={FUEL_ROLES}
                 title="Fuel Reporting"
                 icon={<TbReport />}
                 pathname={pathname}
@@ -197,7 +198,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   label="FT Breakdown - RFU"
                 />
                 <SidebarLink
-                  to="/reporting/ftmaintenancerequest"
+                  to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
               </SidebarGroup>
@@ -205,7 +206,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
 
               <SidebarGroup
               currentRole={role!}
-              roles={['CREATOR', 'GROUP LEADER']}
+              roles={SUPERVISOR}
                 title="Master Data"
                 icon={<TbDatabase />}
                 pathname={pathname}
@@ -221,7 +222,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
 
               <SidebarGroup
               currentRole={role!}
-              roles={['CREATOR', 'GROUP LEADER']}
+              roles={SUPERVISOR}
                 title="Export"
                 icon={<TbDownload />}
                 pathname={pathname}
@@ -239,7 +240,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               {/* <!-- Menu Item Auth Pages --> */}
               <SidebarGroup
               currentRole={role!}
-              roles={['CREATOR', 'GROUP LEADER']}
+              roles={SUPERVISOR}
                 title="Authentication"
                 icon={<TbUserCheck />}
                 pathname={pathname}

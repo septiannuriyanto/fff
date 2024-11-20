@@ -223,7 +223,7 @@ const FuelTruckBacklogRequest = () => {
       setRequestEvidenceFile(null);
 
       const message =
-      `PENGAJUAN MAINTENANCE\n\nDate Submit : ${formatDate(Date.now(),)}\nReported by : ${name}\nEquipment Number : ${equipNumber}
+      `PENGAJUAN BACKLOG\n\nDate Submit : ${formatDate(Date.now(),)}\nReported by : ${name}\nEquipment Number : ${equipNumber}
       \nArea Trouble : ${areaTrouble}\nProblem : ${problem}\nDescription : ${description}
       \nDetail : https://fff-project.vercel.app/reporting/ftmaintenance/${reqId}`;
       sendMessageToChannel(message);
@@ -238,7 +238,7 @@ const FuelTruckBacklogRequest = () => {
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
       <Toaster></Toaster>
       <h1 className="text-center text-2xl font-bold mb-5">
-        Form Request Maintenance FT
+        Form Request Backlog FT
       </h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
         <div className=" flex  flex-row mb-2 justify-between gap-2">
