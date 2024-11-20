@@ -1,10 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ClickOutside from '../ClickOutside';
 import UserOne from '../../images/user/user-01.png';
+import { supabase } from '../../db/SupabaseClient';
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [nama, setNama] = useState('');
+  const [position, setPosition] = useState('');
+
+  const profpicBaseUrl = 'https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/images/profile/';
+
+  const nrp = localStorage.getItem('nrp');
+
+  const fetchImage = async() =>{
+
+    const { data, error } = await supabase
+    .from('manpower')
+    .select('nama, position, incumbent(incumbent)')
+    .eq('nrp', nrp)
+    .single();
+    console.log(data);
+    
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setNama(data.nama);
+    setPosition(data.incumbent.incumbent)
+    
+  }
+
+  useEffect(()=>{
+
+    fetchImage();
+
+  },[])
 
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
@@ -14,14 +47,20 @@ const DropdownUser = () => {
         to="#"
       >
         <span className="hidden text-right lg:block">
-          <span className="block text-sm font-medium text-black dark:text-white">
-            FAO Section
+          <span className="block text-xs font-medium text-black dark:text-white">
+            {nama}
           </span>
-          <span className="block text-xs">SM Dept BRCG</span>
+          <span className="block text-xs">{position}</span>
         </span>
 
         <span className="h-12 w-12 rounded-full">
-          <img src={UserOne} alt="User" />
+          <img src={`${profpicBaseUrl}/${nrp}`} 
+          alt='img'
+          onError={(e) => {
+            // Replace the image source with a fallback URL when it fails to load
+            e.currentTarget.src = UserOne; 
+          }} 
+          />
         </span>
 
         <svg
