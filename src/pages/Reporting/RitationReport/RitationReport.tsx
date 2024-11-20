@@ -914,7 +914,7 @@ const RitationReport: React.FC = () => {
                 <div>
                   <DropZone
                     id="fm-before"
-                    title="Flowmeter Before"
+                    title="FM Before"
                     onFileUpload={handleFlowmeterBeforeUpload}
                     uploadProgress={uploadProgressFmBefore}
                     file={flowmeterBeforeFile}
@@ -956,7 +956,7 @@ const RitationReport: React.FC = () => {
                 <div>
                   <DropZone
                     id="fm-after"
-                    title="Flowmeter After"
+                    title="FM After"
                     onFileUpload={handleFlowmeterAfterUpload}
                     uploadProgress={uploadProgressFmAfter}
                     file={flowmeterAfterFile}

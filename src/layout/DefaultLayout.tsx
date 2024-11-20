@@ -2,8 +2,6 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import Header from '../components/Header/index';
 import Sidebar from '../components/Sidebar/index';
 import { useAuth } from '../pages/Authentication/AuthContext';
-import { supabase } from '../db/SupabaseClient';
-import toast from 'react-hot-toast';
 import getRole from '../functions/get.role';
 
 const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -28,7 +26,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
     
     fetchRole();
 
-  }, [getRole]);
+  }, []);
 
   // Display a loading screen if the authentication state is still being determined
   if (loading) {

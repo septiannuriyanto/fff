@@ -95,7 +95,7 @@ const SignUp: React.FC = () => {
 
     if (error) {
       // Prevent submission if there's an error
-
+      
       return;
     }
 

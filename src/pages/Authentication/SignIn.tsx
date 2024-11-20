@@ -20,6 +20,7 @@ const SignIn: React.FC = () => {
   const handleNrpChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
+    setError(null);
     const newNrp = event.target.value;
     setNrp(newNrp);
 
@@ -65,6 +66,7 @@ const SignIn: React.FC = () => {
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = event.target.value;
     setPassword(newPassword);
+    setError(null);
 
     if (newPassword.trim() === '') {
       setError('Password is required');
@@ -89,7 +91,8 @@ const SignIn: React.FC = () => {
     if (!signIn) return;
     try {
       await signIn(email!, password, nrp!);
-      navigate('/'); // Redirect after successful login
+      navigate(0)
+      window.location.href= '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {

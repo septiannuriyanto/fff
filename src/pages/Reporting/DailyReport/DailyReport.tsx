@@ -13,7 +13,6 @@ const DailyReport = () => {
       </div>
       <div className="content-container">
         <StockReporting />
-        <RitationReporting />
         <TmrReporting />
       </div>
     </div>

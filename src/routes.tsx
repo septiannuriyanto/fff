@@ -36,6 +36,7 @@ import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
 import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
+import ResetPassword from './pages/Authentication/ResetPassword';
 
 
 const routes = [
@@ -59,6 +60,11 @@ const routes = [
   {
     path: '/auth/forgotpassword',
     component: <ForgotPassword />,
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/auth/resetpassword/:token',
+    component: <ResetPassword />,
     allowedRoles: ALL_ROLES
   },
 
