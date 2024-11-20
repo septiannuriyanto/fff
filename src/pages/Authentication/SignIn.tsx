@@ -37,30 +37,26 @@ const SignIn: React.FC = () => {
         .eq('nrp', newNrp)
         .single();
 
-      if (queryError) {
-        throw queryError;
+       if(!data){
+        setError('User not registered');
+        return;
+       }
+       if (!data.active_date) {
+        setError('Account is not activated, contact your administrator');
+        return;
       }
 
-      if (data && data.email) {
+      if (data.email) {
         setEmail(data.email);
         setActiveDate(data.active_date);
         setError(null);
-      } else {
-        setEmail(null);
-        setActiveDate(null);
-        setError('User not registered');
       }
-
-      if (!data.active_date) {
-        setError('Account is not activated, contact your administrator');
-      }
-
 
     } catch (err) {
-      console.error(error);
+      console.error(err);
       setEmail(null);
       setActiveDate(null);
-      setError(error);
+      setError('Error sign in');
     }
 
    
