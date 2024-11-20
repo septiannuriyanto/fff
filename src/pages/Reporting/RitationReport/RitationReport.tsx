@@ -223,7 +223,7 @@ const RitationReport: React.FC = () => {
     // Construct the query object with data to insert or update
 
     try {
-      if (session) {
+      if (!session) {
         let query = {
           no_surat_jalan: id,
           queue_num: parseInt(reportNumber),
@@ -481,11 +481,6 @@ const RitationReport: React.FC = () => {
       toast.success('File Uploaded');
     }
   };
-  // const handleFlowmeterAfterUpload = (file: File) => {
-  //   setFlowmeterAfterFile(file);
-  //   // You can add additional logic here, like validating the file or processing it
-  //   console.log('Flowmeter After Uploaded:', file);
-  // };
 
   const handleSuratJalanUpload = async (file: File) => {
     if (!reportNumber) {
@@ -528,12 +523,6 @@ const RitationReport: React.FC = () => {
       toast.success('File Uploaded');
     }
   };
-
-  // const handleSuratJalanUpload = (file: File) => {
-  //   setSuratJalanFile(file);
-  //   // You can add additional logic here, like validating the file or processing it
-  //   console.log('Surat Jalan uploaded:', file);
-  // };
 
   //HANDLE RITATION DATA
   const [teraDepanBefore, setTeraDepanBefore] = React.useState('');
@@ -914,7 +903,7 @@ const RitationReport: React.FC = () => {
                 <div>
                   <DropZone
                     id="fm-before"
-                    title="FM Before"
+                    title="Flowmeter Before"
                     onFileUpload={handleFlowmeterBeforeUpload}
                     uploadProgress={uploadProgressFmBefore}
                     file={flowmeterBeforeFile}
@@ -956,7 +945,7 @@ const RitationReport: React.FC = () => {
                 <div>
                   <DropZone
                     id="fm-after"
-                    title="FM After"
+                    title="Flowmeter After"
                     onFileUpload={handleFlowmeterAfterUpload}
                     uploadProgress={uploadProgressFmAfter}
                     file={flowmeterAfterFile}
