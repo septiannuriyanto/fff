@@ -1,4 +1,4 @@
-const defaultTheme = require('tailwindcss/defaultTheme')
+const defaultTheme = require('tailwindcss/defaultTheme', 'tailwind-scrollbar')
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {

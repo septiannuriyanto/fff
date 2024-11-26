@@ -229,7 +229,7 @@ class DataService {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd'); // YYYY-MM-DD
     const formattedEndDate = format(endDate, 'yyyy-MM-dd'); // YYYY-MM-DD
 
-    const query = {
+    const newRecord = {
       id: data.Id,
       nrp: data.Nrp,
       date_start: formattedStartDate,
@@ -237,14 +237,35 @@ class DataService {
       recurrence_rule: data.RecurrenceRule,
       subject: data.Subject.toUpperCase(),
     };
-    console.log('Data inputted:', data);
-    const { error } = await supabase.from('shiftly_plan').insert([query]);
-    if (error) {
-      console.error('Error inserting data:', error);
-      return false;
+
+    // Retrieve existing data from local storage
+    const existingData = JSON.parse(localStorage.getItem('rosterrecords') || '[]');
+
+    // Check if the record already exists
+    const recordIndex = existingData.findIndex((record: any) => record.id === newRecord.id);
+    if (recordIndex !== -1) {
+      // Update the existing record
+      existingData[recordIndex] = newRecord;
+    } else {
+      // Add the new record
+      existingData.push(newRecord);
     }
-    console.log('Data added:', query);
-    return true;
+
+    // Save the updated data back to local storage
+    localStorage.setItem('rosterrecords', JSON.stringify(existingData));
+
+    console.log('Updated Local Storage:', existingData);
+  
+
+    // console.log('Data inputted:', data);
+
+    // const { error } = await supabase.from('shiftly_plan').insert([query]);
+    // if (error) {
+    //   console.error('Error inserting data:', error);
+    //   return false;
+    // }
+    // console.log('Data added:', query);
+    // return true;
   }
 
   static async editData(data: any) {
