@@ -184,21 +184,69 @@ class DataService {
       return [];
     }
   }
-  static async fetchShiftlyData() {
+  // static async fetchShiftlyData() {
+  //   try {
+  //     const { data, error } = await supabase.rpc('get_shiftly_plan');
+
+  //     if (error) {
+  //       throw new Error(error.message);
+  //     }
+
+  //     console.log(data);
+      
+
+
+  //     return data;
+  //   } catch (error) {
+  //     console.error('Error fetching shiftly data:', error);
+  //     return [];
+  //   }
+  // }
+
+  parseShiftlyData(jsonData: any) {
+    let dataShiftly: EventData[] = [];
+    dataShiftly = jsonData
+      .filter((event: any) => event.date_end !== null)
+      .map((event: any) => ({
+        ...event,
+        Nrp: event.nrp,
+        PositionId: event.positionid,
+        StartTime: new Date(event.date_start).toISOString(),
+        EndTime: new Date(event.date_end).toISOString(),
+        Subject: event.subject.toUpperCase(),
+        IsAllDay: true,
+        Color: getColor(event.subject.toUpperCase()),
+        Priority: 'low',
+      }));
+    return dataShiftly;
+  }
+
+
+
+   static async fetchShiftlyData(){
+    // Get 'rosterrecord' from local storage
+    const storedData = localStorage.getItem('rosterrecords'); 
+  
+    // Ensure data exists and is valid JSON
+    if (!storedData) {
+      console.warn('No data found for "rosterrecord" in local storage.');
+      return [];
+    }
+  
     try {
-      const { data, error } = await supabase.rpc('get_shiftly_plan');
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-
-      return data;
+      // Parse JSON data  
+      const jsonData = JSON.parse(storedData);
+  
+      // Process and transform data using parseShiftlyData
+      return DataService.parseShiftlyData(jsonData);
     } catch (error) {
-      console.error('Error fetching shiftly data:', error);
+      console.error('Failed to parse "rosterrecord":', error);
       return [];
     }
   }
+
+
+
 
   static async getAllData() {
     let baseData = await DataService.fetchRosterData();
@@ -229,19 +277,38 @@ class DataService {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd'); // YYYY-MM-DD
     const formattedEndDate = format(endDate, 'yyyy-MM-dd'); // YYYY-MM-DD
 
+    const { data:posdata, error } = await supabase.from('manpower')
+    .select('position')
+    .eq('nrp', data.Nrp).single();
+    if(error){
+      console.error(error.message);
+      return;
+    }
+
+
     const newRecord = {
       id: data.Id,
       nrp: data.Nrp,
       date_start: formattedStartDate,
       date_end: formattedEndDate,
+      StartTime: formattedStartDate,
+      EndTime: formattedEndDate,
       recurrence_rule: data.RecurrenceRule,
       subject: data.Subject.toUpperCase(),
+      Color: getColor(data.Subject.toUpperCase()),
+      Priority : "low",
+      positionid : posdata.position,
+      PositionId : posdata.position,
+      IsAllDay: true,
     };
 
-    // Retrieve existing data from local storage
+    console.log(newRecord);
+    
+
+    // // Retrieve existing data from local storage
     const existingData = JSON.parse(localStorage.getItem('rosterrecords') || '[]');
 
-    // Check if the record already exists
+    // // Check if the record already exists
     const recordIndex = existingData.findIndex((record: any) => record.id === newRecord.id);
     if (recordIndex !== -1) {
       // Update the existing record
@@ -251,21 +318,21 @@ class DataService {
       existingData.push(newRecord);
     }
 
-    // Save the updated data back to local storage
+  //   // Save the updated data back to local storage
     localStorage.setItem('rosterrecords', JSON.stringify(existingData));
 
     console.log('Updated Local Storage:', existingData);
   
 
-    // console.log('Data inputted:', data);
+    console.log('Data inputted:', data);
 
-    // const { error } = await supabase.from('shiftly_plan').insert([query]);
-    // if (error) {
-    //   console.error('Error inserting data:', error);
-    //   return false;
-    // }
-    // console.log('Data added:', query);
-    // return true;
+  //   // const { error } = await supabase.from('shiftly_plan').insert([query]);
+  //   // if (error) {
+  //   //   console.error('Error inserting data:', error);
+  //   //   return false;
+  //   // }
+  //   // console.log('Data added:', query);
+  //   // return true;
   }
 
   static async editData(data: any) {

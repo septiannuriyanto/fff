@@ -201,6 +201,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
+                <SidebarLink to="/manpower/induction" label="Induksi" />
               </SidebarGroup>
               {/* <!-- Menu Item Reporting Pages --> */}
 

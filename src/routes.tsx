@@ -37,6 +37,7 @@ import ForgotPassword from './pages/Authentication/ForgotPassword';
 import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
+import Induction from './pages/Dashboard/Manpower/Induction';
 
 
 const routes = [
@@ -199,6 +200,13 @@ const routes = [
     title: 'FFF | FT Backlog Request',
     allowedRoles: FUEL_ROLES
   },
+  {
+    path: '/manpower/induction',
+    component: <Induction />,
+    title: 'FFF | Manpower Induction',
+    allowedRoles: ALL_ROLES
+  },
+
   // Export Routes
   {
     path: '/export/bastfuel',
