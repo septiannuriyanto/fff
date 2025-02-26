@@ -1,5 +1,4 @@
-import * as ReactDOM from 'react-dom';
-import * as React from 'react';
+
 import { useEffect, useState, useRef } from 'react';
 import {
   TimelineViews,
@@ -14,11 +13,9 @@ import {
   Resize,
   DragAndDrop,
   EventRenderedArgs,
-  CellTemplateArgs,
   ActionEventArgs,
 } from '@syncfusion/ej2-react-schedule';
-import { extend } from '@syncfusion/ej2-base';
-import * as dataSource from './datasource.json';
+
 import { supabase } from '../../../../db/SupabaseClient';
 import './RosterGannt.css';
 // import './bootstrap.min.css'
@@ -26,6 +23,8 @@ import './bootstrap5.css';
 import { registerLicense } from '@syncfusion/ej2-base';
 import rosterDataJson from './rosterdata.json';
 import { DataService, getColor } from './RosterDataFetcher';
+import { Button } from 'rsuite';
+import { LoaderLogo } from '../../../../common/Loader/LoaderLogo';
 
 interface Incumbent {
   id: number;
@@ -85,6 +84,8 @@ const RosterGannt = () => {
   const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
 
   const [summary, setSummary] = useState<EventSummary>(eventSummary);
+
+  const [ isLoading, setIsloading ] = useState<boolean>(true)
   const schedulerRef = useRef(null);
   const scheduleRef = useRef<ScheduleComponent>(null);
   const workDays: number[] = [0, 1, 2, 3, 4, 5];
@@ -96,11 +97,15 @@ const RosterGannt = () => {
     const loadData = async () => {
       try {
         const fetchedData = await DataService.getAllData();
+        console.log('All Data  Loaded');
+        
         console.log(fetchedData);
         setData(fetchedData);
+        
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
+        setIsloading(false);
       }
     };
 
@@ -267,11 +272,102 @@ const RosterGannt = () => {
     </div>)
   };
 
+  const handleSynchronizeData = async () => {
+    setIsloading(true); // Show loading state
+
+    try {
+        // Retrieve existing data from localStorage
+        const localStorageData = JSON.parse(localStorage.getItem('shiftlyrecords') || '[]');
+
+        if (localStorageData.length === 0) {
+            console.log('No data to synchronize.');
+            setIsloading(false); // Hide loading state
+            return;
+        }
+
+        // Prepare the data to be synchronized with Supabase
+        const recordsToSync = localStorageData.map((record: any) => ({
+            Id: record.Id,
+            Nrp: record.Nrp,
+            StartTime: record.StartTime,
+            EndTime: record.EndTime,
+            date_start: record.date_start,
+            date_end: record.date_end,
+            recurrence_rule: record.recurrence_rule,
+            Subject: record.Subject.toUpperCase(),
+        }));
+
+        // Insert or update the records in Supabase
+        for (const record of recordsToSync) {
+            // Check if record exists in Supabase
+            const { data, error } = await supabase
+                .from('shiftly_plan')
+                .select('id')
+                .eq('id', record.Id);
+
+            if (error) {
+                console.log('Error checking Supabase:', error.message);
+                continue;
+            }
+
+            if (data && data.length > 0) {
+                // If record exists, update it
+                const { error: updateError } = await supabase
+                    .from('shiftly_plan')
+                    .update({
+                        nrp: record.Nrp,
+                        date_start: record.date_start,
+                        date_end: record.date_end,
+                        recurrence_rule: record.recurrence_rule,
+                        subject: record.Subject,
+                    })
+                    .eq('id', record.Id);
+
+                if (updateError) {
+                    console.log(`Error updating record ${record.Id}:`, updateError.message);
+                } else {
+                    console.log(`Record ${record.Id} updated successfully.`);
+                }
+            } else {
+                // If record doesn't exist, insert it
+                const { error: insertError } = await supabase
+                    .from('shiftly_plan')
+                    .insert({
+                        id: record.Id,
+                        nrp: record.Nrp,
+                        date_start: record.date_start,
+                        date_end: record.date_end,
+                        recurrence_rule: record.recurrence_rule,
+                        subject: record.Subject,
+                    });
+
+                if (insertError) {
+                    console.log(`Error inserting record ${record.Id}:`, insertError.message);
+                } else {
+                    console.log(`Record ${record.Id} inserted successfully.`);
+                }
+            }
+        }
+
+        // Once synchronization is complete, clear the localStorage
+        localStorage.removeItem('shiftlyrecords');
+
+        setIsloading(false); // Hide loading state
+        console.log('Data synchronization complete and localStorage cleared.');
+    } catch (err) {
+        console.error('Error synchronizing data:', err);
+        setIsloading(false); // Hide loading state in case of error
+    }
+};
+
+  
+
   return (
     <div className="schedule-control-section">
       <div className="col-lg-12 control-section">
-        <div className="control-wrapper">
+        { isLoading? <LoaderLogo/> : <div className="control-wrapper">
           <ScheduleComponent
+          timezone='Asia/Singapore'
             dateHeaderTemplate={DateHeaderTemplate}
             ref={schedulerRef}
             actionComplete={onActionComplete}
@@ -327,21 +423,8 @@ const RosterGannt = () => {
               ]}
             />
           </ScheduleComponent>
-
-          {/* Footer with event counts */}
-          <div className="schedule-footer">
-            {Object.entries(summary).map(([date, subjects]) => (
-              <div key={date} className="summary-day">
-                <h4>{date}</h4>
-                {Object.entries(subjects).map(([subject, count]) => (
-                  <div key={subject}>
-                    {subject}: {count}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
+            <Button className='mt-4 bg-blue-700 text-white hover:bg-blue-200 hover:text-blue-600' onClick={handleSynchronizeData}>Synchronize</Button>
+        </div> }
       </div>
     </div>
   );
