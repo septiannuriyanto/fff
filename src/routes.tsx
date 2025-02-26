@@ -37,7 +37,7 @@ import ForgotPassword from './pages/Authentication/ForgotPassword';
 import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
-import Induction from './pages/Dashboard/Manpower/Induction';
+import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
 
 
 const routes = [
@@ -110,7 +110,19 @@ const routes = [
     path: '/infrastructure/ftbacklog',
     component: <FuelTruckBacklog />,
     title: 'FFF | FT Backlog List',
-    allowedRoles: ADMIN
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/infrastructure/ftbacklog/:unit_id',
+    component: <FuelTruckBacklog />,
+    title: 'FFF | FT Backlog List',
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/infrastructure/pressureless',
+    component: <PressurelessSummary allowColumnsEdit />,
+    title: 'FFF | Fuel Feasibility for Fleet',
+    allowedRoles: ALL_ROLES
   },
   {
     path: '/manpower',
@@ -200,13 +212,6 @@ const routes = [
     title: 'FFF | FT Backlog Request',
     allowedRoles: FUEL_ROLES
   },
-  {
-    path: '/manpower/induction',
-    component: <Induction />,
-    title: 'FFF | Manpower Induction',
-    allowedRoles: ALL_ROLES
-  },
-
   // Export Routes
   {
     path: '/export/bastfuel',
@@ -228,7 +233,7 @@ const routes = [
   },
   // Master Data Routes
   {
-    path: '/master/componentlibrary',
+    path: '/master/library',
     component: <ComponentLibrary />,
     title: 'FFF | Component Library',
     allowedRoles: SUPERVISOR

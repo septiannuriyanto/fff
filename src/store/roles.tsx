@@ -7,6 +7,7 @@ const ALL_ROLES = [
     'FUELMAN',
     'FUEL AND OIL ADMIN',
     'OILMAN',
+    'PLANT'
   ];
   
   const FUEL_ROLES  = [
@@ -27,4 +28,8 @@ const ALL_ROLES = [
     'FUEL AND OIL ADMIN',
   ];
 
-  export { ALL_ROLES, FUEL_ROLES, OIL_ROLES, ADMIN, SUPERVISOR }
+  const PLANT = [
+    'PLANT'
+  ]
+
+  export { ALL_ROLES, FUEL_ROLES, OIL_ROLES, ADMIN, SUPERVISOR,PLANT }

@@ -5,12 +5,11 @@ import {
   formatDate,
   formatDateForSupabase,
   formatDateToIndonesianByDate,
-  formatDateToYyMmDd,
 } from '../../../../Utils/DateUtility';
-import { botToken, chatId, sendImageToTopic, sendMessageToChannel, superGroupId } from '../../../../services/TelegramSender';
+import { botToken, sendImageToTopic, sendMessageToChannel, superGroupId } from '../../../../services/TelegramSender';
 import DropZone from '../../../../components/DropZones/DropZone';
 import toast, { Toaster } from 'react-hot-toast';
-import { baseStorageUrl, bucketUrl, uploadImageGeneral, uploadImageGeneralGetUrl } from '../../../../services/ImageUploader';
+import { uploadImageGeneralGetUrl } from '../../../../services/ImageUploader';
 import { sitename } from '../../../../store/site';
 
 interface ManpowerData {
@@ -228,6 +227,8 @@ const FuelTruckBacklogRequest = () => {
       \nDetail : https://fff-project.vercel.app/reporting/ftmaintenance/${reqId}`;
       sendMessageToChannel(message);
     }
+
+    window.location.href = '/infrastructure/ftbacklog';
   };
 
   const handleImageUpload = async (file: File) => {

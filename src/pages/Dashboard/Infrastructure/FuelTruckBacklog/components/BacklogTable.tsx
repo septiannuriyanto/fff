@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { FTBacklog } from './ftbacklog';
 import BacklogAction from './BacklogAction';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateLeft, faRotateRight, faUpload } from '@fortawesome/free-solid-svg-icons';
+import { supabase } from '../../../../../db/SupabaseClient';
+import { formatDateForSupabase } from '../../../../../Utils/DateUtility';
 
 interface BackLogTableProps {
   backlogs: FTBacklog[];
@@ -10,48 +10,31 @@ interface BackLogTableProps {
 }
 
 const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [expandedImageId, setExpandedImageId] = useState<string | null>(null);
-  const [rotationAngle, setRotationAngle] = useState<{ [key: string]: number }>({});
+  const [selectedImage, setSelectedImage] = useState<string>('');
   const [stateBacklog, setStateBacklog] = useState<FTBacklog[]>([]);
 
-  const handleEdit = async (id: string) => {
-    console.log(id);
-  };
   const handleApprove = async (id: string) => {
     console.log(id);
-  };
-  const handleShare = async (id: string) => {
-    console.log(id);
-  };
-  const handleDelete = async (id: string) => {
-    console.log(id);
-  };
+    const isConfirmed = window.confirm(
+      'Are you sure you want to approve this item?',
+    );
+    if (isConfirmed) {
+      const {error } = await supabase
+        .from('unit_maintenance')
+        .update({
+          closed_date: formatDateForSupabase(new Date()),
+          closed_by: 'PLANT_USER',
+        })
+        .eq('req_id', id);
 
-  const toggleEvidencePanel = (id: string) => {
-    setExpandedRow(expandedRow === id ? null : id);
-  };
+    if(error){
+      alert(error.message);
+      return;
+    }
 
-  const handleImageClick = (id: string) => {
-    setExpandedImageId(expandedImageId === id ? null : id);
-    setRotationAngle((prev) => ({
-      ...prev,
-      [id]: 0,
-    }));
-  };
-
-  const rotateLeft = (id: string) => {
-    setRotationAngle((prev) => ({
-      ...prev,
-      [id]: (prev[id] || 0) - 90,
-    }));
-  };
-
-  const rotateRight = (id: string) => {
-    setRotationAngle((prev) => ({
-      ...prev,
-      [id]: (prev[id] || 0) + 90,
-    }));
+      alert('Backlog is completed!');
+      window.location.reload();
+    }
   };
 
   useEffect(() => {
@@ -77,13 +60,32 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
           <table className="min-w-full text-left text-sm font-light text-surface dark:text-white">
             <thead className="border-b border-neutral-200 font-medium dark:border-white/10">
               <tr>
-                <th scope="col" className="px-6 py-4">#</th>
-                <th scope="col" className="px-6 py-4">Req ID</th>
-                <th scope="col" className="px-6 py-4">Operator</th>
-                <th scope="col" className="px-2 py-4">FT Number</th>
-                <th scope="col" className="px-6 py-4">Request Date</th>
-                <th scope="col" className="px-6 py-4">Evidence</th>
-                <th scope="col" className="px-6 py-4 flex justify-start pl-8">Action</th>
+                <th scope="col" className="px-6 py-4">
+                  #
+                </th>
+                <th scope="col" className="px-6 py-4">
+                  Evidence
+                </th>
+
+                <th scope="col" className="px-6 py-4">
+                  Req ID
+                </th>
+                <th scope="col" className="px-6 py-4">
+                  Pelapor
+                </th>
+                <th scope="col" className="px-2 py-4">
+                  FT Number
+                </th>
+                <th scope="col" className="px-6 py-4">
+                  Request Date
+                </th>
+                <th scope="col" className="px-6 py-4">
+                  Status
+                </th>
+
+                <th scope="col" className="px-6 py-4 flex justify-start pl-8">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -91,93 +93,94 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
                 <React.Fragment key={index}>
                   <tr
                     className={`border-b border-neutral-200 transition duration-500 ease-in-out dark:border-white/10 ${
-                      row.isclosed ? 'bg-green-50 dark:bg-green-900' : 'hover:bg-neutral-100 dark:hover:bg-neutral-600'
+                      row.closed_date
+                        ? 'bg-green-50 dark:bg-green-900'
+                        : 'hover:bg-neutral-100 dark:hover:bg-neutral-600'
                     }`}
                   >
-                    <td className="whitespace-nowrap px-6 py-4 font-medium">{index + 1}</td>
-                    <td className="whitespace-nowrap px-6 py-4 font-medium">{row.req_id}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{row.report_by}</td>
-                    <td className="whitespace-nowrap px-2 py-4">{row.unit_id}</td>
-                    <td className="whitespace-nowrap px-2 py-4">{row.created_at.toString()}</td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <button
-                        onClick={() => toggleEvidencePanel(row.req_id)}
-                        className="text-blue-500 hover:underline"
-                      >
-                        {expandedRow === row.req_id ? 'Hide' : 'View'}
-                      </button>
+                    {/* Index Column */}
+                    <td className="px-6 py-4 font-medium text-center align-middle">
+                      {index + 1}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <BacklogAction
-                        data={row.req_id}
-                        onEdit={() => handleEdit(row.req_id)}
-                        onApprove={() => handleApprove(row.req_id)}
-                        onDelete={() => handleDelete(row.req_id)}
-                        onShare={() => {}}
+
+                    {/* Image Column */}
+                    <td className="px-6 py-4 text-center align-middle">
+                      <img
+                        src={row.image_url}
+                        className="w-12 h-12 rounded-md cursor-pointer"
+                        onClick={() => setSelectedImage(row.image_url)}
+                        alt="Evidence"
                       />
                     </td>
+
+                    {/* Request ID Column */}
+                    <td className="px-6 py-4 font-medium text-left align-middle">
+                      {row.req_id}
+                    </td>
+
+                    {/* Reported By Column */}
+                    <td className="px-6 py-4 text-left align-middle">
+                      {row.report_by}
+                    </td>
+
+                    {/* Unit ID Column */}
+                    <td className="px-6 py-4 text-center align-middle">
+                      {row.unit_id}
+                    </td>
+
+                    {/* Created At Column */}
+                    <td className="px-6 py-4 text-center align-middle">
+                      {row.created_at.toString()}
+                    </td>
+
+                    {/* Status Column */}
+                    <td className="px-6 py-4 text-center align-middle">
+                      {row.closed_date ? (
+                        <span className="px-3 py-1 bg-green-200 rounded-xl text-green-800">
+                          CLOSED
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-red-200 rounded-xl text-red-800">
+                          OPEN
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Actions Column */}
+                    <td className="px-6 py-4 text-center align-middle">
+                      {!row.closed_date && (
+                        <BacklogAction
+                          data={row.req_id}
+                          onApprove={() => handleApprove(row.req_id)}
+                        />
+                      )}
+                    </td>
                   </tr>
-                  {/* Toggle evidence panel */}
-                  {expandedRow === row.req_id && (
-                    <tr>
-                      <td colSpan={9} className="px-6 py-4">
-                        <div className="overflow-hidden transition-max-height duration-500 ease-in-out max-h-[600px] bg-gray-100 dark:bg-gray-800 p-4 rounded">
-                          <div className="flex justify-center space-x-4 relative">
-                            {/* Loop over the images */}
-                            {['evidence'].map((urlType, idx) => (
-                              <div
-                                key={idx}
-                                className={`cursor-pointer transition-all duration-300 relative ${
-                                  expandedImageId === `${row.req_id}-${urlType}`
-                                    ? 'w-full h-auto max-w-full'
-                                    : 'w-32 h-32'
-                                }`}
-                              >
-                                <img
-                                  src={row.image_url}
-                                  alt={urlType}
-                                  className={`rounded-md object-cover transition-all duration-300 ${
-                                    expandedImageId === `${row.req_id}-${urlType}`
-                                      ? 'scale-100'
-                                      : 'scale-75'
-                                  }`}
-                                  onClick={() => handleImageClick(`${row.req_id}-${urlType}`)}
-                                  style={{
-                                    transform: `rotate(${rotationAngle[`${row.req_id}-${urlType}`] || 0}deg)`,
-                                    transition: 'transform 0.5s',
-                                  }}
-                                />
-                                {/* Rotation buttons */}
-                                <div className="absolute top-0 right-0 flex flex-col space-y-2">
-                                  <button
-                                    className="bg-yellow-300 p-1 rounded-full"
-                                    onClick={() => rotateLeft(`${row.req_id}-${urlType}`)}
-                                  >
-                                    <FontAwesomeIcon icon={faRotateLeft} />
-                                  </button>
-                                  <button
-                                    className="bg-yellow-300 p-1 rounded-full"
-                                    onClick={() => rotateRight(`${row.req_id}-${urlType}`)}
-                                  >
-                                    <FontAwesomeIcon icon={faRotateRight} />
-                                  </button>
-                                  <button
-                                    className="bg-yellow-300 p-1 rounded-full"
-                                    onClick={() => {}}
-                                  >
-                                    <FontAwesomeIcon icon={faUpload} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </React.Fragment>
               ))}
             </tbody>
+
+            {/* Modal for enlarged image */}
+            {selectedImage && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+                onClick={() => setSelectedImage('')}
+              >
+                <div className="relative bg-white p-4 rounded-lg shadow-lg">
+                  <button
+                    className="absolute top-2 right-2 bg-gray-300 rounded-full px-2 py-1 text-sm"
+                    onClick={() => setSelectedImage('')}
+                  >
+                    ✕
+                  </button>
+                  <img
+                    src={selectedImage}
+                    className="max-w-full max-h-[80vh] rounded-lg"
+                    alt="Expanded"
+                  />
+                </div>
+              </div>
+            )}
           </table>
         </div>
       </div>

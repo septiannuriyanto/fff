@@ -186,22 +186,102 @@ class DataService {
       return [];
     }
   }
+
+
+  static parseFetchedDataFromSupabase(data: any) {
+    // If data is an array, we can map over it
+    if (Array.isArray(data)) {
+      return data.map(item => {
+        return {
+          Id: item.id,
+          Color: item.color,  // Assuming a default color, can be adjusted
+          EndTime: item.endtime || item.date_end,  // Choose the correct date field
+          IsAllDay: true,  // Assuming it's always true, adjust as needed
+          Nrp: item.nrp,
+          PositionId: item.positionid,
+          StartTime: item.starttime || item.date_start,  // Choose the correct date field
+          Subject: item.subject,
+          date_end: item.endtime,  // Correct key for end date
+          date_start: item.starttime,  // Correct key for start date
+          RecurrenceRule : item.recurrencerule,
+        };
+      });
+    }
+  
+    // If data is a single object (not an array), manually parse it similarly
+    return {
+      Id: data.id,
+      Color: data.color,  // Assuming a default color, can be adjusted
+      EndTime: data.endtime || data.date_end,  // Choose the correct date field
+      IsAllDay: true,  // Assuming it's always true, adjust as needed
+      Nrp: data.nrp,
+      PositionId: data.positionid,
+      StartTime: data.starttime || data.date_start,  // Choose the correct date field
+      Subject: data.subject,
+      date_end: data.starttime,  // Correct key for end date
+      date_start: data.starttime,  // Correct key for start date
+    };
+  }
+
   static async fetchShiftlyData() {
     try {
-      const { data, error } = await supabase.rpc('get_shiftly_plan');
-
+      // Fetch data from Supabase
+      const { data: fetchedData, error } = await supabase.rpc('get_shiftly_plan');
+  
       if (error) {
         throw new Error(error.message);
       }
+  
+      // Parse fetched data
+      const formattedData = DataService.parseFetchedDataFromSupabase(fetchedData);
+  
+      // Ensure formattedData is always an array
+      const finalFormattedData = Array.isArray(formattedData) ? formattedData : [formattedData];
+  
+      // Initialize final data as fetched data
+      let finalData = [...finalFormattedData];
+  
+      // Retrieve data from localStorage if available
+      const localData = localStorage.getItem('shiftlyrecords');
+      if (localData) {
+        console.log('Data fetched from local storage');
+        const parsedLocalData = JSON.parse(localData);
+  
+        // Create a map of Ids for faster lookup
+        const localDataMap = new Map(parsedLocalData.map((item: any) => [item.Id, item]));
 
-
-      return data;
+        console.log(localDataMap);
+        
+  
+        // Merge local data into fetched data, prioritizing Supabase data
+        finalData = finalFormattedData.map((supabaseItem: any) => {
+          const localItem = localDataMap.get(supabaseItem.Id);
+          return localItem ? { ...localItem, ...supabaseItem } : supabaseItem;
+        });
+  
+        // Add any local records that are not in Supabase data
+        const supabaseIds = new Set(finalFormattedData.map((item: any) => item.Id));
+        const additionalLocalData = parsedLocalData.filter((item: any) => !supabaseIds.has(item.Id));
+  
+        // Combine the final data
+        finalData = [...finalData, ...additionalLocalData];
+      }
+  
+      // Log the final combined data for debugging
+      console.log('Final combined data:', finalData);
+  
+      // Return the final combined data
+      return finalData;
     } catch (error) {
-      console.error('Failed to parse "rosterrecord":', error);
+      console.error('Error fetching shiftly data:', error);
       return [];
     }
   }
+  
+  
+  
 
+  
   static async getAllData() {
     let baseData = await DataService.fetchRosterData();
     let shiftlyData = await this.fetchShiftlyData();
@@ -231,22 +311,27 @@ class DataService {
 
     // Format the start and end dates
     const formattedStartDate = format(startDate, 'yyyy-MM-dd'); // YYYY-MM-DD
-    const formattedEndDate = format(endDate, 'yyyy-MM-dd'); // YYYY-MM-DD
+    const formattedEndDate = format(adjustedDate, 'yyyy-MM-dd'); // Adjusted date
 
     const newRecord = {
-      id: data.Id,
-      nrp: data.Nrp,
-      date_start: formattedStartDate,
-      date_end: formattedEndDate,
-      recurrence_rule: data.RecurrenceRule,
-      subject: data.Subject.toUpperCase(),
+        ...data,
+        Id: data.Id,
+        Nrp: data.Nrp,
+        StartTime: data.StartTime,
+        EndTime: data.EndTime,
+        date_start: formattedStartDate,
+        date_end: formattedEndDate,
+        RecurrenceRule: data.RecurrenceRule,
+        Subject: data.Subject.toUpperCase(),
+        PositionId: data.PositionId,
+        recurrence_rule : data.RecurrenceRule,
     };
 
-    // Retrieve existing data from local storage
-    const existingData = JSON.parse(localStorage.getItem('rosterrecords') || '[]');
+    // Retrieve existing data from localStorage
+    const existingData = JSON.parse(localStorage.getItem('shiftlyrecords') || '[]');
 
     // Check if the record already exists
-    const recordIndex = existingData.findIndex((record: any) => record.id === newRecord.id);
+    const recordIndex = existingData.findIndex((record: any) => record.Id === newRecord.Id);
     if (recordIndex !== -1) {
         // Update the existing record
         existingData[recordIndex] = { ...existingData[recordIndex], ...newRecord };
@@ -255,22 +340,42 @@ class DataService {
         existingData.push(newRecord);
     }
 
-    // Save the updated data back to local storage
-    localStorage.setItem('rosterrecords', JSON.stringify(existingData));
+    // Save the updated data back to localStorage
+    localStorage.setItem('shiftlyrecords', JSON.stringify(existingData));
 
     console.log('Updated Local Storage:', existingData);
-  
+}
 
-    // console.log('Data inputted:', data);
 
-    // const { error } = await supabase.from('shiftly_plan').insert([query]);
-    // if (error) {
-    //   console.error('Error inserting data:', error);
-    //   return false;
-    // }
-    // console.log('Data added:', query);
-    // return true;
-  }
+  // static async editData(data: any) {
+  //   const startDate = new Date(data.StartTime);
+  //   const endDate = new Date(data.EndTime);
+
+
+  //   // Extract and format the date portion
+  //   const formattedStartDate = format(startDate, 'yyyy-MM-dd'); // YYYY-MM-DD
+  //   const formattedEndDate = format(endDate, 'yyyy-MM-dd'); // YYYY-MM-DD
+
+  //   const query = {
+  //     nrp: data.Nrp,
+  //     date_start: formattedStartDate,
+  //     date_end: formattedEndDate,
+  //     recurrence_rule: data.RecurrenceRule,
+  //     subject: data.Subject.toUpperCase(),
+  //   };
+  //   console.log('Data input:', data);
+  //   const { error } = await supabase
+  //   .from('shiftly_plan')
+  //   .update(query)
+  //   .eq('id', data.Id); // Assuming 'id' is the primary key column
+
+  //   if (error) {
+  //     console.error('Error updating data:', error);
+  //     return false;
+  //   }
+  //   console.log('Data updated:', query);
+  //   return true;
+  // }
 
   static async editData(event: any) {
     console.log('Editing data in local storage');

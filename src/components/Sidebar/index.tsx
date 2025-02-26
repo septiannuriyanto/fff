@@ -8,6 +8,7 @@ import { useDispatch } from 'react-redux'; // Import useDispatch from Redux
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../pages/Authentication/AuthContext';
 import {
+  TbBuilding,
   TbDashboard,
   TbDatabase,
   TbDownload,
@@ -23,7 +24,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -201,7 +202,42 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
-                <SidebarLink to="/manpower/induction" label="Induksi" />
+              </SidebarGroup>
+
+
+              {/* <!-- Menu Item Reporting Pages --> */}
+              <SidebarGroup
+              currentRole={role!}
+              roles={ALL_ROLES}
+                title="Infrastructure"
+                icon={<TbBuilding />}
+                pathname={pathname}
+                basePath="/infrastructure"
+              >
+                <SidebarLink
+                  to="infrastructure/ftbacklog"
+                  label="Backlog Monitoring"
+                />
+                <SidebarLink
+                  to="infrastructure/ftreadiness"
+                  label="FT Readiness"
+                />
+                <SidebarLink
+                  to="infrastructure/pressureless"
+                  label="Pressureless"
+                />
+                <SidebarLink
+                  to="infrastructure/filtration"
+                  label="Filtration"
+                />
+                <SidebarLink
+                  to="infrastructure/calibration"
+                  label="Calibration"
+                />
+                <SidebarLink
+                  to="infrastructure/faoinfra"
+                  label="FAO Infrastructure"
+                />
               </SidebarGroup>
               {/* <!-- Menu Item Reporting Pages --> */}
 

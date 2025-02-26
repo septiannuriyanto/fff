@@ -8,6 +8,7 @@ import { useAuth } from '../Authentication/AuthContext';
 import ReusableSwitcher from '../../components/Switchers/SwitcherFour';
 import { supabase } from '../../db/SupabaseClient';
 import { formatNumberWithSeparator } from '../../Utils/NumberUtility';
+import { useNavigate } from 'react-router-dom';
 
 interface FTStatus {
   unit_id: string;
@@ -18,6 +19,7 @@ interface FTStatus {
   pelapor_rfu: string;
   activity: string;
   description: string;
+  backlog_open_count: number;
 }
 
 interface StockStatus {
@@ -49,6 +51,7 @@ const Dashboard = () => {
   };
 
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const fetchstoragewithstocktaking = async (date: Date, shift: any) => {
     const { data, error } = await supabase.rpc(
@@ -105,6 +108,7 @@ const Dashboard = () => {
       activity: item.activity,
       description: item.description,
       status: item.status,
+      backlog_open_count: item.backlog_open_count,
     }));
 
     setFtStatusData(mappedData);
@@ -226,7 +230,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-              <div className="content__container grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+              <div className="content__container grid grid-cols-1 md:grid-cols-1 gap-4 h-full">
                 <div className="manpower__setting col-span-1  overflow-y-hidden">
                   <h1 className="text-lg font-bold pt-4">Manpower Setting</h1>
 
@@ -247,39 +251,51 @@ const Dashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-300 bg-slate-50 dark:bg-slate-800 dark:divide-slate-700 text-black dark:text-white">
-                        {mpStatus
-                          .filter(
-                            (item) =>
-                              item.subject !== 'C' && item.subject !== 'OFF',
-                          )
-                          .map((item, index) => (
-                            <tr
-                              key={index}
-                              className={
-                                item.position === 1
-                                  ? 'bg-blue-100 dark:bg-blue-900'
-                                  : item.position === 2
-                                  ? 'bg-green-100 dark:bg-green-900'
-                                  : item.position === 3
-                                  ? 'bg-yellow-100 dark:bg-yellow-800'
-                                  : item.position === 4
-                                  ? 'bg-purple-100 dark:bg-purple-800'
-                                  
-                                  : 'bg-violet-200 dark:bg-violet-900'
-
-                              } // Adjust colors based on position
+                        {mpStatus.filter(
+                          (item) =>
+                            item.subject !== 'C' && item.subject !== 'OFF',
+                        ).length > 0 ? (
+                          mpStatus
+                            .filter(
+                              (item) =>
+                                item.subject !== 'C' && item.subject !== 'OFF',
+                            )
+                            .map((item, index) => (
+                              <tr
+                                key={index}
+                                className={
+                                  item.position === 1
+                                    ? 'bg-blue-100 dark:bg-blue-900'
+                                    : item.position === 2
+                                    ? 'bg-green-100 dark:bg-green-900'
+                                    : item.position === 3
+                                    ? 'bg-yellow-100 dark:bg-yellow-800'
+                                    : item.position === 4
+                                    ? 'bg-purple-100 dark:bg-purple-800'
+                                    : 'bg-violet-200 dark:bg-violet-900'
+                                }
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                  {index + 1}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                  {item.nama}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                  {item.subject}
+                                </td>
+                              </tr>
+                            ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={3} // Adjust the number based on your table's total columns
+                              className="text-center py-4 text-gray-500 dark:text-gray-300"
                             >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                {index + 1}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {item.nama}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {item.subject}
-                              </td>
-                            </tr>
-                          ))}
+                              No Data
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -303,10 +319,13 @@ const Dashboard = () => {
                           <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Status
                           </th>
+                          <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Backlog
+                          </th>
                         </tr>
                       </thead>
 
-                      <tbody className="divide-y divide-slate-300 bg-slate-50 dark:bg-slate-800 dark:divide-slate-700 text-black dark:text-white">
+                      <tbody className="divide-y divide-slate-300 bg-slate-50 dark:bg-slate-800 dark:divide-slate-700 text-black dark:text-white ">
                         {ftStatusData.map((status, index) => (
                           <tr key={index}>
                             <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -321,6 +340,25 @@ const Dashboard = () => {
                                 status.downtime_start,
                                 status.downtime_end!,
                                 status.activity,
+                              )}
+                            </td>
+                            <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                              {status.backlog_open_count === 0 ? (
+                                status.backlog_open_count
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    navigate(
+                                      `/infrastructure/ftbacklog/${encodeURIComponent(
+                                        status.unit_id,
+                                      )}`,
+                                    )
+                                  }
+                                >
+                                  <p className="font-bold text-red-700 underline">
+                                    {status.backlog_open_count}
+                                  </p>
+                                </button>
                               )}
                             </td>
                           </tr>

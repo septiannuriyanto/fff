@@ -1,6 +1,4 @@
-import React from 'react'
 import StockReporting from './components/StockReporting'
-import RitationReporting from '../RitationReport/RitationReport'
 import TmrReporting from '../TMRReport/TMRReport'
 
 const DailyReport = () => {
