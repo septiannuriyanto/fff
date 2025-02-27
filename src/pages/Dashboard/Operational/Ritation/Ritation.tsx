@@ -331,8 +331,8 @@ const Ritation = () => {
     );
   };
 
-  const handleShare = (row: any) => {
-    const info = constructMessage(row);
+  const handleShare = async (row: any) => {
+    const info = await constructMessage(row);
     shareMessageToWhatsapp(info);
   };
 
@@ -663,7 +663,7 @@ const Ritation = () => {
                                       onDelete={() =>
                                         handleDelete(row.no_surat_jalan)
                                       }
-                                      onShare={() => handleShare(row)}
+                                      onShare={ async() => await handleShare(row)}
                                     />
                                   </td>
                                 </tr>
