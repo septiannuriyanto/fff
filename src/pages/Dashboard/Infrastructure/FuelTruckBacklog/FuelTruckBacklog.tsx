@@ -130,7 +130,7 @@ const FuelTruckBacklog = () => {
                 ></SelectGroupOne>
               </div>
 
-              <div className="outs__switcher pl-2 flex flex-row items-center gap-2 w-1/2 justify-center md:justify-start flex-wrap">
+              <div className="outs__switcher">
                     <ReusableSwitcher
                       textTrue="All"
                       textFalse="Outs"
