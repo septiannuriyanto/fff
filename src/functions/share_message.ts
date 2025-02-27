@@ -1,5 +1,11 @@
+import { getFTFromWH, getNameFromNrp } from "./get_nrp";
 
-const constructMessage = (ritationData:RitasiFuelData) =>{
+const constructMessage = async (ritationData:RitasiFuelData) =>{
+
+    const fuelman = await getNameFromNrp(ritationData.fuelman_id);
+    const operator = await getNameFromNrp(ritationData.operator_id);
+    const ft = await getFTFromWH(ritationData.warehouse_id);
+
     const averageTeraBefore = (ritationData.sonding_before_front + ritationData.sonding_before_rear)/2;
     const averageTeraAfter = (ritationData.sonding_after_front + ritationData.sonding_after_rear)/2;
     const url = `https://fff-project.vercel.app/reporting/ritation/${ritationData.no_surat_jalan}`;
@@ -7,9 +13,9 @@ const constructMessage = (ritationData:RitasiFuelData) =>{
     *====== Data Ritasi =======*
     Tanggal : ${ritationData.ritation_date}
     No. Surat jalan : ${ritationData.no_surat_jalan}
-    Fuel Truck : ${ritationData.unit}
-    Operator : ${ritationData.operator_name}
-    Fuelman : ${ritationData.fuelman_name}
+    Fuel Truck : ${ft}
+    Operator : ${operator}
+    Fuelman : ${fuelman}
     *====== Sonding Before =======*
     Depan : ${ritationData.sonding_before_front} cm
     Belakang : ${ritationData.sonding_before_rear} cm

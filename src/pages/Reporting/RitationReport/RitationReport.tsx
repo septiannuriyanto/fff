@@ -359,13 +359,11 @@ const RitationReport: React.FC = () => {
     return warehouses[result]; // Return the warehouse_id or null if not found
   };
 
-  const onFuelmanChange = (
-    event: React.FormEvent<HTMLElement>,
-    { newValue }: { newValue: string },
-  ) => {
+  const onFuelmanChange = (event: React.FormEvent<HTMLElement>,{ newValue }: { newValue: string }) => {
     setFuelman(newValue);
     localStorage.setItem('fuelman', newValue);
   };
+
   useEffect(() => {
     const savedFuelman = localStorage.getItem('fuelman');
     if (savedFuelman) {
@@ -646,9 +644,9 @@ const RitationReport: React.FC = () => {
 
   const handleShareReport = async (e: any) => {
     e.preventDefault();
-    console.log(id);
-    const shareData = await fetchDetailReport(id);
-    const info = constructMessage(shareData[0]);
+    const shareData = await fetchDetailReport(id!);
+    if(!shareData) return;
+    const info = await constructMessage(shareData[0]);
     shareMessageToWhatsapp(info);
   };
 
@@ -728,6 +726,10 @@ const RitationReport: React.FC = () => {
                 required: true,
                 disabled: id && !session ? true : false,
               }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setEquipNumber(suggestion); // Update state with selected value
+              }}
               theme={{
                 container: 'relative',
                 suggestionsContainerOpen:
@@ -757,6 +759,10 @@ const RitationReport: React.FC = () => {
                 required: true,
                 disabled: id && !session ? true : false,
               }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setFuelman(suggestion); // Update state with selected value
+              }}
               theme={{
                 container: 'relative',
                 suggestionsContainerOpen:
@@ -782,6 +788,10 @@ const RitationReport: React.FC = () => {
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
                 disabled: id && !session ? true : false,
+              }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setOperator(suggestion); // Update state with selected value
               }}
               theme={{
                 container: 'relative',
