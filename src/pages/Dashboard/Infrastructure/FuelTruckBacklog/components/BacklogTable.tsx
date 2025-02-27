@@ -68,22 +68,22 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
                 </th>
 
                 <th scope="col" className="px-6 py-4">
-                  Req ID
+                  Description
                 </th>
                 <th scope="col" className="px-6 py-4">
                   Pelapor
                 </th>
-                <th scope="col" className="px-2 py-4">
+                <th scope="col" className="px-2 py-4 text-center">
                   FT Number
                 </th>
-                <th scope="col" className="px-6 py-4">
+                <th scope="col" className="px-6 py-4 text-center">
                   Request Date
                 </th>
-                <th scope="col" className="px-6 py-4">
+                <th scope="col" className="px-6 py-4 text-center">
                   Status
                 </th>
 
-                <th scope="col" className="px-6 py-4 flex justify-start pl-8">
+                <th scope="col" className="px-6 py-4 flex text-center ">
                   Action
                 </th>
               </tr>
@@ -115,7 +115,7 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
 
                     {/* Request ID Column */}
                     <td className="px-6 py-4 font-medium text-left align-middle">
-                      {row.req_id}
+                      {row.description}
                     </td>
 
                     {/* Reported By Column */}
