@@ -10,11 +10,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAdd } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from "react-router-dom";
+import ReusableSwitcher from '../../../../components/Switchers/SwitcherFour';
 
 const FuelTruckBacklog = () => {
   const [backlogs, setBacklog] = useState<FTBacklog[]>([]);
   const [populations, setPopulations] = useState<ComboBoxItem[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [ outs, setOuts ] = useState<boolean>(false)
   const navigate = useNavigate();
 
 
@@ -61,6 +63,9 @@ const FuelTruckBacklog = () => {
       console.error("Error fetching backlogs:", err);
     }
   };
+
+
+  
   
 
   const fetchFT = async () => {
@@ -124,8 +129,19 @@ const FuelTruckBacklog = () => {
                   onChange={handleChangeFilter}
                 ></SelectGroupOne>
               </div>
+
+              <div className="outs__switcher pl-2 flex flex-row items-center gap-2 w-1/2 justify-center md:justify-start flex-wrap">
+                    <ReusableSwitcher
+                      textTrue="All"
+                      textFalse="Outs"
+                      onChange={() => {
+                        setOuts(!outs);
+                        console.log(outs);
+                      }}
+                    />
+                  </div>
               <div className="main-content  w-full">
-                <BacklogTable backlogs={backlogs} filter={selectedOption} />
+                <BacklogTable backlogs={backlogs} filter={selectedOption} outs_only={outs} />
               </div>
             </div>
           </div>

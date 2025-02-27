@@ -10,9 +10,10 @@ import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 interface BackLogTableProps {
   backlogs: FTBacklog[];
   filter: string;
+  outs_only: boolean;
 }
 
-const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
+const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter, outs_only }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [stateBacklog, setStateBacklog] = useState<FTBacklog[]>([]);
   const [selectedBacklog, setSelectedBacklog] = useState<FTBacklog | null>(null);
@@ -63,6 +64,21 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
   const closeModal = () => {
     setSelectedBacklog(null);
   };
+
+
+  useEffect(() => {
+    let filteredBacklogs = backlogs;
+  
+    if (filter !== '' && filter !== 'all') {
+      filteredBacklogs = filteredBacklogs.filter((item) => item.unit_id.toString() === filter);
+    }
+  
+    if (outs_only) {
+      filteredBacklogs = filteredBacklogs.filter((item) => !item.closed_date);
+    }
+  
+    setStateBacklog(filteredBacklogs);
+  }, [filter, backlogs, outs_only]);
 
   return (
     <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
