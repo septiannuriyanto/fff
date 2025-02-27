@@ -18,16 +18,14 @@ const BacklogAction: React.FC<BacklogActionCellRendererProps> = (props) => {
  
 
   return (
-    <div className="flex items-center justify-between h-full w-full">
+
         <button
-          className="bg-transparent border-none cursor-pointer p-2 text-gray-700 hover:text-green-600 transition-colors duration-300"
+          className="bg-transparent border-none cursor-pointer text-gray-700 hover:text-green-600 transition-colors duration-300"
           title="Complete Maintenance"
           onClick={handleApprove}
         >
           <FontAwesomeIcon icon={faCheckCircle} width={20} height={20}/>
         </button>
-
-    </div>
   );
 };
 
