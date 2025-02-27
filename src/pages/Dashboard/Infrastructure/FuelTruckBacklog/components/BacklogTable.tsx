@@ -154,12 +154,15 @@ const BacklogTable: React.FC<BackLogTableProps> = ({ backlogs, filter }) => {
 
       {/* Modal for Backlog Details */}
       {selectedBacklog && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div
+        onClick={closeModal}
+        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Backlog Details
             </h2>
             <div className="space-y-2">
+              <p><strong>Unit :</strong> {selectedBacklog.unit_id}</p>
               <p><strong>Description:</strong> {selectedBacklog.description}</p>
               <p><strong>Request Date:</strong> {selectedBacklog.created_at.toString()}</p>
               <p><strong>Closed Date:</strong> {selectedBacklog.closed_date?.toString()}</p>
