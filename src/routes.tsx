@@ -220,7 +220,7 @@ const routes = [
   },
   // Master Data Routes
   {
-    path: '/master/componentlibrary',
+    path: '/master/library',
     component: <ComponentLibrary />,
     title: 'FFF | Component Library',
     allowedRoles: SUPERVISOR

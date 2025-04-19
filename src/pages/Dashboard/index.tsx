@@ -247,39 +247,51 @@ const Dashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-300 bg-slate-50 dark:bg-slate-800 dark:divide-slate-700 text-black dark:text-white">
-                        {mpStatus
-                          .filter(
-                            (item) =>
-                              item.subject !== 'C' && item.subject !== 'OFF',
-                          )
-                          .map((item, index) => (
-                            <tr
-                              key={index}
-                              className={
-                                item.position === 1
-                                  ? 'bg-blue-100 dark:bg-blue-900'
-                                  : item.position === 2
-                                  ? 'bg-green-100 dark:bg-green-900'
-                                  : item.position === 3
-                                  ? 'bg-yellow-100 dark:bg-yellow-800'
-                                  : item.position === 4
-                                  ? 'bg-purple-100 dark:bg-purple-800'
-                                  
-                                  : 'bg-violet-200 dark:bg-violet-900'
-
-                              } // Adjust colors based on position
+                        {mpStatus.filter(
+                              (item) =>
+                                item.subject !== 'C' && item.subject !== 'OFF',
+                            ).length > 0 ? (
+                          mpStatus
+                            .filter(
+                              (item) =>
+                                item.subject !== 'C' && item.subject !== 'OFF',
+                            )
+                            .map((item, index) => (
+                              <tr
+                                key={index}
+                                className={
+                                  item.position === 1
+                                    ? 'bg-blue-100 dark:bg-blue-900'
+                                    : item.position === 2
+                                    ? 'bg-green-100 dark:bg-green-900'
+                                    : item.position === 3
+                                    ? 'bg-yellow-100 dark:bg-yellow-800'
+                                    : item.position === 4
+                                    ? 'bg-purple-100 dark:bg-purple-800'
+                                    : 'bg-violet-200 dark:bg-violet-900'
+                                }
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                  {index + 1}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                  {item.nama}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                  {item.subject}
+                                </td>
+                              </tr>
+                            ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={3} // Adjust the number based on your table's total columns
+                              className="text-center py-4 text-gray-500 dark:text-gray-300"
                             >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                {index + 1}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {item.nama}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {item.subject}
-                              </td>
-                            </tr>
-                          ))}
+                              No Data
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

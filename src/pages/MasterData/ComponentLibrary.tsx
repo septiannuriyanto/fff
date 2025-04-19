@@ -23,7 +23,8 @@ import Settings from "../Settings";
 import Chart from "../Chart";
 import Alerts from "../UiElements/Alerts";
 import Buttons from "../UiElements/Buttons";
-import DropdownDefault from "../../components/Dropdowns/DropdownDefault";
+import DropdownDefault from 
+"../../components/Dropdowns/DropdownDefault";
 import DropdownMessage from "../../components/Header/DropdownMessage";
 import DropdownNotification from "../../components/Header/DropdownNotification";
 import DropdownUser from "../../components/Header/DropdownUser";
@@ -53,7 +54,7 @@ useEffect(()=>{},[
               <DropdownMessage></DropdownMessage>
               <DropdownNotification></DropdownNotification>
               <DropdownUser></DropdownUser>
-              <SelectGroupOne></SelectGroupOne>
+              
               <SelectGroupTwo></SelectGroupTwo>
               <CheckboxOne></CheckboxOne>
               <CheckboxTwo></CheckboxTwo>
@@ -71,7 +72,7 @@ useEffect(()=>{},[
               <Calendar></Calendar>
               <Profile></Profile>
               <FormElements></FormElements>
-              <FormLayout></FormLayout>
+            
               <Tables></Tables>
               <Settings></Settings>
               <Chart></Chart>

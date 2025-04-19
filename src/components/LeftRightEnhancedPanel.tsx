@@ -27,6 +27,8 @@ const LeftRightEnhancedPanel: React.FC<RitationCardProps> = ({
             {totalLeft}
           </h4>
           <span className="text-sm text-body font-medium">{titleLeft}</span>
+          <div className='flex justify-between text-blue-700 underline'><button><h1 className="text-sm text-body font-medium">PO Doc</h1></button>
+          <button><h1 className="text-sm text-body font-medium">BA Request</h1></button></div>
         </div>
 
          {/* Vertical Divider */}

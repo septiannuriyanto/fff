@@ -38,10 +38,13 @@ import { predefinedRanges } from './dateRanges';
 import { downloadExcel } from '../../../../services/ExportToExcel';
 import AlertError from '../../../UiElements/Alerts/AlertError';
 import { useNavigate } from 'react-router-dom';
+import { ReconcileFuelData } from './ReconcileFuelData';
+import { set } from 'date-fns';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
   const [dataRitasi, setDataRitasi] = useState<RitasiFuelData[]>([]);
+  const [dataReconcile, setDataReconcile] = useState<ReconcileFuelData[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedImageId, setExpandedImageId] = useState<string | null>(null);
   const [rotationAngle, setRotationAngle] = useState<{ [key: string]: number }>(
@@ -51,6 +54,9 @@ const Ritation = () => {
   const [ritationQtyTotal, setRitationQtyTotal] = useState<number>(0);
   const [ritationQtyToday, setRitationQtyToday] = useState<number>(0);
   const [ritationDaily, setRitationDaily] = useState<Record<string, number>>(
+    {},
+  );
+  const [reconcileDaily, setReconcileDaily] = useState<Record<string, number>>(
     {},
   );
 
@@ -87,8 +93,9 @@ const Ritation = () => {
     return data.reduce((total, item) => total + item.qty_sj, 0);
   };
 
+
   const fetchRitationReport = async () => {
-    const { data, error } = await supabase
+    const { data: dataRitasi, error: errorRitasi } = await supabase
       .from('ritasi_fuel')
       .select(
         `
@@ -101,12 +108,12 @@ const Ritation = () => {
       .eq('ritation_date', formatDateToString(date!))
       .order('no_surat_jalan');
 
-    if (error) {
-      console.log(error);
+    if (errorRitasi) {
+      console.log(errorRitasi);
       return;
     }
 
-    const enrichedData = data.map((item: any) => ({
+    const enrichedData = dataRitasi.map((item: any) => ({
       ...item,
       fuelman_name: item.fuelman?.nama || 'Unknown',
       operator_name: item.operator?.nama || 'Unknown',
@@ -154,7 +161,7 @@ const Ritation = () => {
     const period = convertDateToYYMM(new Date());
     const sjFilter = `G${period}%`;
 
-    const { data, error } = await supabase
+    const { data: dataRitasi, error } = await supabase
       .from('ritasi_fuel')
       .select('qty_sj, ritation_date') // Include ritation_date in the select statement
       .like('no_surat_jalan', sjFilter); // 'G2409%' filters records where sj_number starts with 'G2409'
@@ -183,24 +190,103 @@ const Ritation = () => {
     }
 
     // Group data by ritation_date
-    const groupedData = data.reduce<Record<string, number>>((acc, item) => {
-      const date = item.ritation_date; // Ensure ritation_date is in a suitable format
-      acc[date] = (acc[date] || 0) + item.qty_sj; // Sum qty_sj for this date
-      return acc;
-    }, {});
+    const summaryDataRitasi = dataRitasi.reduce<Record<string, number>>(
+      (acc, item) => {
+        const date = item.ritation_date; // Ensure ritation_date is in a suitable format
+        acc[date] = (acc[date] || 0) + item.qty_sj; // Sum qty_sj for this date
+        return acc;
+      },
+      {},
+    );
 
     // Prepare final data with 0 values for days without ritation
     const totalByDate = allDates.map((date) => ({
       date,
-      total: groupedData[date] || 0, // Use 0 if no data for this date
+      total: summaryDataRitasi[date] || 0, // Use 0 if no data for this date
     }));
 
     // Set your state with totalByDate
-    setRitationDaily(totalByDate);
+    const totalByDateRecord = totalByDate.reduce<Record<string, number>>(
+      (acc, item) => {
+        acc[item.date] = item.total;
+        return acc;
+      },
+      {},
+    );
+    setRitationDaily(totalByDateRecord);
   };
+
+  const fetchRitationReconcileByDate = async () => {
+    const period = convertDateToYYMM(new Date());
+    const sjFilter = `G${period}%`;
+    const today = new Date().toISOString().split('T')[0]; // format: 'YYYY-MM-DD'
+  
+    const { data: dataRitasi, error } = await supabase
+      .from('ritasi_daily_reconcile')
+      .select('qty, report_date, unit_id') // include unit_id sesuai ReconcileFuelData
+      .like('do_number', sjFilter);
+  
+    if (error) {
+      console.error('Error fetching data:', error);
+      return;
+    }
+  
+    // --- Total harian (semua tanggal di bulan berjalan) ---
+    const daysInMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      0
+    ).getDate();
+  
+    const allDates: string[] = [];
+    for (let day = 2; day <= daysInMonth + 1; day++) {
+      const date = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        day
+      );
+      allDates.push(date.toISOString().split('T')[0]);
+    }
+  
+    const summaryDataRitasi = dataRitasi.reduce<Record<string, number>>(
+      (acc, item) => {
+        const date = item.report_date;
+        acc[date] = (acc[date] || 0) + item.qty;
+        return acc;
+      },
+      {}
+    );
+  
+    const totalByDate = allDates.map((date) => ({
+      date,
+      total: summaryDataRitasi[date] || 0,
+    }));
+  
+    const totalByDateRecord = totalByDate.reduce<Record<string, number>>(
+      (acc, item) => {
+        acc[item.date] = item.total;
+        return acc;
+      },
+      {}
+    );
+    setReconcileDaily(totalByDateRecord);
+  
+    // --- Filter untuk hari ini dan simpan dalam dataReconcile ---
+    const todayReconcile = dataRitasi
+      .filter((item) => item.report_date === today)
+      .map((item) => ({
+        report_date: item.report_date,
+        unit_id: item.unit_id,
+        qty: item.qty,
+      })) as ReconcileFuelData[];
+  
+    setDataReconcile(todayReconcile);
+  };
+  
 
   useEffect(() => {
     fetchRitationActualByDate();
+    fetchRitationReconcileByDate();
   }, []);
 
   useEffect(() => {
@@ -299,8 +385,8 @@ const Ritation = () => {
 
   const handleEdit = async (id: string) => {
     console.log(id);
-    navigate(`/reporting/ritation/${id}`)
-  }
+    navigate(`/reporting/ritation/${id}`);
+  };
 
   const handleApprove = async (id: string) => {
     const targetRow = dataRitasi.find((row) => row.no_surat_jalan === id);
@@ -429,26 +515,24 @@ const Ritation = () => {
     };
   };
 
-
-  const [ dateStart, setDateStart ] = useState<string>();
-  const [ dateEnd, setDateEnd ] = useState<string>();
+  const [dateStart, setDateStart] = useState<string>();
+  const [dateEnd, setDateEnd] = useState<string>();
 
   function handleChangeDate(value: any) {
-      console.log(value);
-      setDateStart(formatDateToString(value[0]));
-      setDateEnd(formatDateToString(value[1]));
+    console.log(value);
+    setDateStart(formatDateToString(value[0]));
+    setDateEnd(formatDateToString(value[1]));
   }
 
-  const handleExportToFile = async ()=>{
-    if(!dateStart || !dateEnd){
+  const handleExportToFile = async () => {
+    if (!dateStart || !dateEnd) {
       toast.error('Isi range tanggal terlebih dahulu!');
       return;
     }
     console.log(dateStart);
     console.log(dateEnd);
     await downloadExcel(dateStart!, dateEnd!);
-    
-  }
+  };
 
   return (
     <>
@@ -470,8 +554,12 @@ const Ritation = () => {
 
               <div className="ritation__table h-23 w-full">
                 <DailyRitationChart
-                  chartDataInput={ritationDaily}
-                  totalPlan={ritationQtyPlan}
+                  chartDataInput={Object.entries(ritationDaily).map(
+                    ([date, total]) => ({ date, total }),
+                  )}
+                  chartDataReconcile={Object.entries(reconcileDaily).map(
+                    ([date, total]) => ({ date, total }),
+                  )}
                 />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3 2xl:gap-7.5 mt-2">
@@ -484,36 +572,35 @@ const Ritation = () => {
                   <div></div>
                 </CardDataStats> */}
                   <div className="flex flex-col justify-between gap-2">
-                    { ritationQtyPlan<=0 ?
-                    <AlertError
-                    title='Plan Ritasi Belum Terinput'
-                    subtitle='Upload berita acara plan ritasi bulan ini'
-                    onClickEvent={()=> navigate('/plan/fuelritationplan') }
-                    />
-                  :
-<LeftRightEnhancedPanel
-                      panelTitle="Monthly Progress (Liter)"
-                      titleLeft="Progress Fulfill"
-                      totalLeft={
-                        formatNumberWithSeparator(
-                          parseFloat(
-                            (
-                              (ritationQtyTotal / ritationQtyPlan) *
-                              100
-                            ).toFixed(2),
-                          ), // Convert to number after rounding
-                        ) + '%'
-                      }
-                      titleRight="of"
-                      totalRightTop={formatNumberWithSeparator(
-                        ritationQtyTotal,
-                      )}
-                      totalRightBottom={formatNumberWithSeparator(
-                        ritationQtyPlan,
-                      )}
-                    />
-                  }
-                    
+                    {ritationQtyPlan <= 0 ? (
+                      <AlertError
+                        title="Plan Ritasi Belum Terinput"
+                        subtitle="Upload berita acara plan ritasi bulan ini"
+                        onClickEvent={() => navigate('/plan/fuelritationplan')}
+                      />
+                    ) : (
+                      <LeftRightEnhancedPanel
+                        panelTitle="Monthly Progress (Liter)"
+                        titleLeft="Progress Fulfill"
+                        totalLeft={
+                          formatNumberWithSeparator(
+                            parseFloat(
+                              (
+                                (ritationQtyTotal / ritationQtyPlan) *
+                                100
+                              ).toFixed(2),
+                            ), // Convert to number after rounding
+                          ) + '%'
+                        }
+                        titleRight="of"
+                        totalRightTop={formatNumberWithSeparator(
+                          ritationQtyTotal,
+                        )}
+                        totalRightBottom={formatNumberWithSeparator(
+                          ritationQtyPlan,
+                        )}
+                      />
+                    )}
 
                     <LeftRightPanel
                       panelTitle="Daily Ritation Stats (Liter)"
@@ -521,6 +608,17 @@ const Ritation = () => {
                       total1={formatNumberWithSeparator(ritationQtyToday)}
                       title2="Ritation Count"
                       total2={dataRitasi.length.toString()}
+                      titleColor='text-orange-600 dark:text-orange-400'
+                      panelColor='bg-orange-50 dark:bg-orange-900'
+                    />
+                    <LeftRightPanel
+                      panelTitle="Daily Reconcile Stats (Liter)"
+                      title1="Reconcile Qty (liter)"
+                      total1={formatNumberWithSeparator(dataReconcile.reduce((acc, item) => acc + item.qty, 0))}
+                      title2="Reconcile Count"
+                      total2={dataReconcile.length.toString()}
+                      titleColor='text-blue-600 dark:text-blue-400'
+                      panelColor='bg-blue-50 dark:bg-blue-900'
                     />
                   </div>
 
@@ -528,32 +626,33 @@ const Ritation = () => {
                   <RitationValidationChart data={dataRitasi} />
                 </div>
                 <div className="flex flex-col">
-                <div className="my-6">
-                          <h4>Specify date range to download report</h4>
-                          <div className="export__segment flex flex-col lg:flex-row w-full items-start gap-2  lg:flex lg:mb-2 mb-2">
-                            <div className='flex w-full'>
-                            <DateRangePicker
-                              size="lg"
-                              format="dd.MM.yyyy"
-                              ranges={predefinedRanges}
-                              placeholder="Select Date Range"
-                              onShortcutClick={(shortcut, event) => {
-                                handleChangeDate(shortcut.value);
-                              }}
-                            />
-                            </div>
-                            <button
-                            onClick={handleExportToFile}
-                            className="w-full lg:w-1/5 lg:flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4">
-                              <span>
-                                <FontAwesomeIcon
-                                  icon={faFileExport}
-                                ></FontAwesomeIcon>
-                              </span>
-                              Export to File
-                            </button>
-                          </div>
-                        </div>
+                  <div className="my-6">
+                    <h4>Specify date range to download report</h4>
+                    <div className="export__segment flex flex-col lg:flex-row w-full items-start gap-2  lg:flex lg:mb-2 mb-2">
+                      <div className="flex w-full">
+                        <DateRangePicker
+                          size="lg"
+                          format="dd.MM.yyyy"
+                          ranges={predefinedRanges}
+                          placeholder="Select Date Range"
+                          onShortcutClick={(shortcut, event) => {
+                            handleChangeDate(shortcut.value);
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={handleExportToFile}
+                        className="w-full lg:w-1/5 lg:flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4"
+                      >
+                        <span>
+                          <FontAwesomeIcon
+                            icon={faFileExport}
+                          ></FontAwesomeIcon>
+                        </span>
+                        Export to File
+                      </button>
+                    </div>
+                  </div>
                   <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
                       <div className="overflow-hidden">
@@ -656,7 +755,9 @@ const Ritation = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
                                     <RitationAction
-                                    onEdit={()=>handleEdit(row.no_surat_jalan)}
+                                      onEdit={() =>
+                                        handleEdit(row.no_surat_jalan)
+                                      }
                                       onApprove={() =>
                                         handleApprove(row.no_surat_jalan)
                                       }
@@ -766,7 +867,6 @@ const Ritation = () => {
                             ))}
                           </tbody>
                         </table>
-                       
                       </div>
                     </div>
                   </div>
