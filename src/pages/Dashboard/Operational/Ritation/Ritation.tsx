@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import {
   convertDateToYYMM,
   convertDateToYYYYMM,
+  formatDateForSupabase,
   formatDateToString,
 } from '../../../../Utils/DateUtility';
 import { supabase } from '../../../../db/SupabaseClient';
@@ -15,13 +16,10 @@ import {
 } from '../../../../functions/share_message';
 import RitationSubtotalByFTChart from '../components/RitationSubtotalByFTChart';
 import LeftRightPanel from '../../../../components/LeftRightPanel';
-import LeftRightEnhancedPanel from '../../../../components/LeftRightEnhancedPanel';
 import RitationValidationChart from '../components/RitationValidationChart';
 import DailyRitationChart from '../components/DailyRitationChart';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faFileCsv,
-  faFileExcel,
   faFileExport,
   faRotateLeft,
   faRotateRight,
@@ -39,7 +37,7 @@ import { downloadExcel } from '../../../../services/ExportToExcel';
 import AlertError from '../../../UiElements/Alerts/AlertError';
 import { useNavigate } from 'react-router-dom';
 import { ReconcileFuelData } from './ReconcileFuelData';
-import { set } from 'date-fns';
+import RitationStatsPanel from './components/RitationStatsPanel';
 
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -92,7 +90,6 @@ const Ritation = () => {
   const calculateTotalQtySj = (data: RitasiFuelData[]): number => {
     return data.reduce((total, item) => total + item.qty_sj, 0);
   };
-
 
   const fetchRitationReport = async () => {
     const { data: dataRitasi, error: errorRitasi } = await supabase
@@ -220,74 +217,160 @@ const Ritation = () => {
     const period = convertDateToYYMM(new Date());
     const sjFilter = `G${period}%`;
     const today = new Date().toISOString().split('T')[0]; // format: 'YYYY-MM-DD'
-  
+
     const { data: dataRitasi, error } = await supabase
       .from('ritasi_daily_reconcile')
       .select('qty, report_date, unit_id') // include unit_id sesuai ReconcileFuelData
       .like('do_number', sjFilter);
-  
+
     if (error) {
       console.error('Error fetching data:', error);
       return;
     }
-  
+
     // --- Total harian (semua tanggal di bulan berjalan) ---
     const daysInMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth() + 1,
-      0
+      0,
     ).getDate();
-  
+
     const allDates: string[] = [];
     for (let day = 2; day <= daysInMonth + 1; day++) {
       const date = new Date(
         new Date().getFullYear(),
         new Date().getMonth(),
-        day
+        day,
       );
       allDates.push(date.toISOString().split('T')[0]);
     }
-  
+
     const summaryDataRitasi = dataRitasi.reduce<Record<string, number>>(
       (acc, item) => {
         const date = item.report_date;
         acc[date] = (acc[date] || 0) + item.qty;
         return acc;
       },
-      {}
+      {},
     );
-  
+
     const totalByDate = allDates.map((date) => ({
       date,
       total: summaryDataRitasi[date] || 0,
     }));
-  
+
     const totalByDateRecord = totalByDate.reduce<Record<string, number>>(
       (acc, item) => {
         acc[item.date] = item.total;
         return acc;
       },
-      {}
+      {},
     );
     setReconcileDaily(totalByDateRecord);
-  
+
     // --- Filter untuk hari ini dan simpan dalam dataReconcile ---
     const todayReconcile = dataRitasi
-      .filter((item) => item.report_date === today)
+      .filter((item) => item.report_date === formatDateForSupabase(date!))
       .map((item) => ({
         report_date: item.report_date,
         unit_id: item.unit_id,
         qty: item.qty,
       })) as ReconcileFuelData[];
-  
+
     setDataReconcile(todayReconcile);
+
+    console.log(todayReconcile);
   };
-  
+
+  interface poData {
+    po_number: string;
+    doc_url: string;
+    po_qty: number;
+    remaining_qty: number;
+  }
+
+  const [poDoc, setPoDoc] = useState<poData | undefined>(undefined);
+  const [baRequest, setBaRequest] = useState<string | undefined>(undefined);
+
+  const fetchThisMonthPoDoc = async () => {
+    const period = convertDateToYYYYMM(new Date());
+    const { data, error } = await supabase
+      .from('po_fuel')
+      .select('po_number, doc_url, po_qty, remaining_qty')
+      .eq('period', period);
+    if (error) {
+      console.log(error.message);
+      return;
+    }
+    const poDoc = data[0];
+    console.log(poDoc);
+
+    setPoDoc(poDoc);
+  };
+
+  const fetchThisMonthBaRequest = async () => {
+    const period = convertDateToYYYYMM(new Date());
+    const { data, error } = await supabase
+      .from('plan_order')
+      .select('doc_url')
+      .eq('period', period);
+    if (error) {
+      console.log(error.message);
+      return;
+    }
+    const baRequest = data[0].doc_url;
+    console.log(baRequest);
+
+    setBaRequest(baRequest);
+  };
+
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setIsModalOpen(false);
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isModalOpen]);
+
+  const showPoDetail = (url: string | undefined) => {
+    if (!url) {
+      alert('PO document URL not available.');
+      return;
+    }
+    setPdfUrl(url);
+    setIsModalOpen(true);
+  };
+
+  const showBaRequestDetail = (url: string | undefined) => {
+    if (!url) {
+      alert('BA request document URL not available.');
+      return;
+    }
+    setPdfUrl(url);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     fetchRitationActualByDate();
     fetchRitationReconcileByDate();
-  }, []);
+    fetchThisMonthBaRequest();
+    fetchThisMonthPoDoc();
+  }, [date]);
 
   useEffect(() => {
     fetchRitationPlan();
@@ -484,7 +567,8 @@ const Ritation = () => {
 
     // Handle file selection
     fileInput.onchange = async (event) => {
-      const file = event.target.files?.[0]; // Get the selected file
+      const target = event.target as HTMLInputElement | null;
+      const file = target?.files?.[0]; // Get the selected file
       if (!file) {
         alert('No file selected.');
         return;
@@ -579,10 +663,10 @@ const Ritation = () => {
                         onClickEvent={() => navigate('/plan/fuelritationplan')}
                       />
                     ) : (
-                      <LeftRightEnhancedPanel
+                      <RitationStatsPanel
                         panelTitle="Monthly Progress (Liter)"
                         titleLeft="Progress Fulfill"
-                        totalLeft={
+                        ritationProgress={
                           formatNumberWithSeparator(
                             parseFloat(
                               (
@@ -592,14 +676,47 @@ const Ritation = () => {
                             ), // Convert to number after rounding
                           ) + '%'
                         }
-                        titleRight="of"
-                        totalRightTop={formatNumberWithSeparator(
-                          ritationQtyTotal,
-                        )}
-                        totalRightBottom={formatNumberWithSeparator(
-                          ritationQtyPlan,
-                        )}
+                        receiveProgress={
+                          formatNumberWithSeparator(
+                            parseFloat(
+                              (
+                                ((poDoc?.po_qty! - poDoc?.remaining_qty!) /  ritationQtyTotal) *
+                                100
+                              ).toFixed(2),
+                            ), // Convert to number after rounding
+                          ) + '%'
+                        }
+                        ritationQty={ritationQtyTotal}
+                        planQty={ritationQtyPlan}
+                        receivedQty={poDoc?.po_qty! - poDoc?.remaining_qty!}
+                        poDoc={poDoc?.po_number}
+                        onShowPoDoc={() => {
+                          showPoDetail(poDoc?.doc_url);
+                        }}
+                        onShowBaRequest={() => {
+                          showBaRequestDetail(baRequest);
+                        }}
                       />
+                    )}
+                    {isModalOpen && pdfUrl && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div
+                          ref={modalRef}
+                          className="relative w-full max-w-4xl h-[80vh] bg-white rounded shadow-lg p-4"
+                        >
+                          <button
+                            className="absolute top-2 right-2 text-black bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                            onClick={() => setIsModalOpen(false)}
+                          >
+                            Close
+                          </button>
+                          <iframe
+                            src={pdfUrl}
+                            title="PDF Viewer"
+                            className="w-full h-full rounded"
+                          />
+                        </div>
+                      </div>
                     )}
 
                     <LeftRightPanel
@@ -608,17 +725,19 @@ const Ritation = () => {
                       total1={formatNumberWithSeparator(ritationQtyToday)}
                       title2="Ritation Count"
                       total2={dataRitasi.length.toString()}
-                      titleColor='text-orange-600 dark:text-orange-400'
-                      panelColor='bg-orange-50 dark:bg-orange-900'
+                      titleColor="text-orange-600 dark:text-orange-400"
+                      panelColor="bg-orange-50 dark:bg-orange-900"
                     />
                     <LeftRightPanel
                       panelTitle="Daily Reconcile Stats (Liter)"
                       title1="Reconcile Qty (liter)"
-                      total1={formatNumberWithSeparator(dataReconcile.reduce((acc, item) => acc + item.qty, 0))}
+                      total1={formatNumberWithSeparator(
+                        dataReconcile.reduce((acc, item) => acc + item.qty, 0),
+                      )}
                       title2="Reconcile Count"
                       total2={dataReconcile.length.toString()}
-                      titleColor='text-blue-600 dark:text-blue-400'
-                      panelColor='bg-blue-50 dark:bg-blue-900'
+                      titleColor="text-blue-600 dark:text-blue-400"
+                      panelColor="bg-blue-50 dark:bg-blue-900"
                     />
                   </div>
 
@@ -635,7 +754,7 @@ const Ritation = () => {
                           format="dd.MM.yyyy"
                           ranges={predefinedRanges}
                           placeholder="Select Date Range"
-                          onShortcutClick={(shortcut, event) => {
+                          onShortcutClick={(shortcut) => {
                             handleChangeDate(shortcut.value);
                           }}
                         />
@@ -755,6 +874,7 @@ const Ritation = () => {
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4">
                                     <RitationAction
+                                    data={null}
                                       onEdit={() =>
                                         handleEdit(row.no_surat_jalan)
                                       }

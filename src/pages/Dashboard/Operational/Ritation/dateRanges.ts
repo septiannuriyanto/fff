@@ -5,6 +5,8 @@ import addDays from 'date-fns/addDays';
 import startOfMonth from 'date-fns/startOfMonth';
 import endOfMonth from 'date-fns/endOfMonth';
 import addMonths from 'date-fns/addMonths';
+
+
 const predefinedRanges = [
     {
       label: 'Today',
@@ -59,7 +61,7 @@ const predefinedRanges = [
     {
       label: 'Last week',
       closeOverlay: false,
-      value: value => {
+      value: (value: never[]) => {
         const [start = new Date()] = value || [];
         return [
           addDays(startOfWeek(start, { weekStartsOn: 0 }), -7),
@@ -71,7 +73,7 @@ const predefinedRanges = [
     {
       label: 'Next week',
       closeOverlay: false,
-      value: value => {
+      value: (value: never[]) => {
         const [start = new Date()] = value || [];
         return [
           addDays(startOfWeek(start, { weekStartsOn: 0 }), 7),
