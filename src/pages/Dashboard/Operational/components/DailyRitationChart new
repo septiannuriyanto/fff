@@ -1,0 +1,79 @@
+import React from 'react';
+import ReactApexChart from 'react-apexcharts';
+
+interface ChartDataItem {
+  date: string;
+  actual: number;
+  reconcile: number;
+}
+
+interface Props {
+  chartDataInput: ChartDataItem[];
+  totalPlan: number;
+}
+
+const DailyRitationChart: React.FC<Props> = ({ chartDataInput, totalPlan }) => {
+  const categories = chartDataInput.map((item) => item.date);
+
+  const series = [
+    {
+      name: 'Actual',
+      data: chartDataInput.map((item) => item.actual),
+    },
+    {
+      name: 'Reconcile',
+      data: chartDataInput.map((item) => item.reconcile),
+    },
+  ];
+
+  const options: ApexCharts.ApexOptions = {
+    chart: {
+      type: 'bar',
+      stacked: false,
+      toolbar: {
+        show: true,
+      },
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '45%',
+      },
+    },
+    dataLabels: {
+      enabled: false,
+    },
+    xaxis: {
+      categories,
+      title: {
+        text: 'Date',
+      },
+    },
+    yaxis: {
+      title: {
+        text: 'Qty',
+      },
+    },
+    tooltip: {
+      shared: true,
+      intersect: false,
+    },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'center',
+    },
+    colors: ['#3B82F6', '#10B981'], // Tailwind blue-500 & green-500
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+      <h2 className="text-lg font-semibold mb-4">Daily Ritation Chart</h2>
+      <ReactApexChart options={options} series={series} type="bar" height={400} />
+      <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+        Total Plan: <strong>{totalPlan.toLocaleString()}</strong>
+      </p>
+    </div>
+  );
+};
+
+export default DailyRitationChart;

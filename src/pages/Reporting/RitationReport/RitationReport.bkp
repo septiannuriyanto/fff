@@ -1,40 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../../../db/SupabaseClient';
+import { supabase } from '../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
-import { sendMessageToChannel } from '../../../../services/TelegramSender';
 import {
-  formatDate,
-  formatDateToDdMmyy,
   formatDateToIndonesianByDate,
   formatDateToString,
   formatDateToYyMmDd,
-} from '../../../../Utils/DateUtility';
-import DropZone from './DropZone';
-import { uploadImage } from '../../../../services/ImageUploader';
+} from '../../../Utils/DateUtility';
+import DropZone from '../../../components/DropZones/DropZone';
+import {
+  baseStorageUrl,
+  getFileFromUrl,
+  uploadImage,
+} from '../../../services/ImageUploader';
 
-import LogoIcon from '../../../../images/logo/logo-icon.svg';
-import { getNrpFromName } from '../../../../functions/get_nrp';
-import { shareMessageToWhatsapp } from '../../../../functions/share_message';
-import { normalizeToTwoDigit } from '../../../../Utils/NumberUtility';  
-import { getQtyByHeight } from '../../../../functions/Interpolate';
-import { useParams } from 'react-router-dom';
-// Define the types
-interface PopulationData {
-  unit_id: string;
-  warehouse_id: string;
-}
-
-interface ManpowerData {
-  nama: string;
-}
+import LogoIcon from '../../../images/logo/logo-icon.svg';
+import {
+  getFTFromWH,
+  getNameFromNrp,
+  getNrpFromName,
+  getWHFromFT,
+} from '../../../functions/get_nrp';
+import {
+  constructMessage,
+  shareMessageToWhatsapp,
+} from '../../../functions/share_message';
+import { normalizeToTwoDigit } from '../../../Utils/NumberUtility';
+import { getQtyByHeight } from '../../../functions/Interpolate';
+import { useNavigate, useParams } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
+import { LoaderLogoFlex } from '../../../common/Loader/LoaderLogo';
+import { Session } from '@supabase/supabase-js';
 
 const RitationReport: React.FC = () => {
+  const [fetchedData, setFetchedData] = useState<RitasiFuelData>();
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [reportNumber, setReportNumber] = useState('');
   const [equipNumber, setEquipNumber] = useState<string>('');
-  const [pressurelessCondition, setPressurelessCondition] = useState<number>(1);
-  const [reportBy, setReportBy] = useState<string>('');
   const [fuelman, setFuelman] = useState<string>('');
   const [operator, setOperator] = useState<string>('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -48,9 +50,81 @@ const RitationReport: React.FC = () => {
 
   const { id } = useParams<{ id: string }>();
 
+  const [session, setSession] = useState<Session | null>(null);
+
+  const navigate = useNavigate();
+
   useEffect(() => {
-    console.log(id);
+    const fetchSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        console.log(session);
+
+        setSession(session);
+      } catch (error) {
+        console.error('Error fetching session:', error);
+      }
+    };
+
+    fetchSession();
+  }, []);
+
+  const fetchDetailReport = async (id: string) => {
+    const { data, error } = await supabase
+      .from('ritasi_fuel')
+      .select('*')
+      .eq('no_surat_jalan', id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    if (data.length == 0) {
+      console.log('No Data Found!');
+      return;
+    }
+    setFetchedData(data[0]);
+    renderFoundData(data);
+    return data;
+  };
+
+  const renderFoundData = async (data: any) => {
+    const foundData = data[0];
+    console.log(foundData);
+    setReportNumber(
+      parseInt(foundData.no_surat_jalan.slice(-2), 10).toString(),
+    );
+    const ft = await getFTFromWH(foundData.warehouse_id);
+    const fuelman = await getNameFromNrp(foundData.fuelman_id);
+    const opt = await getNameFromNrp(foundData.operator_id);
+
     
+
+    setEquipNumber(ft);
+    setFuelman(fuelman);
+    setOperator(opt);
+    setTeraDepanBefore(foundData.sonding_before_front);
+    setTeraBelakangBefore(foundData.sonding_before_rear);
+    setFlowmeterBefore(foundData.qty_flowmeter_before);
+    setTeraDepanAfter(foundData.sonding_after_front);
+    setTeraBelakangAfter(foundData.sonding_after_rear);
+    setFlowmeterAfter(foundData.qty_flowmeter_after);
+    if (foundData.flowmeter_before_url !== null) {
+      const imgData = await getFileFromUrl(foundData.flowmeter_before_url);
+      setFlowmeterBeforeFile(imgData);
+    }
+    if (foundData.flowmeter_after_url !== null) {
+      const imgData = await getFileFromUrl(foundData.flowmeter_after_url);
+      setFlowmeterAfterFile(imgData);
+    }
+    if (foundData.sj_url !== null) {
+      const imgData = await getFileFromUrl(foundData.sj_url);
+      setSuratJalanFile(imgData);
+    }
+  };
+
+  useEffect(() => {
     const fetchCodeNumbers = async () => {
       const { data, error } = await supabase
         .from('storage')
@@ -59,7 +133,6 @@ const RitationReport: React.FC = () => {
       if (error) {
         console.error(error);
       } else {
-
         const units = data?.map((item) => item.unit_id) || [];
         const whs = data?.map((item) => item.warehouse_id) || [];
 
@@ -93,6 +166,11 @@ const RitationReport: React.FC = () => {
       }
     };
 
+    if (id) {
+      fetchDetailReport(id);
+      return;
+    }
+
     fetchCodeNumbers();
     fetchFuelman();
     fetchOperator();
@@ -104,89 +182,129 @@ const RitationReport: React.FC = () => {
     const optNrp = await getNrpFromName(operator);
     const fmNrp = await getNrpFromName(fuelman);
     //Set loading screen
-    setIsLoading(true);
+
     //Upload Image
-    const flowmeterBeforeUrl = await uploadImage(
-      flowmeterBeforeFile!,
-      'fm-before',
-      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
-    );
-    const flowmeterAfterUrl = await uploadImage(
-      flowmeterAfterFile!,
-      'fm-after',
-      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
-    );
-    const suratJalanUrl = await uploadImage(
-      suratJalanFile!,
-      'surat-jalan',
-      `G${formatDateToDdMmyy(new Date())}${normalizeToTwoDigit(
-        parseInt(reportNumber),
-      )}`,
-    );
+    const sjNumber = `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+      parseInt(reportNumber),
+    )}`;
+    const imageUrl = `${baseStorageUrl}/${new Date().getFullYear()}/${sjNumber}/`;
+
+    const flowmeterBeforeUrl = `${imageUrl}fm-before`;
+    const flowmeterAfterUrl = `${imageUrl}fm-after`;
+    const suratJalanUrl = `${imageUrl}surat-jalan`;
 
     //Count required data
     const flowmeterqty =
       parseFloat(flowmeterAfter) - parseFloat(flowmeterBefore);
-    const whId = findWarehouseId(equipNumber);
+
+    if (flowmeterqty < 0 || flowmeterqty > 20000) {
+      console.log('Salah qty');
+
+      toast.error('Cek kembali angka flowmeter anda');
+      return;
+    }
+
+    const whId = await getWHFromFT(equipNumber);
+
+    console.log(whId);
 
     //Count the quantities
     const avgQtyBefore =
       (parseFloat(teraDepanBefore) + parseFloat(teraBelakangBefore)) / 2;
     const avgQtyAfter =
       (parseFloat(teraDepanAfter) + parseFloat(teraBelakangAfter)) / 2;
+
     const qtySondingBefore = (await getQtyByHeight(avgQtyBefore, whId)) || 0;
+
     const qtySondingAfter = (await getQtyByHeight(avgQtyAfter, whId)) || 0;
+
     const qtySonding = qtySondingAfter - qtySondingBefore;
 
-    //construct the query
-    let query = {
-      no_surat_jalan: `G${formatDateToYyMmDd(
-        new Date(),
-      )}${normalizeToTwoDigit(parseInt(reportNumber))}`,
-      queue_num: parseInt(reportNumber),
-      warehouse_id: whId,
-      operator_id: optNrp,
-      fuelman_id: fmNrp,
-      qty_sj: flowmeterqty,
-      qty_flowmeter_before: flowmeterBefore,
-      qty_flowmeter_after: flowmeterAfter,
-      qty_sonding: qtySonding,
-      qty_sonding_before: qtySondingBefore,
-      qty_sonding_after: qtySondingAfter,
-      sonding_before_front: teraDepanBefore,
-      sonding_before_rear: teraBelakangBefore,
-      sonding_after_front: teraDepanAfter,
-      sonding_after_rear: teraBelakangAfter,
-      flowmeter_before_url: flowmeterBeforeUrl.imageUrl,
-      flowmeter_after_url: flowmeterAfterUrl.imageUrl,
-      sj_url: suratJalanUrl.imageUrl,
-      ritation_date: formatDateToString(new Date()),
-    };
+    // Construct the query object with data to insert or update
 
-    const { error } = await supabase.from('ritasi_fuel').insert([query]);
+    try {
+      if (!session) {
+        let query = {
+          no_surat_jalan: id,
+          queue_num: parseInt(reportNumber),
+          warehouse_id: whId,
+          operator_id: optNrp,
+          fuelman_id: fmNrp,
+          qty_sj: flowmeterqty,
+          qty_flowmeter_before: flowmeterBefore,
+          qty_flowmeter_after: flowmeterAfter,
+          qty_sonding: qtySonding,
+          qty_sonding_before: qtySondingBefore,
+          qty_sonding_after: qtySondingAfter,
+          sonding_before_front: teraDepanBefore,
+          sonding_before_rear: teraBelakangBefore,
+          sonding_after_front: teraDepanAfter,
+          sonding_after_rear: teraBelakangAfter,
+          flowmeter_before_url: fetchedData!.flowmeter_before_url,
+          flowmeter_after_url: fetchedData!.flowmeter_after_url,
+          sj_url: fetchedData!.sj_url,
+          ritation_date:  fetchedData!.ritation_date,
+        };
+        // Modify the record if there is an active session
+        console.log(query);
 
-    if (error) {
-      console.error(error.message);
-      alert(error.message);
-      setIsComplete(false);
-      setIsLoading(false);
-    } else {
-      //Ditch loading screen
-      setIsComplete(true);
+        const { error } = await supabase
+          .from('ritasi_fuel')
+          .update(query)
+          .eq('no_surat_jalan', query.no_surat_jalan); // Update based on a unique identifier
 
-      // setEquipNumber('');
-      // setPressurelessCondition(1);
-      // setReportBy('');
-      // const message = `PRESSURELESS REPORT\n\nLast Checked :${formatDate(
-      //   Date.now(),
-      // )}\nReported by : ${reportBy}\nUnit : ${equipNumber}\nCondition : ${pressurelessCondition}\nVisit : https://fff-project.vercel.app/pressureless`;
-      // sendMessageToChannel(message);
+        if (error) {
+          console.error(error.message);
+          alert(error.message);
+          setIsComplete(false);
+          setIsLoading(false);
+        } else {
+          setIsComplete(true); // Update successful
+        }
+        navigate('/stockmanagement');
+      } else {
+        // Insert a new record if no session
+        let query = {
+          no_surat_jalan: `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+        parseInt(reportNumber),
+      )}`,
+          queue_num: parseInt(reportNumber),
+          warehouse_id: whId,
+          operator_id: optNrp,
+          fuelman_id: fmNrp,
+          qty_sj: flowmeterqty,
+          qty_flowmeter_before: flowmeterBefore,
+          qty_flowmeter_after: flowmeterAfter,
+          qty_sonding: qtySonding,
+          qty_sonding_before: qtySondingBefore,
+          qty_sonding_after: qtySondingAfter,
+          sonding_before_front: teraDepanBefore,
+          sonding_before_rear: teraBelakangBefore,
+          sonding_after_front: teraDepanAfter,
+          sonding_after_rear: teraBelakangAfter,
+          flowmeter_before_url: flowmeterBeforeUrl,
+          flowmeter_after_url: flowmeterAfterUrl,
+          sj_url: suratJalanUrl,
+          ritation_date : formatDateToString(new Date()),
+        };
+
+        const { error } = await supabase.from('ritasi_fuel').insert([query]);
+
+        if (error) {
+          console.error(error.message);
+          alert(error.message);
+          setIsComplete(false);
+          setIsLoading(false);
+        } else {
+          setIsComplete(true); // Insertion successful
+          navigate(`/reporting/ritation/${sjNumber}`);
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    } finally {
     }
-  };
+  }; //end submit form
 
   //SUGGESTION GETTER & RENDERER
   const getSuggestions = (value: string, list: string[]): string[] => {
@@ -241,12 +359,17 @@ const RitationReport: React.FC = () => {
     return warehouses[result]; // Return the warehouse_id or null if not found
   };
 
-  const onFuelmanChange = (
-    event: React.FormEvent<HTMLElement>,
-    { newValue }: { newValue: string },
-  ) => {
+  const onFuelmanChange = (event: React.FormEvent<HTMLElement>,{ newValue }: { newValue: string }) => {
     setFuelman(newValue);
+    localStorage.setItem('fuelman', newValue);
   };
+
+  useEffect(() => {
+    const savedFuelman = localStorage.getItem('fuelman');
+    if (savedFuelman) {
+      setFuelman(savedFuelman);
+    }
+  }, []); // Empty dependency array means this runs once on mount
 
   const onOperatorChange = (
     event: React.FormEvent<HTMLElement>,
@@ -264,20 +387,139 @@ const RitationReport: React.FC = () => {
   );
   const [suratJalanFile, setSuratJalanFile] = useState<File | null>(null);
 
+  const [uploadProgressFmBefore, setUploadProgressFmBefore] = useState<
+    number | null
+  >(null);
+  const [uploadProgressFmAfter, setUploadProgressFmAfter] = useState<
+    number | null
+  >(null);
+  const [uploadProgressSuratJalan, setUploadProgressSuratJalan] = useState<
+    number | null
+  >(null);
+
   const handleFlowmeterBeforeUpload = async (file: File) => {
+    if (!reportNumber) {
+      alert('Isikan nomor surat jalan terlebih dahulu');
+      return;
+    }
+
     setFlowmeterBeforeFile(file);
-    // You can add additional logic here, like validating the file or processing it
-    console.log('Flowmeter Before Uploaded:', file);
+    setUploadProgressFmBefore(0); // Set initial progress to 0
+
+    try {
+      const { imageUrl, error } = await uploadImage(
+        file,
+        'fm-before',
+        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+          parseInt(reportNumber),
+        )}`,
+        (progress: number) => {
+          console.log(progress);
+
+          setUploadProgressFmBefore(progress); // Update upload progress
+        },
+      );
+
+      if (error) {
+        alert(error);
+        return;
+      }
+
+      if (id) {
+        window.location.reload();
+      }
+
+      console.log('Flowmeter Before Uploaded:', imageUrl);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file, please try again.');
+    } finally {
+      setUploadProgressFmBefore(null); // Remove the progress when complete
+      toast.success('File Uploaded');
+    }
   };
-  const handleFlowmeterAfterUpload = (file: File) => {
+
+  const handleFlowmeterAfterUpload = async (file: File) => {
+    if (!reportNumber) {
+      alert('Isikan nomor surat jalan terlebih dahulu');
+      return;
+    }
+
     setFlowmeterAfterFile(file);
-    // You can add additional logic here, like validating the file or processing it
-    console.log('Flowmeter After Uploaded:', file);
+    setUploadProgressFmAfter(0); // Set initial progress to 0
+
+    try {
+      const { imageUrl, error } = await uploadImage(
+        file,
+        'fm-after',
+        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+          parseInt(reportNumber),
+        )}`,
+        (progress: number) => {
+          console.log(progress);
+
+          setUploadProgressFmAfter(progress); // Update upload progress
+        },
+      );
+
+      if (error) {
+        alert(error);
+        return;
+      }
+      if (id) {
+        window.location.reload();
+      }
+
+      console.log('Flowmeter After Uploaded:', imageUrl);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file, please try again.');
+    } finally {
+      setUploadProgressFmAfter(null); // Remove the progress when complete
+      toast.success('File Uploaded');
+    }
   };
-  const handleSuratJalanUpload = (file: File) => {
+
+  const handleSuratJalanUpload = async (file: File) => {
+    if (!reportNumber) {
+      alert('Isikan nomor surat jalan terlebih dahulu');
+      return;
+    }
+
     setSuratJalanFile(file);
-    // You can add additional logic here, like validating the file or processing it
-    console.log('Surat Jalan uploaded:', file);
+    setUploadProgressSuratJalan(0); // Set initial progress to 0
+
+    try {
+      const { imageUrl, error } = await uploadImage(
+        file,
+        'surat-jalan',
+        `G${formatDateToYyMmDd(new Date())}${normalizeToTwoDigit(
+          parseInt(reportNumber),
+        )}`,
+        (progress: number) => {
+          console.log(progress);
+
+          setUploadProgressSuratJalan(progress); // Update upload progress
+        },
+      );
+
+      if (error) {
+        alert(error);
+        return;
+      }
+
+      if (id) {
+        window.location.reload();
+      }
+
+      console.log('Surat Jalan Uploaded:', imageUrl);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file, please try again.');
+    } finally {
+      setUploadProgressSuratJalan(null); // Remove the progress when complete
+      toast.success('File Uploaded');
+    }
   };
 
   //HANDLE RITATION DATA
@@ -395,14 +637,18 @@ const RitationReport: React.FC = () => {
     shareMessageToWhatsapp(information);
   };
 
-
-
-
-  const handleChangeReportNumber = (e:any) =>{
-    setReportNumber(e.target.value)
+  const handleChangeReportNumber = (e: any) => {
+    setReportNumber(e.target.value);
     console.log(e.target.value);
-    
-  }
+  };
+
+  const handleShareReport = async (e: any) => {
+    e.preventDefault();
+    const shareData = await fetchDetailReport(id!);
+    if(!shareData) return;
+    const info = await constructMessage(shareData[0]);
+    shareMessageToWhatsapp(info);
+  };
 
   return isLoading ? (
     <div>
@@ -446,48 +692,56 @@ const RitationReport: React.FC = () => {
     </div>
   ) : (
     <div className="max-w-lg mx-auto p-5 font-sans bg-white dark:bg-boxdark">
-      <h1 className="text-center text-2xl font-bold mb-5">Input Ritasi</h1>
+      <Toaster />
+      <h1 className="text-center text-2xl font-bold mb-5">
+        {id ? `Update Ritasi` : `Input Ritasi`}
+      </h1>
       <form onSubmit={handleSubmit} className="flex flex-col">
-
         <div className="header-input flex flex-row w-full gap-4 mb-2">
-        <div className="input__sj-number w-full">
-          <label htmlFor="input_tera_before_front">Nomor Surat Jalan</label>
-          <input
-            value={reportNumber}
-            onChange={handleChangeReportNumber}
-            pattern="[0-9]*\.?[0-9]*"
-            inputMode="decimal"
-            type="text"
-            className="input_tera_before_front w-full p-2 border rounded"
-          />
+          <div className="input__sj-number w-full">
+            <label htmlFor="input_tera_before_front">Nomor Surat Jalan</label>
+            <input
+              disabled={id ? true : false}
+              value={reportNumber}
+              onChange={handleChangeReportNumber}
+              pattern="[0-9]*\.?[0-9]*"
+              inputMode="decimal"
+              type="text"
+              className="input_tera_before_front w-full p-2 border rounded"
+            />
+          </div>
+          <div className=" w-full">
+            <label className="block text-gray-700">Nomor FT :</label>
+            <Autosuggest
+              suggestions={suggestions}
+              onSuggestionsFetchRequested={onSuggestionsFetchRequested}
+              onSuggestionsClearRequested={onSuggestionsClearRequested}
+              getSuggestionValue={getSuggestionValue}
+              renderSuggestion={renderSuggestion}
+              inputProps={{
+                placeholder: 'Ketik Kode Unit',
+                value: equipNumber,
+                onChange: onEquipNumberChange,
+                className: 'w-full p-2  border rounded',
+                required: true,
+                disabled: id && !session ? true : false,
+              }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setEquipNumber(suggestion); // Update state with selected value
+              }}
+              theme={{
+                container: 'relative',
+                suggestionsContainerOpen:
+                  'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
+                suggestion: 'p-2 hover:bg-gray-200',
+                suggestionHighlighted: 'bg-gray-300',
+                input: 'w-full p-2 border rounded',
+              }}
+            />
+          </div>
         </div>
-        <div className=" w-full">
-          <label className="block text-gray-700">Nomor FT :</label>
-          <Autosuggest
-            suggestions={suggestions}
-            onSuggestionsFetchRequested={onSuggestionsFetchRequested}
-            onSuggestionsClearRequested={onSuggestionsClearRequested}
-            getSuggestionValue={getSuggestionValue}
-            renderSuggestion={renderSuggestion}
-            inputProps={{
-              placeholder: 'Ketik Kode Unit',
-              value: equipNumber,
-              onChange: onEquipNumberChange,
-              className: 'w-full p-2  border rounded',
-              required: true,
-            }}
-            theme={{
-              container: 'relative',
-              suggestionsContainerOpen:
-                'absolute z-10 mt-1 w-full bg-white border rounded shadow-lg',
-              suggestion: 'p-2 hover:bg-gray-200',
-              suggestionHighlighted: 'bg-gray-300',
-              input: 'w-full p-2 border rounded',
-            }}
-          />
-        </div>
-        </div>
-        
+
         <div className="data_menpower-ritasi flex flex-row justify-between grow gap-4 mb-4">
           <div className="w-full">
             <label className="block text-gray-700">Fuelman:</label>
@@ -503,6 +757,11 @@ const RitationReport: React.FC = () => {
                 onChange: onFuelmanChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
+                disabled: id && !session ? true : false,
+              }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setFuelman(suggestion); // Update state with selected value
               }}
               theme={{
                 container: 'relative',
@@ -528,6 +787,11 @@ const RitationReport: React.FC = () => {
                 onChange: onOperatorChange,
                 className: 'w-full p-2 mt-1 border rounded',
                 required: true,
+                disabled: id && !session ? true : false,
+              }}
+              onSuggestionSelected={(event, { suggestion }) => {
+                console.log('Suggestion chosen:', suggestion);
+                setOperator(suggestion); // Update state with selected value
               }}
               theme={{
                 container: 'relative',
@@ -548,6 +812,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_before_front">Tera Depan</label>
               <input
+                disabled={id && !session ? true : false}
                 value={teraDepanBefore}
                 onChange={handleTeraDepanBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -557,6 +822,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_before_front">Tera Belakang</label>
               <input
+                disabled={id && !session ? true : false}
                 value={teraBelakangBefore}
                 onChange={handleTeraBelakangBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -566,6 +832,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input__flowmeter-before">Flowmeter Awal</label>
               <input
+                disabled={id && !session ? true : false}
                 value={flowmeterBefore}
                 onChange={handleFlowmeterBeforeChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -581,6 +848,7 @@ const RitationReport: React.FC = () => {
               </h1>
               <label htmlFor="input_tera_after_front">Tera Depan</label>
               <input
+                disabled={id && !session ? true : false}
                 value={teraDepanAfter}
                 onChange={handleTeraDepanAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -590,6 +858,7 @@ const RitationReport: React.FC = () => {
               />
               <label htmlFor="input_tera_after_front">Tera Belakang</label>
               <input
+                disabled={id && !session ? true : false}
                 value={teraBelakangAfter}
                 onChange={handleTeraBelakangAfterChange}
                 pattern="[0-9]*\.?[0-9]*"
@@ -601,6 +870,7 @@ const RitationReport: React.FC = () => {
                 Flowmeter Akhir
               </label>
               <input
+                disabled={id && !session ? true : false}
                 value={flowmeterAfter}
                 onChange={handleFlowmeterAfterChange}
                 inputMode="decimal"
@@ -614,68 +884,168 @@ const RitationReport: React.FC = () => {
               {flowmeterBeforeFile ? (
                 <div className="file-preview1">
                   <h2>Uploaded File:</h2>
-                  <img
-                    id="fm-before"
-                    src={URL.createObjectURL(flowmeterBeforeFile)}
-                    alt={flowmeterBeforeFile.name}
-                    className="thumbnail w-full h-auto"
-                  />
+                  <div className="upload-image-container relative">
+                    {' '}
+                    {/* Add relative positioning here */}
+                    {uploadProgressFmBefore !== null && (
+                      <div
+                        className="absolute upload-overlay z-2 bg-white"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: `${100 - uploadProgressFmBefore}%`, // Gradually decrease height as upload progresses
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                        }}
+                      >
+                        <LoaderLogoFlex />
+                      </div>
+                    )}
+                    <img
+                      src={URL.createObjectURL(flowmeterBeforeFile)}
+                      alt="Flowmeter Before"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
+                    />
+                  </div>
                 </div>
               ) : (
-                <DropZone
-                  id="fm-before"
-                  title="Flowmeter Before"
-                  onFileUpload={handleFlowmeterBeforeUpload}
-                />
+                <div>
+                  <DropZone
+                    id="fm-before"
+                    title="Flowmeter Before"
+                    onFileUpload={handleFlowmeterBeforeUpload}
+                    uploadProgress={uploadProgressFmBefore}
+                    file={flowmeterBeforeFile}
+                  />
+                </div>
               )}
             </div>
+            {/* //============================================================================================ */}
             <div className="foto__flowmeter-after w-full">
               {flowmeterAfterFile ? (
                 <div className="file-preview2">
                   <h2>Uploaded File:</h2>
-                  <img
-                    id="fm-after"
-                    src={URL.createObjectURL(flowmeterAfterFile)}
-                    alt={flowmeterAfterFile.name}
-                    className="thumbnail w-full h-auto"
-                  />
+                  <div className="upload-image-container relative">
+                    {' '}
+                    {/* Add relative positioning here */}
+                    {uploadProgressFmAfter !== null && (
+                      <div
+                        className="absolute upload-overlay z-2 bg-white"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: `${100 - uploadProgressFmAfter}%`, // Gradually decrease height as upload progresses
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                        }}
+                      >
+                        <LoaderLogoFlex />
+                      </div>
+                    )}
+                    <img
+                      src={URL.createObjectURL(flowmeterAfterFile)}
+                      alt="Flowmeter After"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
+                    />
+                  </div>
                 </div>
               ) : (
-                <DropZone
-                  id="fm-after"
-                  title="Flowmeter After"
-                  onFileUpload={handleFlowmeterAfterUpload}
-                />
+                <div>
+                  <DropZone
+                    id="fm-after"
+                    title="Flowmeter After"
+                    onFileUpload={handleFlowmeterAfterUpload}
+                    uploadProgress={uploadProgressFmAfter}
+                    file={flowmeterAfterFile}
+                  />
+                </div>
               )}
             </div>
+            {/* //============================================================================================ */}
             <div className="foto__surat-jalan w-full">
               {suratJalanFile ? (
                 <div className="file-preview3">
                   <h2>Uploaded File:</h2>
-                  <img
-                    id="surat-jalan"
-                    src={URL.createObjectURL(suratJalanFile)}
-                    alt={suratJalanFile.name}
-                    className="thumbnail w-full h-auto"
-                  />
+                  <div className="upload-image-container relative">
+                    {' '}
+                    {/* Add relative positioning here */}
+                    {uploadProgressSuratJalan !== null && (
+                      <div
+                        className="absolute upload-overlay z-2 bg-white"
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: `${100 - uploadProgressSuratJalan}%`, // Gradually decrease height as upload progresses
+                          opacity: 1, // Optional: Adjust the opacity to make it semi-transparent
+                        }}
+                      >
+                        <LoaderLogoFlex />
+                      </div>
+                    )}
+                    <img
+                      src={URL.createObjectURL(suratJalanFile)}
+                      alt="Surat Jalan"
+                      className="upload-image h-32 w-32 object-contain bg-slate-700 mt-1"
+                    />
+                  </div>
                 </div>
               ) : (
-                <DropZone
-                  id="surat-jalan"
-                  title="Surat Jalan"
-                  onFileUpload={handleSuratJalanUpload}
-                />
+                <div>
+                  <DropZone
+                    id="surat-jalan"
+                    title="Surat Jalan"
+                    onFileUpload={handleSuratJalanUpload}
+                    uploadProgress={uploadProgressSuratJalan}
+                    file={suratJalanFile}
+                  />
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        <button
+        {id ? (
+          <div className="flex w-full flex-col gap-2">
+            {session ? (
+              <button
+                type="submit"
+                className="bg-green-400 py-2 rounded text-white"
+              >
+                Edit
+              </button>
+            ) : (
+              <div></div>
+            )}
+            <button
+              onClick={handleShareReport}
+              className="bg-slate-400 py-2 text-white"
+            >
+              Share
+            </button>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            className={`${
+              id ? 'bg-green-500' : 'bg-primary'
+            } text-white py-2 rounded hover:bg-blue-700`}
+          >
+            Submit
+          </button>
+        )}
+
+        {/* <button
           type="submit"
-          className="bg-primary text-white py-2 rounded hover:bg-blue-700"
+          className={`${
+            id ? 'bg-green-500' : 'bg-primary'
+          } text-white py-2 rounded hover:bg-blue-700`}
         >
-          Submit
-        </button>
+          {id ? `Update` : `Submit`}
+        </button> */}
       </form>
     </div>
   );
