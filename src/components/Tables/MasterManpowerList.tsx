@@ -71,7 +71,7 @@ const MasterManpowerList = () => {
     fetchManpower();
   }, []);
 
-  const [dataRow, setDataRow] = useState<Manpower[]>([]);
+  const [dataRow, setDataRow] = useState<Manpower[]>([] as Manpower[]);
   const [keyword, setKeyword] = useState<string>('');
   const [initialDataRow, setInitialDataRow] = useState<Manpower[]>([]);
 
@@ -179,185 +179,191 @@ const MasterManpowerList = () => {
   };
 
   return (
-    <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark justify-between">
-      <Toaster />
-      <div className="add-menpower flex w-full justify-end my-4 ">
-        <Link
-          to="#"
-          className="mr-4 inline-flex items-center justify-center gap-2.5 rounded-md bg-primary py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4"
-        >
-          <span>
-            <FontAwesomeIcon icon={faAdd}></FontAwesomeIcon>
-          </span>
-          Add Manpower
-        </Link>
-      </div>
-      <div className="relative text-gray-600">
-        <input
-          value={keyword}
-          onChange={handleSearch}
-          type="search"
-          name="serch"
-          placeholder="Search"
-          className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none w-full"
-        />
-        <button type="submit" className="absolute right-0 top-0 mt-3 mr-4">
-          <svg
-            className="h-4 w-4 fill-current"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlnsXlink="http://www.w3.org/1999/xlink"
-            version="1.1"
-            id="Capa_1"
-            x="0px"
-            y="0px"
-            viewBox="0 0 56.966 56.966"
-            xmlSpace="preserve"
-            width="512px"
-            height="512px"
+    <div>
+      {dataRow.length > 0 ? (
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark justify-between">
+        <Toaster />
+        <div className="add-menpower flex w-full justify-end my-4 ">
+          <Link
+            to="/master/manpower/add"
+            className="mr-4 inline-flex items-center justify-center gap-2.5 rounded-md bg-primary py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4"
           >
-            <path d="M55.146,51.887L41.588,37.786c3.486-4.144,5.396-9.358,5.396-14.786c0-12.682-10.318-23-23-23s-23,10.318-23,23  s10.318,23,23,23c4.761,0,9.298-1.436,13.177-4.162l13.661,14.208c0.571,0.593,1.339,0.92,2.162,0.92  c0.779,0,1.518-0.297,2.079-0.837C56.255,54.982,56.293,53.08,55.146,51.887z M23.984,6c9.374,0,17,7.626,17,17s-7.626,17-17,17  s-17-7.626-17-17S14.61,6,23.984,6z" />
-          </svg>
-        </button>
-      </div>
-      <div className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5">
-        <div
-          className="col-span-1 sm:col-span-2 flex items-center"
-          onClick={() => handleSort('nama')}
-        >
-          <p className="font-medium cursor-pointer">Name</p>
+            <span>
+              <FontAwesomeIcon icon={faAdd}></FontAwesomeIcon>
+            </span>
+            Add Manpower
+          </Link>
         </div>
-        <div
-          className="col-span-1 flex items-center justify-start sm:flex"
-          onClick={() => handleSort('nrp')}
-        >
-          <p className="font-medium cursor-pointer">NRP/SID</p>
+        <div className="relative text-gray-600">
+          <input
+            value={keyword}
+            onChange={handleSearch}
+            type="search"
+            name="serch"
+            placeholder="Search"
+            className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none w-full"
+          />
+          <button type="submit" className="absolute right-0 top-0 mt-3 mr-4">
+            <svg
+              className="h-4 w-4 fill-current"
+              xmlns="http://www.w3.org/2000/svg"
+              xmlnsXlink="http://www.w3.org/1999/xlink"
+              version="1.1"
+              id="Capa_1"
+              x="0px"
+              y="0px"
+              viewBox="0 0 56.966 56.966"
+              xmlSpace="preserve"
+              width="512px"
+              height="512px"
+            >
+              <path d="M55.146,51.887L41.588,37.786c3.486-4.144,5.396-9.358,5.396-14.786c0-12.682-10.318-23-23-23s-23,10.318-23,23  s10.318,23,23,23c4.761,0,9.298-1.436,13.177-4.162l13.661,14.208c0.571,0.593,1.339,0.92,2.162,0.92  c0.779,0,1.518-0.297,2.079-0.837C56.255,54.982,56.293,53.08,55.146,51.887z M23.984,6c9.374,0,17,7.626,17,17s-7.626,17-17,17  s-17-7.626-17-17S14.61,6,23.984,6z" />
+            </svg>
+          </button>
         </div>
-        <div
-          className="col-span-1 hidden items-center sm:flex"
-          onClick={() => handleSort('position')}
-        >
-          <p className="font-medium cursor-pointer">Role</p>
+        <div className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5">
+          <div
+            className="col-span-1 sm:col-span-2 flex items-center"
+            onClick={() => handleSort('nama')}
+          >
+            <p className="font-medium cursor-pointer">Name</p>
+          </div>
+          <div
+            className="col-span-1 flex items-center justify-start sm:flex"
+            onClick={() => handleSort('nrp')}
+          >
+            <p className="font-medium cursor-pointer">NRP/SID</p>
+          </div>
+          <div
+            className="col-span-1 hidden items-center sm:flex"
+            onClick={() => handleSort('position')}
+          >
+            <p className="font-medium cursor-pointer">Role</p>
+          </div>
+          <div
+            className="col-span-1 hidden items-center sm:flex"
+            onClick={() => handleSort('join_date')}
+          >
+            <p className="font-medium cursor-pointer">Join Date</p>
+          </div>
+          <div
+            className="col-span-1 hidden items-center sm:flex"
+            onClick={() => handleSort('status')}
+          >
+            <p className="font-medium cursor-pointer">Status</p>
+          </div>
+          <div className="col-span-1 flex items-center justify-center">
+            <p className="font-medium">Action</p>
+          </div>
         </div>
-        <div
-          className="col-span-1 hidden items-center sm:flex"
-          onClick={() => handleSort('join_date')}
-        >
-          <p className="font-medium cursor-pointer">Join Date</p>
-        </div>
-        <div
-          className="col-span-1 hidden items-center sm:flex"
-          onClick={() => handleSort('status')}
-        >
-          <p className="font-medium cursor-pointer">Status</p>
-        </div>
-        <div className="col-span-1 flex items-center justify-center">
-          <p className="font-medium">Action</p>
-        </div>
-      </div>
-
-      { dataRow?  dataRow.map((manpower, key) => (
-        <div
-          className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5"
-          key={key}
-        >
-          <div className="col-span-1 sm:col-span-2 flex items-center">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className=" flex h-12.5 w-15 rounded-md">
-                {manpower.image ? (
-                     <button
-                     id={manpower.nrp}
-                     onClick={() => handleButtonClick(manpower.nrp)} // Pass the ID
-                     className="relative flex items-center justify-center"
-                   >
-                     <div className="absolute flex items-center justify-center transition-opacity duration-300">
-                       <FontAwesomeIcon
-                         icon={faEdit}
-                         className="text-slate-700 z-0"
+  
+        {  dataRow.map((manpower, key) => (
+          <div
+            className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5"
+            key={key}
+          >
+            <div className="col-span-1 sm:col-span-2 flex items-center">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className=" flex h-12.5 w-15 rounded-md">
+                  {manpower.image ? (
+                       <button
+                       id={manpower.nrp}
+                       onClick={() => handleButtonClick(manpower.nrp)} // Pass the ID
+                       className="relative flex items-center justify-center"
+                     >
+                       <div className="absolute flex items-center justify-center transition-opacity duration-300">
+                         <FontAwesomeIcon
+                           icon={faEdit}
+                           className="text-slate-700 z-0"
+                         />
+                       </div>
+                       <img
+                         src={manpower.image}
+                         alt="ProfileImg"
+                         className="z-9 h-full w-full object-contain cursor-pointer hover:opacity-30 hover:z-2 transition-opacity duration-300"
                        />
-                     </div>
-                     <img
-                       src={manpower.image}
-                       alt="ProfileImg"
-                       className="z-9 h-full w-full object-contain cursor-pointer hover:opacity-30 hover:z-2 transition-opacity duration-300"
-                     />
-                     <input
+                       <input
+                        id={manpower.nrp}
+                         type="file"
+                         ref={fileInputRef}
+                         onChange={handleFileChange}
+                         style={{ display: 'none' }} // Hide the input
+                       />
+                     </button>
+                  ) : (
+                    <DropZoneMini
                       id={manpower.nrp}
-                       type="file"
-                       ref={fileInputRef}
-                       onChange={handleFileChange}
-                       style={{ display: 'none' }} // Hide the input
-                     />
-                   </button>
-                ) : (
-                  <DropZoneMini
-                    id={manpower.nrp}
-                    onFileUpload={handleUploadProfileImage}
-                  ></DropZoneMini>
-                )}
-              </div>
-              <div className="flex flex-col">
-                <p className="text-sm text-black dark:text-white">
-                  {manpower.nama}
-                  <br></br>
-                </p>
-                <p className="text-sm text-slate-400 dark:text-white">
-                  {manpower.email}
-                  <br></br>
-                </p>
+                      onFileUpload={handleUploadProfileImage}
+                    ></DropZoneMini>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <p className="text-sm text-black dark:text-white">
+                    {manpower.nama}
+                    <br></br>
+                  </p>
+                  <p className="text-sm text-slate-400 dark:text-white">
+                    {manpower.email}
+                    <br></br>
+                  </p>
+                </div>
               </div>
             </div>
+            <div className="col-span-1 flex items-center justify-start sm:flex">
+              <p className="text-sm text-black dark:text-white">
+                {manpower.nrp}
+                <br></br>
+                {manpower.sid_code}
+              </p>
+            </div>
+            <div className="col-span-1 hidden items-center sm:flex">
+              <p className="text-sm text-black dark:text-white">
+                {manpower.position}
+              </p>
+            </div>
+  
+            <div className="col-span-1 hidden items-center sm:flex">
+              <p className="text-sm text-black dark:text-white">
+                {manpower.join_date}
+              </p>
+            </div>
+            <div className="col-span-1 hidden items-center sm:flex">
+              <p
+                className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium ${
+                  manpower.status === 'Onsite'
+                    ? 'bg-success text-success'
+                    : manpower.status === 'Cuti'
+                    ? 'bg-danger text-danger'
+                    : 'bg-warning text-warning'
+                }`}
+              >
+                {manpower.status}
+              </p>
+            </div>
+            <div className="sm:hidden flex justify-center items-center w-full">
+              <DropdownManpowerAction
+                rowId="123"
+                onView={() => handleView(manpower.nrp)}
+                onEdit={() => handleEdit(manpower.nrp)}
+                onDelete={() => handleDelete(manpower.nrp)}
+              />
+            </div>
+            <div className="hidden align-middle justify-center items-center sm:flex">
+              <ManpowerActionButton
+                rowId="123"
+                onView={() => handleView(manpower.nrp)}
+                onEdit={() => handleEdit(manpower.nrp)}
+                onDelete={() => handleDelete(manpower.nrp)}
+              />
+            </div>
           </div>
-          <div className="col-span-1 flex items-center justify-start sm:flex">
-            <p className="text-sm text-black dark:text-white">
-              {manpower.nrp}
-              <br></br>
-              {manpower.sid_code}
-            </p>
-          </div>
-          <div className="col-span-1 hidden items-center sm:flex">
-            <p className="text-sm text-black dark:text-white">
-              {manpower.position}
-            </p>
-          </div>
-
-          <div className="col-span-1 hidden items-center sm:flex">
-            <p className="text-sm text-black dark:text-white">
-              {manpower.join_date}
-            </p>
-          </div>
-          <div className="col-span-1 hidden items-center sm:flex">
-            <p
-              className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium ${
-                manpower.status === 'Onsite'
-                  ? 'bg-success text-success'
-                  : manpower.status === 'Cuti'
-                  ? 'bg-danger text-danger'
-                  : 'bg-warning text-warning'
-              }`}
-            >
-              {manpower.status}
-            </p>
-          </div>
-          <div className="sm:hidden flex justify-center items-center w-full">
-            <DropdownManpowerAction
-              rowId="123"
-              onView={() => handleView(manpower.nrp)}
-              onEdit={() => handleEdit(manpower.nrp)}
-              onDelete={() => handleDelete(manpower.nrp)}
-            />
-          </div>
-          <div className="hidden align-middle justify-center items-center sm:flex">
-            <ManpowerActionButton
-              rowId="123"
-              onView={() => handleView(manpower.nrp)}
-              onEdit={() => handleEdit(manpower.nrp)}
-              onDelete={() => handleDelete(manpower.nrp)}
-            />
-          </div>
+        )) }
+      </div>
+      ) : (
+        <div>
+          <Loader/>
         </div>
-      )) : <div className='w-full'>
-        <Loader></Loader>
-      </div> }
+      )}
     </div>
   );
 };

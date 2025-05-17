@@ -305,7 +305,7 @@ const SignUp: React.FC = () => {
                       type="text"
                       value={nrp}
                       onChange={handleNrpChange}
-                      placeholder="NRP"
+                      placeholder="NRP (misal : BGTA123456 (tanpa p))"
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                     />
 
@@ -344,7 +344,7 @@ const SignUp: React.FC = () => {
                     <input
                       disabled={isDisabled}
                       type="text"
-                      placeholder="Nama Lengkap"
+                      placeholder="Nama Lengkap (Ketik NRP dan tunggu hingga nama muncul)"
                       value={namaLengkap}
                       onChange={(e) => setNamaLengkap(e.target.value)}
                       className="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 text-black outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"

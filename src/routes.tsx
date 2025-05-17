@@ -38,6 +38,7 @@ import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
+import ManpowerRegistration from './pages/MasterData/components/ManpowerRegistration';
 
 
 const routes = [
@@ -241,6 +242,12 @@ const routes = [
   {
     path: '/master/manpower',
     component: <MasterManpower />,
+    title: 'FFF | Master Manpower',
+    allowedRoles: SUPERVISOR
+  },
+{
+    path: '/master/manpower/add',
+    component: <ManpowerRegistration />,
     title: 'FFF | Master Manpower',
     allowedRoles: SUPERVISOR
   },
