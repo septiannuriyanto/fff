@@ -78,21 +78,26 @@ const UnitHeatmap: React.FC<{ unit: any; month: string }> = ({ unit, month }) =>
       });
 
       // propagate status terakhir (misal BD) sampai status baru / FUTURE
-      for (let d = 0; d < renderDays; d++) {
-        let lastStatus = 'RFU';
-        for (let h = 0; h < 24; h++) {
-          if (defaultGrid[d][h] === 'FUTURE') {
-            // skip jam FUTURE
-            continue;
-          }
-          if (defaultGrid[d][h] !== 'RFU') {
-            lastStatus = defaultGrid[d][h];
-          } else {
-            // RFU → ambil status sebelumnya
-            defaultGrid[d][h] = lastStatus;
-          }
-        }
-      }
+let lastStatusAcrossDays = 'RFU'; // status terakhir global antar hari
+
+for (let d = 0; d < renderDays; d++) {
+  let lastStatus = lastStatusAcrossDays; // mulai hari ini pakai status terakhir hari sebelumnya
+  for (let h = 0; h < 24; h++) {
+    if (defaultGrid[d][h] === 'FUTURE') {
+      // skip jam FUTURE
+      continue;
+    }
+    if (defaultGrid[d][h] !== 'RFU') {
+      lastStatus = defaultGrid[d][h]; // update status terakhir kalau ada status baru
+    } else {
+      // kalau RFU, isi status terakhir
+      defaultGrid[d][h] = lastStatus;
+    }
+  }
+  // selesai satu hari, simpan status terakhir untuk hari berikutnya
+  lastStatusAcrossDays = lastStatus;
+}
+
 
       setGrid(defaultGrid);
     };

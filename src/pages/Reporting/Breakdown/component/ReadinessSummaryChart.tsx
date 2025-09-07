@@ -14,7 +14,6 @@ interface Props {
 
 const criticalHours = [6, 7, 8, 12, 18, 19, 20, 0];
 
-
 const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [readinessData, setReadinessData] = useState<
@@ -60,6 +59,7 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
       for (const u of units) {
         const rows = (data || []).filter((r: any) => r.unit_id === u.unit_id);
 
+        // buat grid hari x jam
         const grid: string[][] = Array.from({ length: renderDays }, (_, d) =>
           Array.from({ length: 24 }, (_, h) => {
             if (
@@ -73,6 +73,7 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
           })
         );
 
+        // isi grid dengan data yang ada
         rows.forEach((row: any) => {
           const date = new Date(row.reported_at);
           const dayIndex = date.getDate() - 1;
@@ -82,9 +83,9 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
           }
         });
 
-        // propagate status terakhir
+        // propagasi status dari hari ke hari
+        let lastStatus = 'RFU';
         for (let d = 0; d < renderDays; d++) {
-          let lastStatus = 'RFU';
           for (let h = 0; h < 24; h++) {
             if (grid[d][h] === 'FUTURE') continue;
             if (grid[d][h] !== 'RFU') {
@@ -95,34 +96,33 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
           }
         }
 
-        // HITUNG readiness sesuai period
+        // HITUNG readiness
         let total = 0;
         let rfuCount = 0;
 
         if (period === 'daily') {
           const d = currentDay - 1;
           criticalHours.forEach((h) => {
-            if (h <= currentHour) {
-              if (grid[d] && grid[d][h] && grid[d][h] !== 'FUTURE') {
-                total++;
-                if (grid[d][h] === 'RFU') rfuCount++;
-              }
+            if (h <= currentHour && grid[d] && grid[d][h] !== 'FUTURE') {
+              total++;
+              if (grid[d][h] === 'RFU') rfuCount++;
             }
           });
         }
 
         if (period === 'weekly') {
+          // Kamis–Rabu
           const now = new Date();
-          const dayOfWeek = now.getDay();
+          const dayOfWeek = now.getDay(); // 0: Sunday, 4: Thursday
           const offset = (dayOfWeek - 4 + 7) % 7;
-          let startDayIndex = currentDay - 1 - offset;
+          let startDayIndex = currentDay - 1 - offset; // Kamis
           if (startDayIndex < 0) startDayIndex = 0;
-          const endDayIndex = Math.min(renderDays - 1, startDayIndex + 6);
+          const endDayIndex = Math.min(renderDays - 1, startDayIndex + 6); // sampai Rabu
 
           for (let d = startDayIndex; d <= endDayIndex; d++) {
             criticalHours.forEach((h) => {
               if (d === currentDay - 1 && h > currentHour) return;
-              if (grid[d] && grid[d][h] && grid[d][h] !== 'FUTURE') {
+              if (grid[d] && grid[d][h] !== 'FUTURE') {
                 total++;
                 if (grid[d][h] === 'RFU') rfuCount++;
               }
@@ -134,7 +134,7 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
           for (let d = 0; d < renderDays; d++) {
             criticalHours.forEach((h) => {
               if (d === currentDay - 1 && h > currentHour) return;
-              if (grid[d] && grid[d][h] && grid[d][h] !== 'FUTURE') {
+              if (grid[d] && grid[d][h] !== 'FUTURE') {
                 total++;
                 if (grid[d][h] === 'RFU') rfuCount++;
               }
@@ -157,9 +157,8 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
   const categories = readinessData.map((r) => r.unit);
   const seriesData = readinessData.map((r) => Number(r.readiness.toFixed(1)));
 
-  // warna dinamis: hijau kalau >= target, merah kalau < target
   const barColors = seriesData.map((val) =>
-    val >= readinessTarget ? '#22c55e' /* hijau tailwind */ : '#ef4444' /* merah tailwind */
+    val >= readinessTarget ? '#22c55e' : '#ef4444'
   );
 
   return (
@@ -197,7 +196,7 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
               columnWidth: '50%',
             },
           },
-          colors: barColors, // <<< warna dinamis per batang
+          colors: barColors,
           dataLabels: {
             enabled: true,
             formatter: (val: any) => `${val}%`,
