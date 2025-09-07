@@ -13,10 +13,12 @@ interface AlterStatusModalProps {
   selectedTime: string;
   selectedReporter: string;
   newStatus: string;
+  remark: string; // ⬅️ baru
   onStatusChange: (status: string) => void;
   onDateChange: (date: string) => void;
   onTimeChange: (time: string) => void;
   onReporterChange: (reporter: string) => void;
+  onRemarkChange: (remark: string) => void; // ⬅️ baru
   onCancel: () => void;
   onSubmit: () => void;
 }
@@ -35,10 +37,12 @@ const AlterStatusModal: React.FC<AlterStatusModalProps> = ({
   selectedTime,
   selectedReporter,
   newStatus,
+  remark, // ⬅️ baru
   onStatusChange,
   onDateChange,
   onTimeChange,
   onReporterChange,
+  onRemarkChange, // ⬅️ baru
   onCancel,
   onSubmit,
 }) => {
@@ -82,13 +86,22 @@ const AlterStatusModal: React.FC<AlterStatusModalProps> = ({
           onChange={(e) => onReporterChange(e.target.value)}
           className="border rounded p-1 w-full"
         >
-          <option value="">Select Reporter</option>
+          <option value="">Report By</option>
           {manpower.map((mp) => (
             <option key={mp.nrp} value={mp.nrp}>
               {mp.nama}
             </option>
           ))}
         </select>
+
+        {/* ⬇️ Textarea untuk Remark */}
+        <textarea
+          value={remark}
+          onChange={(e) => onRemarkChange(e.target.value)}
+          placeholder="Remark"
+          className="border rounded p-1 w-full h-20 resize-none"
+        />
+
         <div className="flex justify-end space-x-2">
           <button
             onClick={onCancel}

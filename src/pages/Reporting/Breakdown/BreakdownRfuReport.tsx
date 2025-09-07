@@ -34,6 +34,7 @@ const BreakdownRfuReport: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedReporter, setSelectedReporter] = useState<string>('');
+  const [remark, setRemark] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,6 +91,7 @@ const BreakdownRfuReport: React.FC = () => {
         status: newStatus,
         reported_at: reportedAt.toISOString(),
         reported_by: selectedReporter,
+        remark: remark, // ⬅️ baru
       },
     ]);
     window.location.reload();
@@ -146,6 +148,8 @@ const BreakdownRfuReport: React.FC = () => {
           onReporterChange={setSelectedReporter}
           onCancel={() => setSelectedUnit(null)}
           onSubmit={handleSubmit}
+          remark={remark} // ⬅️ baru
+          onRemarkChange={setRemark} // ⬅️ baru'
         />
       )}
     </div>
