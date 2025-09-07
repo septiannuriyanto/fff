@@ -239,6 +239,7 @@ const routes = [
     title: 'FFF | Component Library',
     allowedRoles: SUPERVISOR
   },
+  
   {
     path: '/master/manpower',
     component: <MasterManpower />,
