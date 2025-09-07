@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import UnitHeatmap from './component/UnitHeatmap';
 import MonthPicker from './component/MonthPicker';
+import ReadinessSummaryChart from './component/ReadinessSummaryChart';
 
 type Storage = {
   id: number;
@@ -12,21 +13,33 @@ interface BreakdownRfuHeatmapProps {
   storages: Storage[]; // daftar unit yang diterima dari parent
 }
 
-const BreakdownRfuHeatmap: React.FC<BreakdownRfuHeatmapProps> = ({ storages }) => {
+const BreakdownRfuHeatmap: React.FC<BreakdownRfuHeatmapProps> = ({
+  storages,
+}) => {
   // state bulan lokal
   const [month, setMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}`;
   });
 
   return (
     <div className="p-6">
       <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full ">
-        Breakdown RFU Heatmap
+        Readiness Summary
       </h2>
 
+      <div className="my-2">
+        <ReadinessSummaryChart units={storages} month={month} />
+      </div>
+
+      <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full ">
+        Breakdown RFU Heatmap
+      </h2>
       {/* Picker bulan */}
-      <div className='mb-2'>
+      <div className="mb-2">
         <MonthPicker value={month} onChange={setMonth} />
       </div>
 

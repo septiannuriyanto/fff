@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { statusColors } from './statuscolor';
 import { supabase } from '../../../../db/SupabaseClient';
+import { criticalHours } from './criticalHours';
 
 const UnitHeatmap: React.FC<{ unit: any; month: string }> = ({ unit, month }) => {
   const [expanded, setExpanded] = useState(true);
@@ -30,8 +31,6 @@ const UnitHeatmap: React.FC<{ unit: any; month: string }> = ({ unit, month }) =>
       ? currentDay
       : daysInMonth;
 
-  // Array jam kritis (untuk opacity)
-  const criticalHours = [6, 7, 8, 12, 18, 19, 20, 0];
 
   useEffect(() => {
     const fetchStatus = async () => {
