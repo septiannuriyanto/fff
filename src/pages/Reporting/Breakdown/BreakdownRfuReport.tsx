@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import AlterStatusModal from './AlterStatusModal';
 import { supabase } from '../../../db/SupabaseClient';
+import { statusColors } from './component/statuscolor';
+import  BreakdownRfuHeatmap  from './BreakdownRfuHeatmap';
 
 type Storage = {
   id: number;
@@ -18,12 +20,7 @@ type Manpower = {
   nama: string;
 };
 
-const statusColors: Record<string, string> = {
-  RFU: 'bg-green-500 text-white',
-  BD: 'bg-red-500 text-white',
-  PS: 'bg-yellow-500 text-black',
-  NA: 'bg-gray-400 text-white',
-};
+
 
 const BreakdownRfuReport: React.FC = () => {
   const [units, setUnits] = useState<Storage[]>([]);
@@ -154,10 +151,15 @@ const BreakdownRfuReport: React.FC = () => {
       )}
     </div>
               </div>
+              
             </div>
+            <BreakdownRfuHeatmap storages={units} />
           </div>
+           
         </div>
+       
       </div>
+       
     </>
   );
 
