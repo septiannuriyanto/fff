@@ -18,7 +18,11 @@ const ALL_ROLES = [
     'FUEL AND OIL ADMIN',
   ];
   
-  const OIL_ROLES = ['OILMAN'];
+  const OIL_ROLES = [
+    'CREATOR',
+    'GROUP LEADER',
+    'OILMAN'
+  ];
   
   const SUPERVISOR= ['CREATOR', 'GROUP LEADER'];
   

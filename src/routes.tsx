@@ -34,11 +34,14 @@ import ComponentLibrary from './pages/MasterData/ComponentLibrary';
 import MasterManpower from './pages/MasterData/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, SUPERVISOR } from './store/roles';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
 import ManpowerRegistration from './pages/MasterData/components/ManpowerRegistration';
+import DailyStockTakingOil from './pages/Oil/DailyStockTakingOil/DailyStockTakingOil';
+import HousekeepingOil from './pages/Oil/HousekeepingOil/HousekeepingOil';
+import StorageManagement from './pages/Oil/StorageManagement/StorageManagement';
 
 
 const routes = [
@@ -213,6 +216,29 @@ const routes = [
     title: 'FFF | FT Backlog Request',
     allowedRoles: FUEL_ROLES
   },
+
+  // Oil Reporting Routes
+   {
+    path: '/oil/storagemgmt',
+    component: <StorageManagement />,
+    title: 'FFF | Oil Storage Management',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/oil/dst',
+    component: <DailyStockTakingOil />,
+    title: 'FFF | Daily Stock Taking Oil',
+    allowedRoles: OIL_ROLES
+  },
+
+    {
+    path: '/oil/housekeeping',
+    component: <HousekeepingOil />,
+    title: 'FFF | Housekeeping Oil',
+    allowedRoles: OIL_ROLES
+  },
+
+
   // Export Routes
   {
     path: '/export/bastfuel',
@@ -239,7 +265,7 @@ const routes = [
     title: 'FFF | Component Library',
     allowedRoles: SUPERVISOR
   },
-  
+
   {
     path: '/master/manpower',
     component: <MasterManpower />,

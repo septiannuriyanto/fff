@@ -24,7 +24,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -175,7 +175,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               </SidebarGroup>
               {/* <!-- Menu Item Dashboard --> */}
 
-              {/* <!-- Menu Item Reporting Pages --> */}
+              {/* <!-- Menu Item Fuel Reporting Pages --> */}
               <SidebarGroup
               currentRole={role!}
               roles={FUEL_ROLES}
@@ -202,6 +202,20 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
+              </SidebarGroup>
+
+             {/* <!-- Menu Item Oil Reporting Pages --> */}
+              <SidebarGroup
+              currentRole={role!}
+              roles={OIL_ROLES}
+                title="Oil Reporting"
+                icon={<TbReport />}
+                pathname={pathname}
+                basePath="/oil"
+              >
+                <SidebarLink to="/oil/storagemgmt" label="Stor. Mgmt" />
+                <SidebarLink to="/oil/dst" label="DST Oil" />
+                <SidebarLink to="/oil/housekeeping" label="Housekeeping" />
               </SidebarGroup>
 
 
