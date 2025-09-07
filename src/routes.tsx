@@ -205,7 +205,7 @@ const routes = [
     path: '/reporting/ftbdrfu',
     component: <BreakdownRfuReport />,
     title: 'FFF | FT Breakdown - RFU',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: ALL_ROLES
   },
   {
     path: '/reporting/ftbacklogreq',
