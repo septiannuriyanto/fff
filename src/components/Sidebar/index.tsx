@@ -1,30 +1,21 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import SidebarLinkGroup from './SidebarLinkGroup';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
-import { supabase } from '../../db/SupabaseClient';
-import { useDispatch } from 'react-redux'; // Import useDispatch from Redux
-import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../../pages/Authentication/AuthContext';
 import {
   TbBuilding,
   TbDashboard,
   TbDatabase,
   TbDownload,
-  TbLayoutGrid,
-  TbList,
   TbReport,
-  TbSearch,
-  TbSortAZ,
-  TbSortZA,
-  TbUser,
   TbUserCheck,
 } from 'react-icons/tb';
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -44,7 +35,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
     storedSidebarExpanded === null ? false : storedSidebarExpanded === 'true',
   );
 
-  const [isShown, setIsShown] = useState('');
+  const [isShown] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { signOut } = useAuth();
   const { currentUser } = useAuth();
