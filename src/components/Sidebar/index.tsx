@@ -215,6 +215,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/oil/storagemgmt" label="Stor. Mgmt" />
                 <SidebarLink to="/oil/dst" label="DST Oil" />
+                <SidebarLink to="/oil/dstreport" label="DST Report" />
                 <SidebarLink to="/oil/housekeeping" label="Housekeeping" />
               </SidebarGroup>
 
@@ -263,6 +264,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 pathname={pathname}
                 basePath="/master"
               >
+                <SidebarLink to="/master/addmaterial" label="Add Material" />
                 <SidebarLink to="/master/manpower" label="Manpower" />
                 <SidebarLink to="/master/equipment" label="Equipment" />
                 <SidebarLink to="/master/fueltruck" label="Fuel Truck" />

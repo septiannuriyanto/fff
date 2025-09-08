@@ -42,6 +42,8 @@ import ManpowerRegistration from './pages/MasterData/components/ManpowerRegistra
 import DailyStockTakingOil from './pages/Oil/DailyStockTakingOil/DailyStockTakingOil';
 import HousekeepingOil from './pages/Oil/HousekeepingOil/HousekeepingOil';
 import StorageManagement from './pages/Oil/StorageManagement/StorageManagement';
+import AddMaterialPage from './pages/MasterData/Materials/AddMaterialPage';
+import DstOilReport from './pages/Oil/DailyStockTakingReport/DstOilReport';
 
 
 const routes = [
@@ -230,6 +232,12 @@ const routes = [
     title: 'FFF | Daily Stock Taking Oil',
     allowedRoles: OIL_ROLES
   },
+   {
+    path: '/oil/dstreport',
+    component: <DstOilReport />,
+    title: 'FFF | Daily Stock Taking Oil Report',
+    allowedRoles: OIL_ROLES
+  },
 
     {
     path: '/oil/housekeeping',
@@ -270,6 +278,12 @@ const routes = [
     path: '/master/manpower',
     component: <MasterManpower />,
     title: 'FFF | Master Manpower',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/master/addmaterial',
+    component: <AddMaterialPage />,
+    title: 'FFF | Add Material',
     allowedRoles: SUPERVISOR
   },
 {
