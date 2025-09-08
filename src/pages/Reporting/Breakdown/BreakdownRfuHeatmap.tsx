@@ -4,7 +4,6 @@ import MonthPicker from './component/MonthPicker';
 import ReadinessSummaryChart from './component/ReadinessSummaryChart';
 
 type Storage = {
-  id: number;
   warehouse_id: string;
   unit_id: string;
 };
@@ -45,7 +44,7 @@ const BreakdownRfuHeatmap: React.FC<BreakdownRfuHeatmapProps> = ({
 
       {/* Heatmap per unit */}
       {storages.map((storage) => (
-        <UnitHeatmap key={storage.id} unit={storage} month={month} />
+        <UnitHeatmap key={storage.warehouse_id} unit={storage} month={month} />
       ))}
     </div>
   );

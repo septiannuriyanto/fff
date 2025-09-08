@@ -40,91 +40,102 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const start = `${month}-01`;
-      const end = `${month}-${String(daysInMonth).padStart(2, '0')}`;
+      // Fetch a wider range of data to handle statuses that started before this month.
+      const start = `${month}-01T00:00:00`;
+      const end = `${month}-${String(daysInMonth).padStart(2, '0')}T23:59:59`;
 
       const { data, error } = await supabase
         .from('rfu_status')
-        .select('unit_id,status,reported_at')
+        .select('unit_id, status, reported_at, next_status_timestamp')
         .gte('reported_at', start)
-        .lte('reported_at', end);
+        .lte('reported_at', end)
+        .order('reported_at', { ascending: true });
 
       if (error) {
         console.error(error);
         return;
       }
-
+      
       const result: { unit: string; readiness: number }[] = [];
 
+      // Process each unit one by one
       for (const u of units) {
-        const rows = (data || []).filter((r: any) => r.unit_id === u.unit_id);
-
-        // buat grid hari x jam
-        const grid: string[][] = Array.from({ length: renderDays }, (_, d) =>
-          Array.from({ length: 24 }, (_, h) => {
-            if (
-              Number(month.split('-')[0]) === currentYear &&
-              Number(month.split('-')[1]) === currentMonth &&
-              (d > currentDay - 1 || (d === currentDay - 1 && h > currentHour))
-            ) {
-              return 'FUTURE';
-            }
-            return 'RFU';
-          })
+        // Filter data for the current unit and sort by reported_at to ensure correct order
+        const unitData = data.filter((row: any) => row.unit_id === u.unit_id);
+        
+        // Initialize grid with 'RFU' for all hours.
+        const grid: string[][] = Array.from({ length: renderDays }, () =>
+          Array.from({ length: 24 }, () => 'RFU')
         );
 
-        // isi grid dengan data yang ada
-        rows.forEach((row: any) => {
-          const date = new Date(row.reported_at);
-          const dayIndex = date.getDate() - 1;
-          const hourIndex = date.getHours();
-          if (dayIndex >= 0 && dayIndex < renderDays) {
-            grid[dayIndex][hourIndex] = row.status;
+        // Fill the grid based on the reported status intervals
+        let lastStatus = 'RFU';
+        let lastTimestamp = new Date(start);
+
+        // Use the fetched data to correctly populate the grid for each hour
+        unitData.forEach(row => {
+          const startDate = new Date(row.reported_at);
+          let endDate = row.next_status_timestamp ? new Date(row.next_status_timestamp) : new Date(end);
+
+          // If this is the last entry in the data for the current month, extend its duration to the present time
+          if (!row.next_status_timestamp && month.split('-')[0] === String(currentYear) && month.split('-')[1] === String(currentMonth).padStart(2, '0')) {
+             endDate = new Date();
+          }
+
+          // Loop through each hour from the start to the end of this status interval
+          const current = new Date(startDate);
+          while (current < endDate) {
+            const dayIndex = current.getDate() - 1;
+            const hourIndex = current.getHours();
+
+            if (dayIndex >= 0 && dayIndex < renderDays) {
+              grid[dayIndex][hourIndex] = row.status;
+            }
+            current.setHours(current.getHours() + 1);
           }
         });
-
-        // propagasi status dari hari ke hari
-        let lastStatus = 'RFU';
-        for (let d = 0; d < renderDays; d++) {
-          for (let h = 0; h < 24; h++) {
-            if (grid[d][h] === 'FUTURE') continue;
-            if (grid[d][h] !== 'RFU') {
-              lastStatus = grid[d][h];
-            } else {
-              grid[d][h] = lastStatus;
+        
+        // Mark future hours for today
+        if (Number(month.split('-')[0]) === currentYear && Number(month.split('-')[1]) === currentMonth) {
+          const dayIndex = currentDay - 1;
+          if (dayIndex >= 0 && dayIndex < renderDays) {
+            for (let h = currentHour + 1; h < 24; h++) {
+              grid[dayIndex][h] = 'FUTURE';
             }
           }
         }
 
-        // HITUNG readiness
-        let total = 0;
+        // Calculate readiness based on the correctly populated grid
+        let totalCriticalHours = 0;
         let rfuCount = 0;
 
         if (period === 'daily') {
-          const d = currentDay - 1;
-          criticalHours.forEach((h) => {
-            if (h <= currentHour && grid[d] && grid[d][h] !== 'FUTURE') {
-              total++;
-              if (grid[d][h] === 'RFU') rfuCount++;
+          const dayIndex = currentDay - 1;
+          criticalHours.forEach(h => {
+            if (grid[dayIndex] && grid[dayIndex][h] && grid[dayIndex][h] !== 'FUTURE') {
+              totalCriticalHours++;
+              if (grid[dayIndex][h] === 'RFU') {
+                rfuCount++;
+              }
             }
           });
         }
 
         if (period === 'weekly') {
-          // Kamis–Rabu
           const now = new Date();
-          const dayOfWeek = now.getDay(); // 0: Sunday, 4: Thursday
+          const dayOfWeek = now.getDay();
           const offset = (dayOfWeek - 4 + 7) % 7;
-          let startDayIndex = currentDay - 1 - offset; // Kamis
+          let startDayIndex = currentDay - 1 - offset;
+          
           if (startDayIndex < 0) startDayIndex = 0;
-          const endDayIndex = Math.min(renderDays - 1, startDayIndex + 6); // sampai Rabu
-
-          for (let d = startDayIndex; d <= endDayIndex; d++) {
-            criticalHours.forEach((h) => {
-              if (d === currentDay - 1 && h > currentHour) return;
-              if (grid[d] && grid[d][h] !== 'FUTURE') {
-                total++;
-                if (grid[d][h] === 'RFU') rfuCount++;
+          
+          for (let d = startDayIndex; d <= currentDay - 1; d++) {
+            criticalHours.forEach(h => {
+              if (grid[d] && grid[d][h] && grid[d][h] !== 'FUTURE') {
+                totalCriticalHours++;
+                if (grid[d][h] === 'RFU') {
+                  rfuCount++;
+                }
               }
             });
           }
@@ -132,19 +143,21 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
 
         if (period === 'monthly') {
           for (let d = 0; d < renderDays; d++) {
-            criticalHours.forEach((h) => {
-              if (d === currentDay - 1 && h > currentHour) return;
-              if (grid[d] && grid[d][h] !== 'FUTURE') {
-                total++;
-                if (grid[d][h] === 'RFU') rfuCount++;
+            criticalHours.forEach(h => {
+              if (grid[d] && grid[d][h] && grid[d][h] !== 'FUTURE') {
+                totalCriticalHours++;
+                if (grid[d][h] === 'RFU') {
+                  rfuCount++;
+                }
               }
             });
           }
         }
-
+        
+        const readiness = totalCriticalHours === 0 ? 0 : (rfuCount / totalCriticalHours) * 100;
         result.push({
           unit: u.unit_id,
-          readiness: total === 0 ? 0 : (rfuCount / total) * 100,
+          readiness: Number(readiness.toFixed(1)),
         });
       }
 
@@ -152,10 +165,10 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
     };
 
     fetchAll();
-  }, [units, month, period, renderDays, daysInMonth, currentDay, currentHour]);
+  }, [units, month, period, renderDays, daysInMonth, currentDay, currentHour, currentMonth, currentYear]);
 
   const categories = readinessData.map((r) => r.unit);
-  const seriesData = readinessData.map((r) => Number(r.readiness.toFixed(1)));
+  const seriesData = readinessData.map((r) => r.readiness);
 
   const barColors = seriesData.map((val) =>
     val >= readinessTarget ? '#22c55e' : '#ef4444'
@@ -189,27 +202,33 @@ const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
           },
         ]}
         options={{
-          chart: { toolbar: { show: false } },
-          plotOptions: {
-            bar: {
-              distributed: true,
-              columnWidth: '50%',
+    chart: { toolbar: { show: false } },
+    plotOptions: {
+        bar: {
+            distributed: true,
+            columnWidth: '50%',
+        },
+    },
+    colors: barColors,
+    dataLabels: {
+        enabled: true,
+        formatter: (val: any) => `${val}%`,
+    },
+    xaxis: {
+        categories,
+        title: { text: 'Unit' },
+    },
+    yaxis: {
+        max: 100,
+        title: { text: 'Readiness (%)' },
+        // Baris ini yang perlu ditambahkan
+        labels: {
+            formatter: (val: number) => {
+                return val.toFixed(1); // Bulatkan ke 1 angka di belakang koma
             },
-          },
-          colors: barColors,
-          dataLabels: {
-            enabled: true,
-            formatter: (val: any) => `${val}%`,
-          },
-          xaxis: {
-            categories,
-            title: { text: 'Unit' },
-          },
-          yaxis: {
-            max: 100,
-            title: { text: 'Readiness (%)' },
-          },
-        }}
+        },
+    },
+}}
       />
     </div>
   );
