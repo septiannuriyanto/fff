@@ -15,7 +15,7 @@ const StorageManagement: React.FC = () => {
   const [tankNumber, setTankNumber] = useState(1);
 
   const fetchStorages = async () => {
-    const { data, error } = await supabase.from('storage_oil').select('*').order('warehouse_id', { ascending: true });
+    const { data, error } = await supabase.from('storage_oil').select('*').order('id', { ascending: true });
     if (error) console.error(error);
     else setStorages(data || []);
   };
@@ -41,35 +41,21 @@ const StorageManagement: React.FC = () => {
     if (selectedStorage) fetchStorageSetup(selectedStorage.warehouse_id);
   }, [selectedStorage]);
 
-  const handleAddMaterial = async () => {
-  if (!selectedStorage || !selectedMaterial) return;
-
-  // Cek duplicate di frontend
-  const exists = storageSetup.some(
-    (s) =>
-      s.warehouse_id === selectedStorage.warehouse_id &&
-      s.material_code === selectedMaterial &&
-      s.tank_number === tankNumber
-  );
-  if (exists) {
-    alert('Material + Tank already exists!');
+  const handleAddMaterial = async (payload: any) => {
+  const { error } = await supabase.from('storage_oil_setup').insert([payload]);
+  if (error) {
+    console.error(error);
+    alert(error.message);
     return;
   }
 
-  const { error } = await supabase.from('storage_oil_setup').insert([
-    {
-      warehouse_id: selectedStorage.warehouse_id,
-      material_code: selectedMaterial,
-      tank_number: tankNumber,
-    },
-  ]);
-  if (error) console.error(error);
-  else {
-    setShowAddModal(false);
-    setSelectedMaterial('');
-    setTankNumber(1);
-    fetchStorageSetup(selectedStorage.warehouse_id);
-  }
+  // refetch setelah insert
+  if (selectedStorage) fetchStorageSetup(selectedStorage.warehouse_id);
+
+  // reset state parent jika perlu
+  setSelectedMaterial('');
+  setTankNumber(1);
+  setShowAddModal(false);
 };
 
 
@@ -93,18 +79,18 @@ const StorageManagement: React.FC = () => {
           onAddClick={() => setShowAddModal(true)}
         />
         {showAddModal && (
-          <AddMaterialModal
-            warehouseId={selectedStorage?.warehouse_id || ''}
-           storageSetup={storageSetup}
-            materials={materials}
-            selectedMaterial={selectedMaterial}
-            setSelectedMaterial={setSelectedMaterial}
-            tankNumber={tankNumber}
-            setTankNumber={setTankNumber}
-            onClose={() => setShowAddModal(false)}
-            onSubmit={handleAddMaterial}
-          />
-        )}
+  <AddMaterialModal
+    warehouseId={selectedStorage?.warehouse_id || ''}
+    storageSetup={storageSetup}
+    materials={materials}
+    selectedMaterial={selectedMaterial}
+    setSelectedMaterial={setSelectedMaterial}
+    tankNumber={tankNumber}
+    setTankNumber={setTankNumber}
+    onClose={() => setShowAddModal(false)}
+    onSubmit={handleAddMaterial} // <-- definisi baru
+  />
+)}
       </div>
     </div>
   );

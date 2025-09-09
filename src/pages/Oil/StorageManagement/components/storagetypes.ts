@@ -19,4 +19,7 @@ export interface StorageSetup {
   warehouse_id: string;
   material_code: string;
   tank_number: number;
+  uoi: string;
+  conversion_factor?: number;
+  storage_model: string;
 }

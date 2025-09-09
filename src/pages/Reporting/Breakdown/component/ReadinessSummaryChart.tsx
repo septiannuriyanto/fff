@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../../db/SupabaseClient';
 import Chart from 'react-apexcharts';
-import { readinessTarget } from './criticalHours';
+import { criticalHours, readinessTarget } from './criticalHours';
 
 interface Unit {
   unit_id: string;
@@ -12,7 +12,6 @@ interface Props {
   month: string; // format YYYY-MM
 }
 
-const criticalHours = [6, 7, 8, 12, 18, 19, 20, 0];
 
 const ReadinessSummaryChart: React.FC<Props> = ({ units, month }) => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
