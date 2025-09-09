@@ -1,24 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../db/SupabaseClient";
 import DetailTable from "./components/DetailTable";
+import { DstOli } from "./components/dstoli";
+import { StorageOil } from "./components/storageOli";
+import { fetchDstOilRecords } from "./components/fetchOilDstRecords";
 
-interface DstOli {
-  id: number;
-  warehouse_id: string;
-  unit_id: string;
-  material_code: string;
-  item_description: string | null;
-  tank_number: number | null;
-  uoi: string;
-  input_value: number | null;
-  qty: number | null;
-  date_dst: string | null;
-}
 
-interface StorageOil {
-  warehouse_id: string;
-  location: string | null;
-}
+
 
 const DstOilReport: React.FC = () => {
   const [records, setRecords] = useState<
@@ -34,47 +22,19 @@ const DstOilReport: React.FC = () => {
   const month = today.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const fetchRecords = async () => {
+    const startDate = new Date(year, month, 1).toISOString().split("T")[0];
+    const endDate = new Date(year, month + 1, 0).toISOString().split("T")[0];
+    try {
+      const data = await fetchDstOilRecords(startDate, endDate);
+      setRecords(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
   useEffect(() => {
-    const fetchData = async () => {
-      const startDate = new Date(year, month, 1)
-        .toISOString()
-        .split("T")[0];
-      const endDate = new Date(year, month + 1, 0)
-        .toISOString()
-        .split("T")[0];
-
-      const { data: dstData, error: dstErr } = await supabase
-        .from("dst_oli")
-        .select("*")
-        .gte("date_dst", startDate)
-        .lte("date_dst", endDate);
-
-      if (dstErr) {
-        console.error(dstErr);
-        return;
-      }
-
-      const { data: storageData, error: storageErr } = await supabase
-        .from("storage_oil")
-        .select("warehouse_id, location");
-
-      if (storageErr) {
-        console.error(storageErr);
-        return;
-      }
-
-      const locMap = new Map<string, string | null>();
-      storageData?.forEach((s: StorageOil) => {
-        locMap.set(s.warehouse_id, s.location);
-      });
-
-      const merged = (dstData as DstOli[]).map((d) => ({
-        ...d,
-        location: locMap.get(d.warehouse_id) || null,
-      }));
-      setRecords(merged);
-    };
-    fetchData();
+    
+    fetchRecords();
   }, [month, year]);
 
   const hasData = (day: number) => {
@@ -119,7 +79,7 @@ const DstOilReport: React.FC = () => {
                     className={`rounded-md py-2 text-center text-sm font-medium ${
                       active
                         ? "bg-green-500 text-white cursor-pointer"
-                        : "bg-slate-200 text-slate-700"
+                        : "bg-slate-200 text-slate-700 dark:bg-graydark dark:text-slate-300"
                     }`}
                     onClick={() => active && setSelectedDate(dateStr)}
                   >
@@ -131,6 +91,7 @@ const DstOilReport: React.FC = () => {
 
             {selectedDate && (
               <DetailTable
+              fetchRecords={fetchRecords}
                 records={selectedRecords}
                 warehouseFilter={warehouseFilter}
                 setWarehouseFilter={setWarehouseFilter}
