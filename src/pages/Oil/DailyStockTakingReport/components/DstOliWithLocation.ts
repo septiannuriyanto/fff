@@ -14,4 +14,5 @@ export interface DstOliWithLocation {
   failed_posting?: number | null;
   pending_input?: number | null;
   location: string | null;
+  date_dst: string; // format 'YYYY-MM-DD'
 }

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import { supabase } from "../../../../db/SupabaseClient";
-import { DstOliWithLocation } from "./DstOliWithLocation";
-import StockTakingOilChart from "./StockTakingOilChart";
+// /dst-oil/components/DetailTable.tsx
+import React, { useEffect, useRef, useState } from 'react';
+import { supabase } from '../../../../db/SupabaseClient';
+import { DstOliWithLocation } from './DstOliWithLocation';
+import StockTakingOilChart from './StockTakingOilChart';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -9,8 +10,10 @@ interface DetailTableProps {
   setWarehouseFilter: (val: string) => void;
   unitFilter: string;
   setUnitFilter: (val: string) => void;
+  materialFilter: string;
+  setMaterialFilter: (val: string) => void;
   selectedDate: string;
-  fetchRecords: () => void; // supaya bisa refetch setelah submit
+  fetchRecords: () => void; // refetch after submit
 }
 
 const DetailTable: React.FC<DetailTableProps> = ({
@@ -19,331 +22,415 @@ const DetailTable: React.FC<DetailTableProps> = ({
   setWarehouseFilter,
   unitFilter,
   setUnitFilter,
+  materialFilter,
+  setMaterialFilter,
   selectedDate,
   fetchRecords,
 }) => {
-  const [viewMode, setViewMode] = useState<"SOH" | "Pending">("SOH");
+  const [viewMode, setViewMode] = useState<'SOH' | 'Pending'>('SOH');
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalField, setModalField] = useState<string>("");
+  const [modalField, setModalField] = useState<string>('');
   const [modalRecordId, setModalRecordId] = useState<number | null>(null);
-  const [modalValue, setModalValue] = useState<string>("");
+  const [modalValue, setModalValue] = useState<string>('');
+  const [descriptionFilter, setDescriptionFilter] = useState<string>('');
+  const [tankFilter, setTankFilter] = useState<string>('');
+  const [uoiFilter, setUoiFilter] = useState<string>('');
+  const [locationFilter, setLocationFilter] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const sohFisik = records.reduce((acc, r) => acc + (r.qty ?? 0), 0);
-const pendingPosting = records.reduce((acc, r) => acc + (r.pending_input ?? 0), 0);
-const sohSystem = records.reduce((acc, r) => acc + (r.qty_system_1 ?? 0), 0);
-const pendingReceive = records.reduce((acc, r) => acc + (r.pending_receive ?? 0), 0);
-const diff = (sohFisik + pendingPosting) - (sohSystem + pendingReceive);
-
-  // autofocus setiap buka modal
+  // Autofocus modal
   useEffect(() => {
     if (modalOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [modalOpen]);
 
-  let lastWarehouse = "";
-  let isOddGroup = false;
+  // Round helper
+  const round2 = (num: number | null | undefined) =>
+    Math.round(((num ?? 0) + Number.EPSILON) * 100) / 100;
 
-  const openModal = (
-    recordId: number,
-    field: string,
-    currentVal?: number | null
-  ) => {
+  const sohFisik = round2(records.reduce((acc, r) => acc + (r.qty ?? 0), 0));
+  const pendingPosting = round2(
+    records.reduce((acc, r) => acc + (r.pending_input ?? 0), 0),
+  );
+  const sohSystem =
+    round2(records.reduce((acc, r) => acc + (r.qty_system_1 ?? 0), 0)) +
+    round2(records.reduce((acc, r) => acc + (r.qty_system_2 ?? 0), 0));
+  const pendingReceive = round2(
+    records.reduce((acc, r) => acc + (r.pending_receive ?? 0), 0),
+  );
+  const diff = round2(sohFisik + pendingPosting - (sohSystem + pendingReceive));
+
+  // Open modal
+  const openModal = (recordId: number, field: string, currentVal?: number) => {
     setModalRecordId(recordId);
     setModalField(field);
-    setModalValue(currentVal?.toString() ?? "");
+    setModalValue(currentVal?.toString() ?? '');
     setModalOpen(true);
   };
 
+  // Save modal
   const saveModal = async () => {
-    if (modalRecordId == null || modalField === "") return;
-    const numericVal = modalValue === "" ? null : Number(modalValue);
-    // update ke supabase
+    if (modalRecordId == null || modalField === '') return;
+    const numericVal = modalValue === '' ? null : Number(modalValue);
     const { error } = await supabase
-      .from("dst_oli")
+      .from('dst_oli')
       .update({ [modalField]: numericVal })
-      .eq("id", modalRecordId);
+      .eq('id', modalRecordId);
 
     if (error) {
       alert(error.message);
     } else {
       setModalOpen(false);
-      fetchRecords(); // refetch tabel terbaru
+      fetchRecords();
     }
   };
 
+  // Filtered records
+  const filteredRecords = records.filter((r) => {
+    const warehouseOk =
+      !warehouseFilter ||
+      (r.warehouse_id?.toLowerCase() ?? '').includes(
+        warehouseFilter.toLowerCase(),
+      );
+    const unitOk =
+      !unitFilter ||
+      (r.unit_id?.toLowerCase() ?? '').includes(unitFilter.toLowerCase());
+    const materialOk =
+      !materialFilter ||
+      (r.material_code?.toLowerCase() ?? '').includes(
+        materialFilter.toLowerCase(),
+      );
+    const descriptionOk =
+      !descriptionFilter ||
+      (r.item_description?.toLowerCase() ?? '').includes(
+        descriptionFilter.toLowerCase(),
+      );
+    const tankOk =
+      !tankFilter ||
+      (r.tank_number?.toString() ?? '').includes(tankFilter.toString());
+    const uoiOk =
+      !uoiFilter || (r.uoi?.toLowerCase() ?? '').includes(uoiFilter.toLowerCase());
+    const locationOk =
+      !locationFilter ||
+      (r.location?.toLowerCase() ?? '').includes(locationFilter.toLowerCase());
+
+    return (
+      warehouseOk && unitOk && materialOk && descriptionOk && tankOk && uoiOk && locationOk
+    );
+  });
+
+  // Table row coloring
+  let lastWarehouse = '';
+  let isOddGroup = false;
+
   return (
     <div>
-
-      <div className="visualisasi my-6">
-    {/* Chart summary */}
-<div className="mb-4">
-  <StockTakingOilChart
-    sohFisik={sohFisik}
-    pendingPosting={pendingPosting}
-    sohSystem={sohSystem}
-    pendingReceive={pendingReceive}
-    diff={diff}
-  />
-</div>
-
-{/* Angka ringkasan */}
-<div className="w-full flex justify-between mb-4 px-2">
-  <div>
-    <h1 className="font-bold">Stock Fisik</h1>
-    <h1>{sohFisik.toLocaleString('id-ID')}</h1>
-  </div>
-  <div>
-    <h1 className="font-bold">Pending Posting</h1>
-    <h1>{pendingPosting.toLocaleString('id-ID')}</h1>
-  </div>
-  <div>
-    <h1 className="font-bold">Stock System</h1>
-    <h1>{sohSystem.toLocaleString('id-ID')}</h1>
-  </div>
-  <div>
-    <h1 className="font-bold">Pending Receive</h1>
-    <h1>{pendingReceive.toLocaleString('id-ID')}</h1>
-  </div>
-  <div>
-    <h1 className="font-bold">Difference</h1>
-    <h1
-      className={`${
-        diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
-      }`}
-    >
-      {diff.toLocaleString('id-ID')}
-    </h1>
-  </div>
-</div>
-
+      {/* Chart summary */}
+      <div className="mb-4">
+        <StockTakingOilChart
+          sohFisik={sohFisik}
+          pendingPosting={pendingPosting}
+          sohSystem={sohSystem}
+          pendingReceive={pendingReceive}
+          diff={diff}
+        />
       </div>
+
+      {/* Summary numbers */}
+      <div className="w-full flex justify-between mb-4 px-2">
+        <div>
+          <h1 className="font-bold">Stock Fisik</h1>
+          <h1>{sohFisik.toLocaleString('id-ID')}</h1>
+        </div>
+        <div>
+          <h1 className="font-bold">Pending Posting</h1>
+          <h1>{pendingPosting.toLocaleString('id-ID')}</h1>
+        </div>
+        <div>
+          <h1 className="font-bold">Stock System</h1>
+          <h1>{sohSystem.toLocaleString('id-ID')}</h1>
+        </div>
+        <div>
+          <h1 className="font-bold">Pending Receive</h1>
+          <h1>{pendingReceive.toLocaleString('id-ID')}</h1>
+        </div>
+        <div>
+          <h1 className="font-bold">Difference</h1>
+          <h1
+            className={`${
+              diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
+            }`}
+          >
+            {diff.toLocaleString('id-ID')}
+          </h1>
+        </div>
+      </div>
+
       <h3 className="text-center font-semibold mb-2">
-        Detail Stock Taking – {selectedDate}
+        Detail Stock Taking – {filteredRecords[0]?.date_dst ?? ''}
       </h3>
 
-      {/* switcher */}
+      {/* Switcher */}
       <div className="flex justify-center gap-4 mb-2">
         <button
-          onClick={() => setViewMode("SOH")}
+          onClick={() => setViewMode('SOH')}
           className={`px-4 py-1 rounded ${
-            viewMode === "SOH" ? "bg-blue-500 text-white" : "bg-gray-200"
+            viewMode === 'SOH' ? 'bg-blue-500 text-white' : 'bg-gray-200'
           }`}
         >
           SOH
         </button>
         <button
-          onClick={() => setViewMode("Pending")}
+          onClick={() => setViewMode('Pending')}
           className={`px-4 py-1 rounded ${
-            viewMode === "Pending" ? "bg-blue-500 text-white" : "bg-gray-200"
+            viewMode === 'Pending' ? 'bg-blue-500 text-white' : 'bg-gray-200'
           }`}
         >
           Pending
         </button>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse border border-slate-400 dark:border-slate-300">
           <thead className="bg-slate-200 dark:bg-slate-800">
+            {/* Baris 1: Headers */}
             <tr>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                No
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300 w-24"
-              >
-                <div>Warehouse</div>
-                <input
-                  className="mt-1 block w-full border rounded px-1 text-sm"
-                  placeholder="Filter"
-                  value={warehouseFilter}
-                  onChange={(e) => setWarehouseFilter(e.target.value)}
-                />
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300 w-24"
-              >
-                <div>Unit</div>
-                <input
-                  className="mt-1 block w-full border rounded px-1 text-sm"
-                  placeholder="Filter"
-                  value={unitFilter}
-                  onChange={(e) => setUnitFilter(e.target.value)}
-                />
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                Material
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                Description
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                Tank
-              </th>
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                UOI
-              </th>
-
-              {viewMode === "SOH" ? (
-                <th
-                  colSpan={3}
-                  className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-                >
-                  Qty
-                </th>
-              ) : (
-                <th
-                  colSpan={3}
-                  className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-                >
-                  Pending
-                </th>
-              )}
-              <th
-                rowSpan={2}
-                className="text-center px-3 py-2 border border-slate-400 dark:border-slate-300"
-              >
-                Location
+              <th className="px-3 py-2 border text-center">No</th>
+              <th className="px-3 py-2 border text-center">Warehouse</th>
+              <th className="px-3 py-2 border text-center">Unit</th>
+              <th className="px-3 py-2 border text-center">Material</th>
+              <th className="px-3 py-2 border text-center">Description</th>
+              <th className="px-3 py-2 border text-center">Tank</th>
+              <th className="px-3 py-2 border text-center">UOI</th>
+              <th className="px-3 py-2 border text-center">Location</th>
+              <th colSpan={3} className="px-3 py-2 border text-center">
+                {viewMode === 'SOH' ? 'Qty' : 'Pending'}
               </th>
             </tr>
+            {/* Baris 2: Filters */}
             <tr>
-              {viewMode === "SOH" ? (
+              <th className="px-3 py-1 border"></th> {/* No */}
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={warehouseFilter}
+                  onChange={(e) => setWarehouseFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.warehouse_id))].map((w) => (
+                    <option key={w} value={w}>
+                      {w}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={unitFilter}
+                  onChange={(e) => setUnitFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.unit_id))].map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={materialFilter}
+                  onChange={(e) => setMaterialFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.material_code))].map(
+                    (m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={descriptionFilter}
+                  onChange={(e) => setDescriptionFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.item_description))].map(
+                    (d) => (
+                      <option key={d ?? ''} value={d ?? ''}>
+                        {d ?? ''}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={tankFilter}
+                  onChange={(e) => setTankFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.tank_number))].map((t) => (
+                    <option key={t ?? ''} value={t ?? ''}>
+                      {t ?? ''}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={uoiFilter}
+                  onChange={(e) => setUoiFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.uoi))].map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              <th className="px-3 py-1 border">
+                <select
+                  className="w-full border rounded px-1 text-sm"
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {[...new Set(records.map((r) => r.location))].map((l) => (
+                    <option key={l ?? ''} value={l ?? ''}>
+                      {l ?? ''}
+                    </option>
+                  ))}
+                </select>
+              </th>
+              {viewMode === 'SOH' ? (
                 <>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    Fisik
-                  </th>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    System1
-                  </th>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    System2
-                  </th>
+                  <th className="px-3 py-1 border">Fisik</th>
+                  <th className="px-3 py-1 border">System1</th>
+                  <th className="px-3 py-1 border">System2</th>
                 </>
               ) : (
                 <>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    Receive
-                  </th>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    Failed
-                  </th>
-                  <th className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    Input
-                  </th>
+                  <th className="px-3 py-1 border">Receive</th>
+                  <th className="px-3 py-1 border">Failed</th>
+                  <th className="px-3 py-1 border">Input</th>
                 </>
               )}
             </tr>
           </thead>
           <tbody>
-            {records.map((r, idx) => {
+            {filteredRecords.map((r, idx) => {
               if (r.warehouse_id !== lastWarehouse) {
                 isOddGroup = !isOddGroup;
                 lastWarehouse = r.warehouse_id;
               }
+
               const bgClass = isOddGroup
-                ? "bg-orange-50 dark:bg-boxdark-2"
-                : "bg-white dark:bg-slate-700";
+                ? 'bg-green-50 dark:bg-green-800'
+                : 'bg-white dark:bg-slate-700';
 
               return (
                 <tr
                   key={r.id}
-                  className={`${bgClass} border-b border-slate-400 dark:border-slate-300 hover:bg-orange-100 dark:hover:bg-orange-900`}
+                  className={`${bgClass} border-b border-slate-400 dark:border-slate-300 hover:bg-green-200 dark:hover:bg-green-900`}
                 >
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300 text-center">
-                    {idx + 1}
-                  </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.warehouse_id}
-                  </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.unit_id}
-                  </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.material_code}
-                  </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.item_description}
-                  </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300 text-center">
+                  <td className="px-3 py-1 border text-center">{idx + 1}</td>
+                  <td className="px-3 py-1 border">{r.warehouse_id}</td>
+                  <td className="px-3 py-1 border">{r.unit_id}</td>
+                  <td className="px-3 py-1 border">{r.material_code}</td>
+                  <td className="px-3 py-1 border">{r.item_description}</td>
+                  <td className="px-3 py-1 border text-center">
                     {r.tank_number}
                   </td>
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.uoi}
-                  </td>
+                  <td className="px-3 py-1 border">{r.uoi}</td>
+                  <td className="px-3 py-1 border">{r.location}</td>
 
-                  {viewMode === "SOH" ? (
+                  {viewMode === 'SOH' ? (
                     <>
                       <td
-                        onClick={() => openModal(r.id, "qty", r.qty)}
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        onClick={() =>
+                          openModal(r.id, 'qty', r.qty ?? undefined)
+                        }
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.qty}
+                        {r.qty ?? 0}
                       </td>
                       <td
-                        onClick={() => openModal(r.id, "qty_system_1", r.qty_system_1)}
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        onClick={() =>
+                          openModal(
+                            r.id,
+                            'qty_system_1',
+                            r.qty_system_1 ?? undefined,
+                          )
+                        }
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.qty_system_1}
+                        {r.qty_system_1 ?? 0}
                       </td>
                       <td
-                        onClick={() => openModal(r.id, "qty_system_2", r.qty_system_2)}
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        onClick={() =>
+                          openModal(
+                            r.id,
+                            'qty_system_2',
+                            r.qty_system_2 ?? undefined,
+                          )
+                        }
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.qty_system_2}
+                        {r.qty_system_2 ?? 0}
                       </td>
                     </>
                   ) : (
                     <>
                       <td
                         onClick={() =>
-                          openModal(r.id, "pending_receive", r.pending_receive)
+                          openModal(
+                            r.id,
+                            'pending_receive',
+                            r.pending_receive ?? undefined,
+                          )
                         }
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.pending_receive}
+                        {r.pending_receive ?? 0}
                       </td>
                       <td
                         onClick={() =>
-                          openModal(r.id, "failed_posting", r.failed_posting)
+                          openModal(
+                            r.id,
+                            'failed_posting',
+                            r.failed_posting ?? undefined,
+                          )
                         }
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.failed_posting}
+                        {r.failed_posting ?? 0}
                       </td>
                       <td
                         onClick={() =>
-                          openModal(r.id, "pending_input", r.pending_input)
+                          openModal(
+                            r.id,
+                            'pending_input',
+                            r.pending_input ?? undefined,
+                          )
                         }
-                        className="cursor-pointer px-3 py-1 border border-slate-400 dark:border-slate-300 text-center hover:bg-orange-200 dark:hover:bg-orange-950"
+                        className="cursor-pointer px-3 py-1 border text-center hover:bg-green-300 dark:hover:bg-green-950"
                       >
-                        {r.pending_input}
+                        {r.pending_input ?? 0}
                       </td>
                     </>
                   )}
-
-                  <td className="px-3 py-1 border border-slate-400 dark:border-slate-300">
-                    {r.location}
-                  </td>
                 </tr>
               );
             })}
@@ -351,10 +438,13 @@ const diff = (sohFisik + pendingPosting) - (sohSystem + pendingReceive);
         </table>
       </div>
 
+      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-md w-80">
-            <h4 className="mb-2 font-semibold">Input nilai untuk {modalField}</h4>
+            <h4 className="mb-2 font-semibold">
+              Input nilai untuk {modalField}
+            </h4>
             <input
               ref={inputRef}
               type="number"
@@ -362,7 +452,7 @@ const diff = (sohFisik + pendingPosting) - (sohSystem + pendingReceive);
               value={modalValue}
               onChange={(e) => setModalValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === 'Enter') {
                   e.preventDefault();
                   saveModal();
                 }

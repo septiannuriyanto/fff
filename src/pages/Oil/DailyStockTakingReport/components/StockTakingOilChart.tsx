@@ -1,5 +1,6 @@
 import React from 'react';
 import Chart from 'react-apexcharts';
+import { ApexOptions } from 'apexcharts';
 
 // Define the props type
 interface StockTakingOilChartProps {
@@ -54,9 +55,9 @@ const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
   const differenceColor = diff >= 0 ? '#28a745' /* green */ : '#FF4560' /* red */;
 
   // Chart options with blue for "Fisik" and yellowish for "Sistem"
-  const options = {
+  const options: ApexOptions = {
     chart: {
-      type: 'bar',
+      type: 'bar' as const, // Explicitly type as 'bar'
       stacked: true,
     },
     plotOptions: {
@@ -77,13 +78,22 @@ const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
     tooltip: {
       shared: true,
       intersect: false,
+      y: {
+        formatter: function(val: any): string {
+          return Number(val).toFixed(2);
+        }
+      }
     },
     legend: {
       position: 'top',
     },
     yaxis: {
       labels: {
-        formatter: (val: number) => `${val}`, // Ensure y-axis shows negative numbers correctly
+        formatter: function(val: any): string {
+          if (val === null || val === undefined) return '0';
+          const num = parseFloat(val.toString());
+          return isNaN(num) ? '0' : num.toFixed(2);
+        },
       },
     },
   };

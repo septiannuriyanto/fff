@@ -4,7 +4,7 @@ import { supabase } from '../../../db/SupabaseClient';
 import DraftsTable from './components/DraftsTable';
 import { computeQtyFromInput } from './components/computeQtyFromInput';
 import { LocalDraft } from './components/LocalDraft';
-import { format } from 'date-fns';
+  import { toZonedTime, format } from 'date-fns-tz';
 
 type StorageOilSetup = {
   id: number;
@@ -339,27 +339,45 @@ const DailyStockTakingOil: React.FC = () => {
     }
   };
 
-  const handleSubmitAll = async () => {
-    if (!drafts.length) return;
-    const rows = drafts.map((d) => ({
-      warehouse_id: d.warehouse_id,
-      unit_id: d.unit_id,
-      location: d.location,
-      material_code: d.material_code,
-      item_description: d.item_description,
-      tank_number: d.tank_number,
-      uoi: d.uoi,
-      input_value: d.input_value ? Number(d.input_value) : null,
-      qty: d.qty,
-      date_dst: new Date().toISOString().split('T')[0],
-    }));
-    const { error } = await supabase.from('dst_oli').insert(rows);
-    if (!error) {
-      alert('All drafts submitted successfully!');
-      // drafts.forEach((d) => localStorage.removeItem(d.key));
-      loadDrafts();
-    }
-  };
+
+
+const handleSubmitAll = async () => {
+  if (!drafts.length) return;
+
+  // ambil tanggal sekarang
+  const now = new Date();
+  // definisikan timezone yang diinginkan
+  const timeZone = 'Asia/Makassar'; // GMT+8
+
+  // konversi UTC → zona yang dimaksud
+  const zonedDate = toZonedTime(now, timeZone);
+
+  // format YYYY-MM-DD sesuai zona
+  const date_dst = format(zonedDate, 'yyyy-MM-dd');
+  console.log('Formatted date_dst:', date_dst);
+
+  const rows = drafts.map((d) => ({
+    warehouse_id: d.warehouse_id,
+    unit_id: d.unit_id,
+    location: d.location,
+    material_code: d.material_code,
+    item_description: d.item_description,
+    tank_number: d.tank_number,
+    uoi: d.uoi,
+    input_value: d.input_value ? Number(d.input_value) : null,
+    qty: d.qty,
+    date_dst, // hasil format dengan timezone
+  }));
+
+  const { error } = await supabase.from('dst_oli').insert(rows);
+  if (!error) {
+    alert('All drafts submitted successfully!');
+    drafts.forEach((d) => localStorage.removeItem(d.key));
+    loadDrafts();
+  }
+};
+
+
 
   const handleDeleteDraft = (key: string) => {
     localStorage.removeItem(key);
