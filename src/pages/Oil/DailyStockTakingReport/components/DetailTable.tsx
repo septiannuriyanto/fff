@@ -24,7 +24,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
   setUnitFilter,
   materialFilter,
   setMaterialFilter,
-  selectedDate,
   fetchRecords,
 }) => {
   const [viewMode, setViewMode] = useState<'SOH' | 'Pending'>('SOH');
@@ -50,9 +49,15 @@ const DetailTable: React.FC<DetailTableProps> = ({
     Math.round(((num ?? 0) + Number.EPSILON) * 100) / 100;
 
   const sohFisik = round2(records.reduce((acc, r) => acc + (r.qty ?? 0), 0));
-  const pendingPosting = round2(
+  const pendingFailed = round2(
+    records.reduce((acc, r) => acc + (r.failed_posting ?? 0), 0),
+  );
+  const pendingInput = round2(
     records.reduce((acc, r) => acc + (r.pending_input ?? 0), 0),
   );
+
+  const pendingPosting = round2(pendingFailed + pendingInput);
+
   const sohSystem =
     round2(records.reduce((acc, r) => acc + (r.qty_system_1 ?? 0), 0)) +
     round2(records.reduce((acc, r) => acc + (r.qty_system_2 ?? 0), 0));
@@ -126,46 +131,49 @@ const DetailTable: React.FC<DetailTableProps> = ({
 
   return (
     <div>
-      {/* Chart summary */}
-      <div className="mb-4">
-        <StockTakingOilChart
-          sohFisik={sohFisik}
-          pendingPosting={pendingPosting}
-          sohSystem={sohSystem}
-          pendingReceive={pendingReceive}
-          diff={diff}
-        />
-      </div>
+      <div className="chart__and-summary p-4 border rounded mb-4">
+        {/* Chart summary */}
+        <div className="mb-4">
+          <StockTakingOilChart
+            sohFisik={sohFisik}
+            pendingPosting={pendingPosting}
+            sohSystem={sohSystem}
+            pendingReceive={pendingReceive}
+            diff={diff}
+          />
+        </div>
 
-      {/* Summary numbers */}
-      <div className="w-full flex justify-between mb-4 px-2">
-        <div>
-          <h1 className="font-bold">Stock Fisik</h1>
-          <h1>{sohFisik.toLocaleString('id-ID')}</h1>
-        </div>
-        <div>
-          <h1 className="font-bold">Pending Posting</h1>
-          <h1>{pendingPosting.toLocaleString('id-ID')}</h1>
-        </div>
-        <div>
-          <h1 className="font-bold">Stock System</h1>
-          <h1>{sohSystem.toLocaleString('id-ID')}</h1>
-        </div>
-        <div>
-          <h1 className="font-bold">Pending Receive</h1>
-          <h1>{pendingReceive.toLocaleString('id-ID')}</h1>
-        </div>
-        <div>
-          <h1 className="font-bold">Difference</h1>
-          <h1
-            className={`${
-              diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
-            }`}
-          >
-            {diff.toLocaleString('id-ID')}
-          </h1>
+        {/* Summary numbers */}
+        <div className="w-full flex justify-between mb-4 px-2">
+          <div>
+            <h1 className="font-bold">Stock Fisik</h1>
+            <h1>{sohFisik.toLocaleString('id-ID')}</h1>
+          </div>
+          <div>
+            <h1 className="font-bold">Pending Posting</h1>
+            <h1>{pendingPosting.toLocaleString('id-ID')}</h1>
+          </div>
+          <div>
+            <h1 className="font-bold">Stock System</h1>
+            <h1>{sohSystem.toLocaleString('id-ID')}</h1>
+          </div>
+          <div>
+            <h1 className="font-bold">Pending Receive</h1>
+            <h1>{pendingReceive.toLocaleString('id-ID')}</h1>
+          </div>
+          <div>
+            <h1 className="font-bold">Difference</h1>
+            <h1
+              className={`${
+                diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
+              }`}
+            >
+              {diff.toLocaleString('id-ID')}
+            </h1>
+          </div>
         </div>
       </div>
+      
 
       <h3 className="text-center font-semibold mb-2">
         Detail Stock Taking – {filteredRecords[0]?.date_dst ?? ''}
@@ -247,8 +255,9 @@ const DetailTable: React.FC<DetailTableProps> = ({
                   onChange={(e) => setMaterialFilter(e.target.value)}
                 >
                   <option value="">All</option>
-                  {[...new Set(records.map((r) => r.material_code))].map(
-                    (m) => (
+                  {[...new Set(records.map((r) => r.material_code))]
+                    .sort()
+                    .map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
@@ -263,8 +272,9 @@ const DetailTable: React.FC<DetailTableProps> = ({
                   onChange={(e) => setDescriptionFilter(e.target.value)}
                 >
                   <option value="">All</option>
-                  {[...new Set(records.map((r) => r.item_description))].map(
-                    (d) => (
+                  {[...new Set(records.map((r) => r.item_description))]
+                    .sort((a, b) => (a ?? '').localeCompare(b ?? ''))
+                    .map((d) => (
                       <option key={d ?? ''} value={d ?? ''}>
                         {d ?? ''}
                       </option>

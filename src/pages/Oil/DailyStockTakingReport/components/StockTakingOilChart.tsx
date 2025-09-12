@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
 
@@ -9,6 +9,7 @@ interface StockTakingOilChartProps {
   sohSystem: number;
   pendingReceive: number;
   diff: number; // Difference input
+  title?: string; // Optional title parameter
 }
 
 const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
@@ -17,7 +18,25 @@ const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
   sohSystem,
   pendingReceive,
   diff,
+  title = "Stock Comparison", // Default title if not provided
 }) => {
+  
+  const [isDarkMode, setIsDarkMode] = useState(
+    document.body.classList.contains('dark')
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.body.classList.contains('dark'));
+    });
+
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const textColor = isDarkMode ? '#ffffff' : '#000000';
+
   // Calculate totals for Fisik and Sistem
   const totalFisik = sohFisik + pendingPosting;
   const totalSistem = sohSystem + pendingReceive;
@@ -68,32 +87,49 @@ const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
     },
     xaxis: {
       categories: ['Sistem', 'Fisik', 'Difference'], // X-axis categories
+      labels: {
+        style: {
+          colors: textColor, // Set x-axis label color dynamically
+        },
+      },
     },
-    // Blue monochromes for "Fisik", yellowish tones for "Sistem", and dynamic color for Difference
-    colors: ['#FFC300', '#FFEB3B', '#1E90FF', '#87CEEB', differenceColor], // Sistem (yellowish), Fisik (blue), Difference (dynamic)
+    yaxis: {
+      labels: {
+        formatter: (val: any) => {
+          if (val === null || val === undefined) return '0';
+          const num = parseFloat(val.toString());
+          return isNaN(num) ? '0' : num.toFixed(2);
+        },
+        style: {
+          colors: textColor, // Set y-axis label color dynamically
+        },
+      },
+    },
+    title: {
+      text: title,
+      align: 'center',
+      style: {
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: textColor, // Set title color dynamically
+      },
+    },
+    colors: ['#FFC300', '#FFEB3B', '#1E90FF', '#87CEEB', differenceColor],
     dataLabels: {
       enabled: true,
-      formatter: (val: number) => `${val}`, // Show negative values correctly
+      formatter: (val: number) => `${val}`,
     },
     tooltip: {
       shared: true,
       intersect: false,
       y: {
-        formatter: function(val: any): string {
-          return Number(val).toFixed(2);
-        }
-      }
+        formatter: (val: any) => Number(val).toFixed(2),
+      },
     },
     legend: {
-      position: 'top',
-    },
-    yaxis: {
+      position: 'bottom',
       labels: {
-        formatter: function(val: any): string {
-          if (val === null || val === undefined) return '0';
-          const num = parseFloat(val.toString());
-          return isNaN(num) ? '0' : num.toFixed(2);
-        },
+        colors: textColor, // Set legend label color dynamically
       },
     },
   };
@@ -102,7 +138,7 @@ const StockTakingOilChart: React.FC<StockTakingOilChartProps> = ({
     <div>
       <Chart
         options={options}
-        series={sortedSeries} // Use the sorted series
+        series={sortedSeries}
         type="bar"
         height={350}
       />
