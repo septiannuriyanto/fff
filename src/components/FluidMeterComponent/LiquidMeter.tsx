@@ -1,21 +1,31 @@
 import { color } from 'd3-color';
 import { interpolateRgb } from 'd3-interpolate';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import LiquidFillGauge from 'react-liquid-gauge';
 
 interface LiquidMeterProps {
   filled: number;
   max: number;
   whId: string;
+  diameter?: number; // diameter gauge dalam px (opsional)
 }
 
-const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId }) => {
-  const value = (filled / max) * 100; // Calculate percentage based on filled and max
-  const startColor = '#6495ed'; // cornflowerblue
-  const endColor = '#dc143c'; // crimson
-  const radius = 100;
+const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId, diameter }) => {
+  // jika diameter tidak dikirim, otomatis ambil % dari lebar layar
+  const [size, setSize] = useState(diameter ?? Math.min(window.innerWidth * 0.4, 300));
 
-  // Interpolate between two colors based on the value
+  useEffect(() => {
+    if (diameter) return; // kalau user sudah kasih diameter jangan override
+    const handleResize = () => {
+      setSize(Math.min(window.innerWidth * 0.4, 300)); // responsif, max 300px
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [diameter]);
+
+  const value = (filled / max) * 100;
+  const startColor = '#6495ed';
+  const endColor = '#dc143c';
   const interpolate = interpolateRgb(startColor, endColor);
   const fillColor = interpolate(value / 100);
 
@@ -41,45 +51,30 @@ const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId }) => {
   ];
 
   return (
-    <div>
+    <div style={{ width: size * 2 }}>
       <LiquidFillGauge
         style={{ margin: '0 auto' }}
-        width={radius * 2}
-        height={radius * 2}
+        width={size}
+        height={size}
         value={value}
         percent="%"
         textSize={1}
         textOffsetX={0}
-        textOffsetY={-30}
+        textOffsetY={-size * 0.15} // relatif terhadap diameter
         textRenderer={(props: any) => {
-          const value = Math.round(props.value);
+          const val = Math.round(props.value);
           const radius = Math.min(props.height / 2, props.width / 2);
           const textPixels = (props.textSize * radius) / 2;
-          const valueStyle = {
-            fontSize: textPixels,
-          };
-          const percentStyle = {
-            fontSize: textPixels * 0.6,
-          };
-          const whStyle = {
-            fontSize: textPixels * 0.4,
-          };
-          const idStyle = {
-            fontSize: textPixels * 0.3,
-          };
-          const captionSmall = {
-            fontSize: textPixels * 0.2,
-          };
 
           return (
             <tspan>
-              <tspan className="value" style={valueStyle}>{value}</tspan>
-              <tspan style={percentStyle}>{props.percent}</tspan>
-              
-              <tspan x="0" dy="1.5em" style={idStyle}>{max-filled}</tspan>
-              <tspan x="0" dy="1.5em" style={captionSmall}>*</tspan>
-              <tspan x="0" dy="1.5em" style={idStyle}>{filled}</tspan>
-              <tspan x="0" dy="1.5em" style={whStyle}>{whId}</tspan>
+              <tspan className="value" style={{ fontSize: textPixels }}>{val}</tspan>
+              <tspan style={{ fontSize: textPixels * 0.6 }}>{props.percent}</tspan>
+
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.3 }}>{max - filled}</tspan>
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.2 }}>*</tspan>
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.3 }}>{filled}</tspan>
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.4 }}>{whId}</tspan>
             </tspan>
           );
         }}
@@ -89,12 +84,8 @@ const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId }) => {
         waveAmplitude={1}
         gradient
         gradientStops={gradientStops}
-        circleStyle={{
-          fill: fillColor,
-        }}
-        waveStyle={{
-          fill: fillColor,
-        }}
+        circleStyle={{ fill: fillColor }}
+        waveStyle={{ fill: fillColor }}
         textStyle={{
           fill: color('#444').toString(),
           fontFamily: 'Arial',
@@ -104,8 +95,6 @@ const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId }) => {
           fontFamily: 'Arial',
         }}
       />
-
-     
     </div>
   );
 };

@@ -3,6 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../../db/SupabaseClient';
 import { DstOliWithLocation } from './DstOliWithLocation';
 import StockTakingOilChart from './StockTakingOilChart';
+import LiquidMeter from '../../../../components/FluidMeterComponent/LiquidMeter';
+import StockLevelMonitoring from './StockLevelMonitoring';
+import { fetchStorageOilSetup } from './fetchSelectedSpecialMonitoring';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -36,6 +39,29 @@ const DetailTable: React.FC<DetailTableProps> = ({
   const [uoiFilter, setUoiFilter] = useState<string>('');
   const [locationFilter, setLocationFilter] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const [liquidMeters, setLiquidMeters] = useState<any[]>([]); // data special_monitoring
+
+   useEffect(() => {
+    // fetch storage_oil_setup untuk LiquidMeter
+    const fetchLiquidMeterData = async () => {
+      const { data, error } = await supabase
+        .from('storage_oil_setup')
+        .select('*')
+        .not('special_monitor', 'is', null); // hanya yang punya angka
+
+      if (!error && data) {
+        // urutkan sesuai angka special_monitor
+        const sorted = data.sort(
+          (a, b) => (a.special_monitor ?? 0) - (b.special_monitor ?? 0),
+        );
+        setLiquidMeters(sorted);
+      } else {
+        console.error(error);
+      }
+    };
+
+    fetchLiquidMeterData();
+  }, []);
 
   // Autofocus modal
   useEffect(() => {
@@ -131,8 +157,12 @@ const DetailTable: React.FC<DetailTableProps> = ({
 
   return (
     <div>
+
+<StockLevelMonitoring onUpdated={fetchStorageOilSetup}/>
+   
       <div className="chart__and-summary p-4 border rounded mb-4">
         {/* Chart summary */}
+      
         <div className="mb-4">
           <StockTakingOilChart
             sohFisik={sohFisik}
@@ -180,11 +210,12 @@ const DetailTable: React.FC<DetailTableProps> = ({
       </h3>
 
       {/* Switcher */}
-      <div className="flex justify-center gap-4 mb-2">
-        <button
+      <div className="flex flex-wrap justify-center gap-4 mb-2">
+        <div className="buttons__border border border-slate-200 rounded-md p-2 bg-slate-200 dark:bg-boxdark-2">
+          <button
           onClick={() => setViewMode('SOH')}
           className={`px-4 py-1 rounded ${
-            viewMode === 'SOH' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            viewMode === 'SOH' ? 'bg-slate-400 text-white' : 'bg-gray-200'
           }`}
         >
           SOH
@@ -192,11 +223,12 @@ const DetailTable: React.FC<DetailTableProps> = ({
         <button
           onClick={() => setViewMode('Pending')}
           className={`px-4 py-1 rounded ${
-            viewMode === 'Pending' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            viewMode === 'Pending' ? 'bg-slate-400 text-white' : 'bg-gray-200'
           }`}
         >
           Pending
         </button>
+        </div>
       </div>
 
       {/* Table */}

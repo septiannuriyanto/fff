@@ -4,7 +4,7 @@ import { supabase } from '../../../db/SupabaseClient';
 import DraftsTable from './components/DraftsTable';
 import { computeQtyFromInput } from './components/computeQtyFromInput';
 import { LocalDraft } from './components/LocalDraft';
-  import { toZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, format } from 'date-fns-tz';
 
 type StorageOilSetup = {
   id: number;
@@ -20,7 +20,6 @@ type Material = {
   material_code: string;
   item_description?: string;
 };
-
 
 const LS_PREFIX = 'dailyStock-';
 
@@ -38,6 +37,11 @@ const DailyStockTakingOil: React.FC = () => {
   const [inputValue, setInputValue] = useState<string>('');
   const [qty, setQty] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<LocalDraft[]>([]);
+  
+  // State untuk URL parameter handling
+  const [urlWarehouse, setUrlWarehouse] = useState<string | null>(null);
+  const [isWarehouseDisabled, setIsWarehouseDisabled] = useState<boolean>(false);
+  const [error403, setError403] = useState<boolean>(false);
 
   const getLsKey = (
     warehouse_id?: string,
@@ -48,6 +52,17 @@ const DailyStockTakingOil: React.FC = () => {
     if (!warehouse_id || !material || tank == null || !uoi) return null;
     return `${LS_PREFIX}${warehouse_id}-${material}-${tank}-${uoi}`;
   };
+
+  // Check URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const warehouseParam = urlParams.get('warehouse');
+    
+    if (warehouseParam) {
+      setUrlWarehouse(warehouseParam);
+      setIsWarehouseDisabled(true);
+    }
+  }, []);
 
   // ambil storage_oil_setup dan storage_oil untuk mendapatkan unit_id dan location
   useEffect(() => {
@@ -81,13 +96,24 @@ const DailyStockTakingOil: React.FC = () => {
           }));
 
         setWarehouses(warehousesWithDetails);
+
+        // Check if URL warehouse parameter exists and is valid
+        if (urlWarehouse) {
+          const foundWarehouse = warehousesWithDetails.find(w => w.warehouse_id === urlWarehouse);
+          if (foundWarehouse) {
+            setSelectedWarehouse(foundWarehouse);
+            setError403(false);
+          } else {
+            setError403(true);
+          }
+        }
       }
 
       if (storageData) {
         setStorageOils(storageData);
       }
     })();
-  }, []);
+  }, [urlWarehouse]);
 
   // ambil material untuk warehouse yang dipilih
   useEffect(() => {
@@ -339,50 +365,65 @@ const DailyStockTakingOil: React.FC = () => {
     }
   };
 
+  const handleSubmitAll = async () => {
+    if (!drafts.length) return;
 
+    // ambil tanggal sekarang
+    const now = new Date();
+    // definisikan timezone yang diinginkan
+    const timeZone = 'Asia/Makassar'; // GMT+8
 
-const handleSubmitAll = async () => {
-  if (!drafts.length) return;
+    // konversi UTC → zona yang dimaksud
+    const zonedDate = toZonedTime(now, timeZone);
 
-  // ambil tanggal sekarang
-  const now = new Date();
-  // definisikan timezone yang diinginkan
-  const timeZone = 'Asia/Makassar'; // GMT+8
+    // format YYYY-MM-DD sesuai zona
+    const date_dst = format(zonedDate, 'yyyy-MM-dd');
+    console.log('Formatted date_dst:', date_dst);
 
-  // konversi UTC → zona yang dimaksud
-  const zonedDate = toZonedTime(now, timeZone);
+    const rows = drafts.map((d) => ({
+      warehouse_id: d.warehouse_id,
+      unit_id: d.unit_id,
+      location: d.location,
+      material_code: d.material_code,
+      item_description: d.item_description,
+      tank_number: d.tank_number,
+      uoi: d.uoi,
+      input_value: d.input_value ? Number(d.input_value) : null,
+      qty: d.qty,
+      date_dst, // hasil format dengan timezone
+    }));
 
-  // format YYYY-MM-DD sesuai zona
-  const date_dst = format(zonedDate, 'yyyy-MM-dd');
-  console.log('Formatted date_dst:', date_dst);
-
-  const rows = drafts.map((d) => ({
-    warehouse_id: d.warehouse_id,
-    unit_id: d.unit_id,
-    location: d.location,
-    material_code: d.material_code,
-    item_description: d.item_description,
-    tank_number: d.tank_number,
-    uoi: d.uoi,
-    input_value: d.input_value ? Number(d.input_value) : null,
-    qty: d.qty,
-    date_dst, // hasil format dengan timezone
-  }));
-
-  const { error } = await supabase.from('dst_oli').insert(rows);
-  if (!error) {
-    alert('All drafts submitted successfully!');
-    drafts.forEach((d) => localStorage.removeItem(d.key));
-    loadDrafts();
-  }
-};
-
-
+    const { error } = await supabase.from('dst_oli').insert(rows);
+    if (!error) {
+      alert('All drafts submitted successfully!');
+      drafts.forEach((d) => localStorage.removeItem(d.key));
+      loadDrafts();
+    }
+  };
 
   const handleDeleteDraft = (key: string) => {
     localStorage.removeItem(key);
     loadDrafts();
   };
+
+  // Tampilkan error 403 jika warehouse tidak ditemukan
+  if (error403) {
+    return (
+      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6 p-4 sm:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-6xl font-bold text-red-500 mb-4">403</div>
+            <div className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Warehouse Not Found
+            </div>
+            <div className="text-gray-600 dark:text-gray-400">
+              The warehouse specified in the URL parameter is not available in your access list.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6 p-4 sm:p-6">
@@ -392,14 +433,26 @@ const handleSubmitAll = async () => {
 
       {/* Warehouse */}
       <div className="mb-4">
-        <label className="block mb-1 font-medium">Select Warehouse</label>
+        <label className="block mb-1 font-medium">
+          Select Warehouse
+          {isWarehouseDisabled && (
+            <span className="text-sm text-gray-500 ml-2">(Fixed by URL parameter)</span>
+          )}
+        </label>
         <select
-          className="border p-2 w-full rounded"
+          className={`border p-2 w-full rounded ${
+            isWarehouseDisabled 
+              ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' 
+              : ''
+          }`}
           value={selectedWarehouse?.warehouse_id ?? ''}
           onChange={(e) => {
-            const wh = warehouses.find((w) => w.warehouse_id === e.target.value) || null;
-            setSelectedWarehouse(wh);
+            if (!isWarehouseDisabled) {
+              const wh = warehouses.find((w) => w.warehouse_id === e.target.value) || null;
+              setSelectedWarehouse(wh);
+            }
           }}
+          disabled={isWarehouseDisabled}
         >
           <option value="">-- Select Warehouse --</option>
           {warehouses.map((w) => (
