@@ -39,7 +39,7 @@ const DailyStockTakingOil: React.FC = () => {
   const [drafts, setDrafts] = useState<LocalDraft[]>([]);
   
   // State untuk URL parameter handling
-  const [urlWarehouse, setUrlWarehouse] = useState<string | null>(null);
+  const [urlAlias, setUrlAlias] = useState<string | null>(null);
   const [isWarehouseDisabled, setIsWarehouseDisabled] = useState<boolean>(false);
   const [error403, setError403] = useState<boolean>(false);
 
@@ -56,10 +56,12 @@ const DailyStockTakingOil: React.FC = () => {
   // Check URL parameters on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const warehouseParam = urlParams.get('warehouse');
+    const aliasParam = urlParams.get('warehouse');
     
-    if (warehouseParam) {
-      setUrlWarehouse(warehouseParam);
+    console.log('URL Params:', aliasParam);
+    
+    if (aliasParam) {
+      setUrlAlias(aliasParam);
       setIsWarehouseDisabled(true);
     }
   }, []);
@@ -67,17 +69,22 @@ const DailyStockTakingOil: React.FC = () => {
   // ambil storage_oil_setup dan storage_oil untuk mendapatkan unit_id dan location
   useEffect(() => {
     (async () => {
+      console.log('Fetching data... urlAlias:', urlAlias);
+      
       // ambil storage_oil_setup
       const { data: setupData } = await supabase
         .from('storage_oil_setup')
         .select('*')
         .order('warehouse_id, material_code, tank_number');
 
-      // ambil storage_oil untuk mendapatkan unit_id dan location, diurutkan by id
+      // ambil storage_oil untuk mendapatkan unit_id, location, dan alias
       const { data: storageData } = await supabase
         .from('storage_oil')
-        .select('id, warehouse_id, unit_id, location')
+        .select('id, warehouse_id, unit_id, location, alias')
         .order('id');
+
+      console.log('Setup Data:', setupData);
+      console.log('Storage Data:', storageData);
 
       if (setupData && storageData) {
         setStorageSetups(setupData);
@@ -97,13 +104,34 @@ const DailyStockTakingOil: React.FC = () => {
 
         setWarehouses(warehousesWithDetails);
 
-        // Check if URL warehouse parameter exists and is valid
-        if (urlWarehouse) {
-          const foundWarehouse = warehousesWithDetails.find(w => w.warehouse_id === urlWarehouse);
-          if (foundWarehouse) {
-            setSelectedWarehouse(foundWarehouse);
-            setError403(false);
+        // Check if URL alias parameter exists and is valid
+        if (urlAlias) {
+          console.log('Looking for alias:', urlAlias);
+          
+          // Cari berdasarkan alias dari storage_oil
+          const foundStorageOil = storageData.find(storage => storage.alias === urlAlias);
+          console.log('Found storage oil by alias:', foundStorageOil);
+          
+          if (foundStorageOil) {
+            // Pastikan warehouse_id ini ada di setupData juga
+            const hasSetupData = setupData.some(setup => setup.warehouse_id === foundStorageOil.warehouse_id);
+            console.log('Has setup data for warehouse:', foundStorageOil.warehouse_id, hasSetupData);
+            
+            if (hasSetupData) {
+              const warehouseDetail = {
+                warehouse_id: foundStorageOil.warehouse_id,
+                unit_id: foundStorageOil.unit_id,
+                location: foundStorageOil.location
+              };
+              console.log('Setting selected warehouse:', warehouseDetail);
+              setSelectedWarehouse(warehouseDetail);
+              setError403(false);
+            } else {
+              console.log('No setup data found for warehouse:', foundStorageOil.warehouse_id);
+              setError403(true);
+            }
           } else {
+            console.log('No storage oil found for alias:', urlAlias);
             setError403(true);
           }
         }
@@ -113,7 +141,7 @@ const DailyStockTakingOil: React.FC = () => {
         setStorageOils(storageData);
       }
     })();
-  }, [urlWarehouse]);
+  }, [urlAlias]);
 
   // ambil material untuk warehouse yang dipilih
   useEffect(() => {
@@ -406,7 +434,7 @@ const DailyStockTakingOil: React.FC = () => {
     loadDrafts();
   };
 
-  // Tampilkan error 403 jika warehouse tidak ditemukan
+  // Tampilkan error 403 jika alias tidak ditemukan
   if (error403) {
     return (
       <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6 p-4 sm:p-6">
@@ -417,7 +445,7 @@ const DailyStockTakingOil: React.FC = () => {
               Warehouse Not Found
             </div>
             <div className="text-gray-600 dark:text-gray-400">
-              The warehouse specified in the URL parameter is not available in your access list.
+              The warehouse specified in the URL parameter is not found or not available in your access list.
             </div>
           </div>
         </div>
@@ -436,7 +464,7 @@ const DailyStockTakingOil: React.FC = () => {
         <label className="block mb-1 font-medium">
           Select Warehouse
           {isWarehouseDisabled && (
-            <span className="text-sm text-gray-500 ml-2">(Fixed by URL parameter)</span>
+            <span className="text-sm text-gray-500 ml-2">(Fixed by alias parameter)</span>
           )}
         </label>
         <select
