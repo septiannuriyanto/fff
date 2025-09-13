@@ -5,6 +5,7 @@ import DraftsTable from './components/DraftsTable';
 import { computeQtyFromInput } from './components/computeQtyFromInput';
 import { LocalDraft } from './components/LocalDraft';
 import { toZonedTime, format } from 'date-fns-tz';
+import { useParams } from 'react-router-dom';
 
 type StorageOilSetup = {
   id: number;
@@ -54,17 +55,13 @@ const DailyStockTakingOil: React.FC = () => {
   };
 
   // Check URL parameters on component mount
+  const { alias } = useParams(); // baca /oil/dst/:alias
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const aliasParam = urlParams.get('warehouse');
-    
-    console.log('URL Params:', aliasParam);
-    
-    if (aliasParam) {
-      setUrlAlias(aliasParam);
+    if (alias) {
+      setUrlAlias(alias);
       setIsWarehouseDisabled(true);
     }
-  }, []);
+  }, [alias]);
 
   // ambil storage_oil_setup dan storage_oil untuk mendapatkan unit_id dan location
   useEffect(() => {

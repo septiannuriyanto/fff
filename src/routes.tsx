@@ -232,6 +232,12 @@ const routes = [
     title: 'FFF | Daily Stock Taking Oil',
     allowedRoles: OIL_ROLES
   },
+
+  {
+  path: '/oil/dst/:alias',   // ← warehouse jadi path param
+  component: <DailyStockTakingOil />,
+  allowedRoles: ALL_ROLES,
+},
    {
     path: '/oil/dstreport',
     component: <DstOilReport />,
