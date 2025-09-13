@@ -47,7 +47,7 @@ const AlterStatusModal: React.FC<AlterStatusModalProps> = ({
   onSubmit,
 }) => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-99">
       <div className="bg-white p-6 rounded-xl w-96 space-y-4">
         <h3 className="text-lg font-medium">Alter Status: {unitId}</h3>
         <div className="flex space-x-2">
