@@ -28,6 +28,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
   materialFilter,
   setMaterialFilter,
   fetchRecords,
+  selectedDate,
 }) => {
   const [viewMode, setViewMode] = useState<'SOH' | 'Pending'>('SOH');
   const [modalOpen, setModalOpen] = useState(false);
@@ -158,7 +159,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
   return (
     <div>
 
-<StockLevelMonitoring onUpdated={fetchStorageOilSetup}/>
+<StockLevelMonitoring onUpdated={fetchStorageOilSetup} selectedDate={selectedDate}/>
    
       <div className="chart__and-summary p-4 border rounded mb-4">
         {/* Chart summary */}

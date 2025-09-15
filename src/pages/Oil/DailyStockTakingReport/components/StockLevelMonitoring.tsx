@@ -13,10 +13,12 @@ import { JSX } from 'react/jsx-runtime';
 
 interface StockLevelMonitoringProps {
   onUpdated?: () => void;
+  selectedDate?: string;
 }
 
 const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
   onUpdated,
+  selectedDate,
 }) => {
   const [liquidMeters, setLiquidMeters] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -33,7 +35,7 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
   };
 
   const reloadData = async () => {
-    const data = await fetchStorageOilSetup();
+    const data = await fetchStorageOilSetup(selectedDate);
     setLiquidMeters(data);
     setSelected(data);
   };
@@ -41,7 +43,7 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
   useEffect(() => {
     fetchAvailable();
     reloadData();
-  }, []);
+  }, [selectedDate]);
 
   const addToSelected = async (item: any) => {
     const maxOrder =
@@ -101,13 +103,22 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
 
       <div className="inline-flex justify-evenly flex-row w-full flex-wrap gap-2">
         {liquidMeters.map((m) => (
-          <LiquidMeter
+          <div>
+            <p className='text-center text-sm mt-1 font-bold'>{m.warehouse_id} ({m.storage_oil.location})</p>
+            <LiquidMeter
             key={m.id}
             filled={m.current_filled ?? 0}
             max={m.max_capacity ?? 100}
             whId={m.warehouse_id ?? ''}
-            diameter={80}
+            diameter={90}
           />
+          <div className='text-center text-sm mt-1 font-bold'>
+            
+            <p className='text-gray-500'>{m.materials?.item_description}</p>
+            <p className='text-gray-500'>({m.current_filled} of {m.max_capacity})</p>
+          </div>
+
+          </div>
         ))}
       </div>
 
