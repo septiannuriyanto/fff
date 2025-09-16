@@ -6,7 +6,7 @@ import { computeQtyFromInput } from './components/computeQtyFromInput';
 import { LocalDraft } from './components/LocalDraft';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useParams } from 'react-router-dom';
-import VoiceInputHandler from './enhancement/VoiceInputHandler';
+import VoiceInputHandler from './VoiceInputHandler';
 
 type StorageOilSetup = {
   id: number;
@@ -554,14 +554,14 @@ const DailyStockTakingOil: React.FC = () => {
   />
 
   {/* Tambahkan Voice Input */}
-  {/* <VoiceInputHandler
+  <VoiceInputHandler
     onParsed={(val) => {
       // kalau mau langsung isi field input value
       if (val.tinggi) setInputValue(val.tinggi.toString());
       // kamu juga bisa memanfaatkan val.tank dan val.material kalau mau auto-select
       console.log("Voice parsed:", val);
     }}
-  /> */}
+  />
 </div>
 
       {/* Qty */}
