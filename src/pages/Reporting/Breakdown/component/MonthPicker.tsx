@@ -5,6 +5,7 @@ interface MonthPickerProps {
   onChange: (month: string) => void;
   startYear?: number;
   endYear?: number;
+  disabled?: boolean; // <-- tambahan
 }
 
 const MonthPicker: React.FC<MonthPickerProps> = ({
@@ -12,6 +13,7 @@ const MonthPicker: React.FC<MonthPickerProps> = ({
   onChange,
   startYear = new Date().getFullYear() - 5,
   endYear = new Date().getFullYear() + 5,
+  disabled = false, // <-- default false
 }) => {
   const [year, month] = value.split('-');
 
@@ -36,6 +38,7 @@ const MonthPicker: React.FC<MonthPickerProps> = ({
         className="rounded border px-3 py-2"
         value={month}
         onChange={(e) => onChange(`${year}-${e.target.value}`)}
+        disabled={disabled} // <-- pakai disabled
       >
         {months.map((m) => (
           <option key={m.value} value={m.value}>
@@ -48,6 +51,7 @@ const MonthPicker: React.FC<MonthPickerProps> = ({
         className="rounded border px-3 py-2"
         value={year}
         onChange={(e) => onChange(`${e.target.value}-${month}`)}
+        disabled={disabled} // <-- pakai disabled
       >
         {Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i).map((y) => (
           <option key={y} value={y}>

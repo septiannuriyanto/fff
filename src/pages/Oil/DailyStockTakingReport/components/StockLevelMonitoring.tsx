@@ -101,21 +101,24 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
         </button>
       </div>
 
-      <div className="inline-flex justify-evenly flex-row w-full flex-wrap gap-2">
+      <div className="inline-flex justify-evenly flex-row w-full flex-wrap gap-4 ">
         {liquidMeters.map((m) => (
-          <div>
-            <p className='text-center text-sm mt-1 font-bold'>{m.warehouse_id} ({m.storage_oil.location})</p>
-            <LiquidMeter
+          <div className='p-2 border rounded-md border-slate-300 bg-slate-50'>
+            <p className='text-center text-xs mt-1 font-bold '>{m.warehouse_id} ({m.storage_oil.location})</p>
+            <p className='text-center text-xs my-1 font-bold text-red-300'>Tank #{m.tank_number}</p>
+       
+              <LiquidMeter
             key={m.id}
             filled={m.current_filled ?? 0}
             max={m.max_capacity ?? 100}
             whId={m.warehouse_id ?? ''}
             diameter={90}
           />
-          <div className='text-center text-sm mt-1 font-bold'>
+           
+          <div className='text-center text-xs mt-1 font-bold'>
             
-            <p className='text-gray-500'>{m.materials?.item_description}</p>
-            <p className='text-gray-500'>({m.current_filled} of {m.max_capacity})</p>
+            <p className='text-purple-400'>{m.materials?.item_description}</p>
+            <p className='text-blue-300'>(<span className='text-green-600 underline'>{m.current_filled}</span> of {m.max_capacity})</p>
           </div>
 
           </div>
@@ -123,7 +126,7 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-99">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg w-[95%] max-w-7xl max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Pilih Tangki untuk Monitoring</h2>
