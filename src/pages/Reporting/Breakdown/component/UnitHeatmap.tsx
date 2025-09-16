@@ -1,37 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { statusColors } from './statuscolor';
 import { supabase } from '../../../../db/SupabaseClient';
 import { criticalHours } from './criticalHours';
 
 type UnitHeatmapProps = {
-  unit: any;
+  unit: { unit_id: string };
   month: string; // YYYY-MM
   mode: 'monthly' | 'thisWeek' | 'lastWeek';
 };
 
 const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
   const [expanded, setExpanded] = useState(true);
-  const [grid, setGrid] = useState<
-    { status: string; remark: string | null }[][]
-  >([]);
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
-    content: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [grid, setGrid] = useState<{ status: string; remark: string | null }[][]>([]);
+  const [tooltip, setTooltip] = useState<{ content: string; x: number; y: number } | null>(null);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const cellWidth = 22;
-  const today = new Date();
+
+  // hitung tanggal/hari yang akan dirender
+  const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth() + 1;
   const currentDay = today.getDate();
   const currentHour = today.getHours();
 
-  // range tanggal
-  const { startDate, endDate, renderDays } = (() => {
+  const { startDate, endDate, renderDays } = useMemo(() => {
     if (mode === 'monthly') {
       const year = Number(month.split('-')[0]);
       const mon = Number(month.split('-')[1]);
@@ -43,6 +38,7 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
         renderDays: rd,
       };
     }
+    // minggu berjalan/kemarin
     const now = new Date();
     const day = now.getDay();
     const thursdayOffset = day >= 4 ? day - 4 : 7 - (4 - day);
@@ -66,8 +62,9 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
       const diff = Math.ceil((end.getTime() - thursdayLastWeek.getTime()) / 86400000) + 1;
       return { startDate: thursdayLastWeek, endDate: end, renderDays: diff };
     }
-  })();
+  }, [mode, month, currentYear, currentMonth, currentDay]);
 
+  // ambil data status
   useEffect(() => {
     const fetchStatus = async () => {
       const { data, error } = await supabase
@@ -84,33 +81,25 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
         );
 
       if (!error && data) {
-        for (let i = 0; i < data.length; i++) {
-          const row = data[i];
+        data.forEach(row => {
           const start = new Date(row.reported_at);
           const end = row.next_status_timestamp ? new Date(row.next_status_timestamp) : new Date();
-
           const effectiveStart = start < startDate ? startDate : start;
           const effectiveEnd = end > endDate ? endDate : end;
 
-          let startDayIndex = Math.floor(
-            (effectiveStart.getTime() - startDate.getTime()) / 86400000
-          );
-          const endDayIndex = Math.floor(
-            (effectiveEnd.getTime() - startDate.getTime()) / 86400000
-          );
-
+          let startDayIndex = Math.floor((effectiveStart.getTime() - startDate.getTime()) / 86400000);
+          const endDayIndex = Math.floor((effectiveEnd.getTime() - startDate.getTime()) / 86400000);
           if (startDayIndex < 0) startDayIndex = 0;
 
           for (let d = startDayIndex; d <= endDayIndex; d++) {
             if (d >= renderDays) break;
             const hStart = d === startDayIndex ? effectiveStart.getHours() : 0;
             const hEnd = d === endDayIndex ? effectiveEnd.getHours() : 23;
-
             for (let h = hStart; h <= hEnd; h++) {
               newGrid[d][h] = { status: row.status, remark: row.remark };
             }
           }
-        }
+        });
       }
 
       if (
@@ -129,7 +118,7 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
     };
 
     fetchStatus();
-  }, [unit, month, mode, renderDays, startDate, endDate, currentHour, currentDay]);
+  }, [unit.unit_id, month, mode, renderDays, startDate, endDate, currentYear, currentMonth, currentDay, currentHour]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
@@ -145,10 +134,8 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
       const rect = containerRef.current?.getBoundingClientRect();
       const offsetX = rect ? e.clientX - rect.left : e.clientX;
       const offsetY = rect ? e.clientY - rect.top : e.clientY;
-
       const tooltipContent = `Unit: ${unit.unit_id}\nTanggal: ${date.toLocaleDateString()}\nRemark: ${remark || 'N/A'}`;
       setTooltip({
-        visible: true,
         content: tooltipContent,
         x: offsetX + 12,
         y: offsetY + 12,
@@ -165,9 +152,7 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
         onClick={() => setExpanded(!expanded)}
       >
         <div className="font-bold">{unit.unit_id}</div>
-        <div className="text-xs text-blue-600">
-          {expanded ? '▼ Collapse' : '► Expand'}
-        </div>
+        <div className="text-xs text-blue-600">{expanded ? '▼ Collapse' : '► Expand'}</div>
       </div>
 
       {expanded && (
@@ -175,16 +160,11 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
           {/* Header tanggal */}
           <div
             className="grid gap-x-[4px] gap-y-[1px]"
-            style={{
-              gridTemplateColumns: `80px repeat(${renderDays}, ${cellWidth}px)`,
-            }}
+            style={{ gridTemplateColumns: `80px repeat(${renderDays}, ${cellWidth}px)` }}
           >
             <div></div>
             {Array.from({ length: renderDays }, (_, d) => (
-              <div
-                key={d}
-                className="text-center text-[10px] whitespace-nowrap"
-              >
+              <div key={d} className="text-center text-[10px] whitespace-nowrap">
                 {new Date(startDate.getTime() + d * 86400000).getDate()}
               </div>
             ))}
@@ -195,9 +175,7 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
             <div
               key={i}
               className="grid ml-2 gap-x-[4px] gap-y-[1px]"
-              style={{
-                gridTemplateColumns: `80px repeat(${renderDays}, ${cellWidth}px)`,
-              }}
+              style={{ gridTemplateColumns: `80px repeat(${renderDays}, ${cellWidth}px)` }}
             >
               <div className="text-[10px] border-r whitespace-nowrap">
                 {i.toString().padStart(2, '0')}:00
@@ -209,18 +187,14 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
                 const isCritical = criticalHours.includes(i);
                 const cellDate = new Date(startDate.getTime() + d * 86400000);
 
+                const colorClass = status === 'FUTURE' ? 'bg-gray-300' : statusColors[status] || 'bg-gray-200';
+
                 return (
                   <div
                     key={d}
-                    className={`h-5 rounded-sm cursor-pointer ${
-                      status === 'FUTURE'
-                        ? 'bg-gray-300'
-                        : statusColors[status]
-                    } ${!isCritical ? 'opacity-30' : ''}`}
+                    className={`h-5 rounded-sm cursor-pointer ${colorClass} ${!isCritical ? 'opacity-30' : ''}`}
                     style={{ width: cellWidth }}
-                    onMouseMove={(e) =>
-                      handleMouseMove(e, status, remark, cellDate)
-                    }
+                    onMouseMove={(e) => handleMouseMove(e, status, remark, cellDate)}
                     onMouseLeave={() => setTooltip(null)}
                   />
                 );
@@ -230,13 +204,10 @@ const UnitHeatmap: React.FC<UnitHeatmapProps> = ({ unit, month, mode }) => {
         </div>
       )}
 
-      {tooltip?.visible && (
+      {tooltip && (
         <div
           className="absolute z-50 p-2 text-xs text-white bg-slate-500 rounded-lg shadow-lg pointer-events-none"
-          style={{
-            top: tooltip.y,
-            left: tooltip.x,
-          }}
+          style={{ top: tooltip.y, left: tooltip.x }}
         >
           {tooltip.content.split('\n').map((line, index) => (
             <div key={index}>{line}</div>
