@@ -15,7 +15,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from '../../store/roles';
 
 interface SidebarProps {
   role?:string | null;
@@ -193,6 +193,19 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
+              </SidebarGroup>
+
+              {/* <!-- Menu Item Partner Reporting --> */}
+              <SidebarGroup
+                currentRole={role!}
+                roles={FUEL_PARTNER}
+                title="Fuel Partner Menu"
+                icon={<TbReport />}
+                pathname={pathname}
+                basePath="/partner/fuel"
+              >
+                <SidebarLink to="/partner/fuel" label="Fuel Dashboard" />
+                <SidebarLink to="/partner/fuel/ritation" label="Fuel Ritation" />
               </SidebarGroup>
 
              {/* <!-- Menu Item Oil Reporting Pages --> */}

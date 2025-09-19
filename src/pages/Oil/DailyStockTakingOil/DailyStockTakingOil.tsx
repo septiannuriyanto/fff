@@ -554,14 +554,14 @@ const DailyStockTakingOil: React.FC = () => {
   />
 
   {/* Tambahkan Voice Input */}
-  {/* <VoiceInputHandler
+  <VoiceInputHandler
     onParsed={(val) => {
       // kalau mau langsung isi field input value
       if (val.tinggi) setInputValue(val.tinggi.toString());
       // kamu juga bisa memanfaatkan val.tank dan val.material kalau mau auto-select
       console.log("Voice parsed:", val);
     }}
-  /> */}
+  />
 </div>
 
       {/* Qty */}

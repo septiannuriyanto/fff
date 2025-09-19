@@ -34,7 +34,7 @@ import ComponentLibrary from './pages/MasterData/ComponentLibrary';
 import MasterManpower from './pages/MasterData/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
-import { ADMIN, ALL_ROLES, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from './store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
@@ -44,6 +44,8 @@ import HousekeepingOil from './pages/Oil/HousekeepingOil/HousekeepingOil';
 import StorageManagement from './pages/Oil/StorageManagement/StorageManagement';
 import AddMaterialPage from './pages/MasterData/Materials/AddMaterialPage';
 import DstOilReport from './pages/Oil/DailyStockTakingReport/DstOilReport';
+import FuelPartnerDashboard from './pages/Partner/Dashboard/FuelPartnerDashboard';
+import FuelPartnerRitation from './pages/Partner/Ritation/FuelPartnerRitation';
 
 
 const routes = [
@@ -217,6 +219,20 @@ const routes = [
     component: <FuelTruckBacklogRequest />,
     title: 'FFF | FT Backlog Request',
     allowedRoles: FUEL_ROLES
+  },
+
+  // Partner Reporting Routes
+  {
+    path: '/partner/fuel',
+    component: <FuelPartnerDashboard />,
+    title: 'FFF | Fuel Partner Dashboard',
+    allowedRoles: FUEL_PARTNER
+  },
+  {
+    path: '/partner/fuel/ritation',
+    component: <FuelPartnerRitation />,
+    title: 'FFF | Fuel Partner Ritation',
+    allowedRoles: FUEL_PARTNER
   },
 
   // Oil Reporting Routes
