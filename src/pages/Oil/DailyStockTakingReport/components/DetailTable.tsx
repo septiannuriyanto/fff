@@ -3,9 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../../db/SupabaseClient';
 import { DstOliWithLocation } from './DstOliWithLocation';
 import StockTakingOilChart from './StockTakingOilChart';
-import LiquidMeter from '../../../../components/FluidMeterComponent/LiquidMeter';
 import StockLevelMonitoring from './StockLevelMonitoring';
 import { fetchStorageOilSetup } from './fetchSelectedSpecialMonitoring';
+import * as XLSX from 'xlsx';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -156,6 +156,82 @@ const DetailTable: React.FC<DetailTableProps> = ({
   let lastWarehouse = '';
   let isOddGroup = false;
 
+
+
+  // Tambah state di atas (sebelum return)
+const [uploadModalOpen, setUploadModalOpen] = useState(false);
+const [uploadTarget, setUploadTarget] = useState<'system1' | 'system2' | null>(null);
+const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+// fungsi buka modal
+const openUploadModal = (target: 'system1' | 'system2') => {
+  setUploadTarget(target);
+  setUploadModalOpen(true);
+  setSelectedFile(null);
+};
+
+// fungsi handle file drop / select
+const handleFileSelect = (files: FileList | null) => {
+  if (files && files.length > 0) {
+    setSelectedFile(files[0]);
+  }
+};
+
+
+
+const handleUpload = async () => {
+  if (!selectedFile || !uploadTarget) return;
+
+
+  // 2. Baca file Excel
+  const fileBuffer = await selectedFile.arrayBuffer();
+  const workbook = XLSX.read(fileBuffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
+  const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+
+  // 3. Ambil hanya kolom yang dibutuhkan
+  const extracted = allRows.map((row) => ({
+    storageLocation: row['Storage Location'], // warehouse_id
+    materialNumber: row['Material Number'],   // material_code
+    totalStock: row['Total Stock'],           // qty_system_1
+  }));
+
+  console.log('Extracted:', extracted);
+
+  // 4. Format tanggal yyyy-mm-dd untuk filter date_dst
+  const formattedDate = selectedDate;
+
+  // 5. Loop update ke Supabase untuk setiap baris
+  for (const row of extracted) {
+    const { error: updateError } = await supabase
+      .from('dst_oli')
+      .update({ qty_system_1: row.totalStock })
+      .eq('tank_number', 1)
+      .eq('warehouse_id', row.storageLocation)
+      .eq('material_code', row.materialNumber)
+      .eq('date_dst', formattedDate);
+
+    if (updateError) {
+      console.error(
+        `Gagal update material ${row.materialNumber} @${row.storageLocation}:`,
+        updateError
+      );
+    } else {
+      console.log(
+        `Berhasil update material ${row.materialNumber} @${row.storageLocation}`
+      );
+    }
+  }
+
+  alert('Upload sukses dan qty_system_1 sudah diupdate untuk semua baris!');
+  fetchRecords();
+  setUploadModalOpen(false);
+};
+
+
+
   return (
     <div>
 
@@ -211,7 +287,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
       </h3>
 
       {/* Switcher */}
-      <div className="flex flex-wrap justify-center gap-4 mb-2">
+      <div className="switcher flex flex-wrap justify-center gap-4 mb-2">
         <div className="buttons__border border border-slate-200 rounded-md p-2 bg-slate-200 dark:bg-boxdark-2">
           <button
           onClick={() => setViewMode('SOH')}
@@ -358,12 +434,36 @@ const DetailTable: React.FC<DetailTableProps> = ({
                 </select>
               </th>
               {viewMode === 'SOH' ? (
-                <>
-                  <th className="px-3 py-1 border">Fisik</th>
-                  <th className="px-3 py-1 border">System1</th>
-                  <th className="px-3 py-1 border">System2</th>
-                </>
-              ) : (
+  <>
+    <th className="px-3 py-1 border">
+      <div className="flex flex-col items-center">
+        <span>Fisik</span>
+      </div>
+    </th>
+    <th className="px-3 py-1 border">
+      <div className="flex flex-col items-center">
+        <span>System1</span>
+        <button
+          onClick={() => openUploadModal('system1')}
+          className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
+        >
+          Upload
+        </button>
+      </div>
+    </th>
+    <th className="px-3 py-1 border">
+      <div className="flex flex-col items-center">
+        <span>System2</span>
+        <button
+          onClick={() => openUploadModal('system2')}
+          className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
+        >
+          Upload
+        </button>
+      </div>
+    </th>
+  </>
+) : (
                 <>
                   <th className="px-3 py-1 border">Receive</th>
                   <th className="px-3 py-1 border">Failed</th>
@@ -479,9 +579,60 @@ const DetailTable: React.FC<DetailTableProps> = ({
             })}
           </tbody>
         </table>
+        
       </div>
 
+      
+
       {/* Modal */}
+      {uploadModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-md w-96">
+      <h4 className="mb-2 font-semibold">
+        Upload file untuk {uploadTarget === 'system1' ? 'System 1' : 'System 2'}
+      </h4>
+
+      <div
+        onDrop={(e) => {
+          e.preventDefault();
+          handleFileSelect(e.dataTransfer.files);
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        className="border-2 border-dashed border-gray-400 rounded p-6 text-center cursor-pointer"
+        onClick={() => document.getElementById('fileInput')?.click()}
+      >
+        {selectedFile ? (
+          <p>{selectedFile.name}</p>
+        ) : (
+          <p>Drag & drop file di sini atau klik untuk memilih file</p>
+        )}
+      </div>
+      <input
+        id="fileInput"
+        type="file"
+        className="hidden"
+        onChange={(e) => handleFileSelect(e.target.files)}
+      />
+
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          onClick={() => setUploadModalOpen(false)}
+          className="px-3 py-1 bg-gray-300 rounded"
+        >
+          Batal
+        </button>
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile}
+          className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+        >
+          Upload
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-md w-80">

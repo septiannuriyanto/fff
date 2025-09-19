@@ -87,7 +87,7 @@ const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId, diameter }
         circleStyle={{ fill: fillColor }}
         waveStyle={{ fill: fillColor }}
         textStyle={{
-          fill: color('#444').toString(),
+          fill: color('#FF4560').toString(),
           fontFamily: 'Arial',
         }}
         waveTextStyle={{

@@ -103,7 +103,7 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
 
       <div className="inline-flex justify-evenly flex-row w-full flex-wrap gap-4 ">
         {liquidMeters.map((m) => (
-          <div className='p-2 border rounded-md border-slate-300 bg-slate-50'>
+          <div className='p-2 border rounded-md border-slate-300 bg-slate-50 dark:bg-graydark'>
             <p className='text-center text-xs mt-1 font-bold '>{m.warehouse_id} ({m.storage_oil.location})</p>
             <p className='text-center text-xs my-1 font-bold text-red-300'>Tank #{m.tank_number}</p>
        
