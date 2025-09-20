@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from "react";
-import ReusableSwitcher from "../../../components/Switchers/SwitcherFour";
-import { supabase } from "../../../db/SupabaseClient";
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../../../db/SupabaseClient';
+import DataFleetSelector from './components/DataFleetSelector';
+import FlowmeterPanel from './components/FlowmeterPanel';
+import SondingPanel from './components/SondingPanel';
+import ViewTeraModal from './components/ViewTeraModal';
+import SummaryPanel from './components/SummaryPanel';
 
 interface ManpowerItem {
   nrp: string;
@@ -11,142 +15,175 @@ interface StorageItem {
   warehouse_id: string;
   unit_id: string;
 }
+export interface TeraPoint {
+  unit_id: string;
+  height_mm: number;
+  qty_liter: number;
+}
 
 const FuelPartnerRitation: React.FC = () => {
   // core form state
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().slice(0, 10),
   );
-  const [shift, setShift] = useState<"1" | "2">("1");
-  const [manualNN, setManualNN] = useState(""); // nomor manual user (angka)
-  const [noSuratJalan, setNoSuratJalan] = useState("");
+  const [shift, setShift] = useState<'1' | '2'>('1');
+  const [manualNN, setManualNN] = useState('');
+  const [queueNum, setQueueNum] = useState<number | null>(null);
+  const [noSuratJalan, setNoSuratJalan] = useState('');
 
   // dropdown selections
-  const [unit, setUnit] = useState("");
-  const [operator, setOperator] = useState("");
-  const [fuelman, setFuelman] = useState("");
+  const [unit, setUnit] = useState('');
+  const [operator, setOperator] = useState('');
+  const [fuelman, setFuelman] = useState('');
+  const [selectedPetugas, setSelectedPetugas] = useState<string>(
+    () => localStorage.getItem('selectedPetugas') || '',
+  );
 
   // sonding
-  const [sondingBeforeRear, setSondingBeforeRear] = useState("");
-  const [sondingBeforeFront, setSondingBeforeFront] = useState("");
-  const [sondingAfterRear, setSondingAfterRear] = useState("");
-  const [sondingAfterFront, setSondingAfterFront] = useState("");
+  const [sondingBeforeRear, setSondingBeforeRear] = useState('');
+  const [sondingBeforeFront, setSondingBeforeFront] = useState('');
+  const [sondingAfterRear, setSondingAfterRear] = useState('');
+  const [sondingAfterFront, setSondingAfterFront] = useState('');
 
   // flowmeter
-  const [flowmeterBefore, setFlowmeterBefore] = useState("");
-  const [flowmeterAfter, setFlowmeterAfter] = useState("");
+  const [flowmeterBefore, setFlowmeterBefore] = useState('');
+  const [flowmeterAfter, setFlowmeterAfter] = useState('');
   const [useDekaliter, setUseDekaliter] = useState(true);
 
-  // foto preview
-  const [photoPreview, setPhotoPreview] = useState<string>("");
+  // volume
+  const [volumeBefore, setVolumeBefore] = useState(0);
+  const [volumeAfter, setVolumeAfter] = useState(0);
 
-  // dropdown data from Supabase
+  // foto preview
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+
+  // dropdown data
   const [units, setUnits] = useState<StorageItem[]>([]);
   const [operators, setOperators] = useState<ManpowerItem[]>([]);
   const [fuelmans, setFuelmans] = useState<ManpowerItem[]>([]);
   const [petugasList, setPetugasList] = useState<ManpowerItem[]>([]);
-
-  // nama petugas persisted (localStorage)
-  const [selectedPetugas, setSelectedPetugas] = useState<string>(() => {
-    return localStorage.getItem("selectedPetugas") || "";
-  });
-
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // set default shift based on hour
+  // tera tangki
+  const [teraAll, setTeraAll] = useState<Record<string, TeraPoint[]>>({});
+  const [loadingTera, setLoadingTera] = useState(false);
+  const [showTeraModal, setShowTeraModal] = useState(false);
+
+  // default shift berdasarkan jam
   useEffect(() => {
     const hour = new Date().getHours();
-    setShift(hour >= 6 && hour < 18 ? "1" : "2");
+    setShift(hour >= 6 && hour < 18 ? '1' : '2');
   }, []);
 
-  // persist selectedPetugas to localStorage
+  // persist selectedPetugas
   useEffect(() => {
-    if (selectedPetugas) {
-      localStorage.setItem("selectedPetugas", selectedPetugas);
-    } else {
-      localStorage.removeItem("selectedPetugas");
-    }
+    if (selectedPetugas)
+      localStorage.setItem('selectedPetugas', selectedPetugas);
+    else localStorage.removeItem('selectedPetugas');
   }, [selectedPetugas]);
 
-  // fetch dropdowns from Supabase
+  // fetch dropdowns
   useEffect(() => {
     const fetchDropdowns = async () => {
       setLoadingDropdowns(true);
       setFetchError(null);
       try {
-        // units (storage.type = 'FT') ordered by warehouse_id
         const { data: unitData, error: unitErr } = await supabase
-          .from("storage")
-          .select("id, unit_id, warehouse_id")
-          .eq("type", "FT")
-          .eq("status", "RUNNING")
-          .order("warehouse_id", { ascending: true });
+          .from('storage')
+          .select('id, unit_id, warehouse_id')
+          .eq('type', 'FT')
+          .eq('status', 'RUNNING')
+          .order('warehouse_id', { ascending: true });
         if (unitErr) throw unitErr;
         setUnits((unitData as any) || []);
 
-        // operators
-        const { data: opData, error: opErr } = await supabase
-          .from("manpower")
-          .select("nrp, nama, position")
-          // we cannot use .in on joined field in simple select, so fetch position id then filter client-side
-          .order("nama", { ascending: true });
-        if (opErr) throw opErr;
-
-        // fetch incumbents table separately to know which position ids maps to which incumbent text
-        // but in your schema 'position' is a FK to 'incumbent(id)'. We'll do a single query to manpower with join:
         const { data: opJoined, error: opJoinErr } = await supabase
-          .from("manpower")
-          .select("nrp, nama, incumbent:position (id, incumbent)")
-          .order("nama", { ascending: true });
+          .from('manpower')
+          .select('nrp, nama, incumbent:position (id, incumbent)')
+          .order('nama', { ascending: true });
         if (opJoinErr) throw opJoinErr;
 
         const opJoinedArr = (opJoined as any[]) || [];
-
-        // filter operators & fuelmans & petugas by incumbent text
-        const ops = opJoinedArr
-          .filter((r) => r.incumbent?.incumbent === "OPERATOR FT")
-          .map((r) => ({ nrp: r.nrp, nama: r.nama }));
-        const fms = opJoinedArr
-          .filter((r) => r.incumbent?.incumbent === "FUELMAN")
-          .map((r) => ({ nrp: r.nrp, nama: r.nama }));
-        const ptg = opJoinedArr
-          .filter((r) => r.incumbent?.incumbent === "FUELMAN_PARTNER")
-          .map((r) => ({ nrp: r.nrp, nama: r.nama }));
-
-        setOperators(ops);
-        setFuelmans(fms);
-        setPetugasList(ptg);
+        setOperators(
+          opJoinedArr
+            .filter((r) => r.incumbent?.incumbent === 'OPERATOR FT')
+            .map((r) => ({ nrp: r.nrp, nama: r.nama })),
+        );
+        setFuelmans(
+          opJoinedArr
+            .filter((r) => r.incumbent?.incumbent === 'FUELMAN')
+            .map((r) => ({ nrp: r.nrp, nama: r.nama })),
+        );
+        setPetugasList(
+          opJoinedArr
+            .filter((r) => r.incumbent?.incumbent === 'FUELMAN_PARTNER')
+            .map((r) => ({ nrp: r.nrp, nama: r.nama })),
+        );
       } catch (err: any) {
-        console.error("fetchDropdowns error", err);
-        setFetchError(err?.message || "Gagal mengambil data dropdown");
+        console.error('fetchDropdowns error', err);
+        setFetchError(err?.message || 'Gagal mengambil data dropdown');
       } finally {
         setLoadingDropdowns(false);
       }
     };
-
     fetchDropdowns();
   }, []);
 
-  // format nomor surat jalan GYYMMDDSSNN whenever dependencies change
-  useEffect(() => {
-    if (selectedDate && shift && manualNN !== "") {
-      // ensure manualNN is digits only
-      const numeric = String(manualNN).replace(/\D/g, "");
-      const nn = numeric ? numeric.padStart(2, "0") : "";
-      if (!nn) {
-        setNoSuratJalan("");
-        return;
+  // fetch tera tangki
+  // fetch tera tangki semua record >1000
+  const fetchTeraAll = async () => {
+    setLoadingTera(true);
+    try {
+      let allData: TeraPoint[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('tera_tangki')
+          .select('unit_id, height_mm, qty_liter')
+          .order('unit_id', { ascending: true })
+          .order('height_mm', { ascending: true })
+          .range(from, from + batchSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        allData = [...allData, ...(data as TeraPoint[])];
+
+        if (data.length < batchSize) break; // tidak ada data lagi
+        from += batchSize;
       }
+
+      const grouped = allData.reduce<Record<string, TeraPoint[]>>((acc, t) => {
+        if (!acc[t.unit_id]) acc[t.unit_id] = [];
+        acc[t.unit_id].push(t);
+        return acc;
+      }, {});
+      setTeraAll(grouped);
+    } catch (err) {
+      console.error('fetchTeraAll error', err);
+    } finally {
+      setLoadingTera(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeraAll();
+  }, []);
+
+  // generate nomor surat jalan
+  useEffect(() => {
+    if (selectedDate && shift && manualNN !== '') {
+      const numeric = String(manualNN).replace(/\D/g, '');
+      const nn = numeric ? numeric.padStart(2, '0') : '';
+      if (!nn) return setNoSuratJalan('');
       const date = new Date(selectedDate);
       const yy = date.getFullYear().toString().slice(-2);
-      const mm = (date.getMonth() + 1).toString().padStart(2, "0");
-      const dd = date.getDate().toString().padStart(2, "0");
-      const ss = shift.padStart(2, "0");
+      const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+      const dd = date.getDate().toString().padStart(2, '0');
+      const ss = shift.padStart(2, '0');
       setNoSuratJalan(`G${yy}${mm}${dd}${ss}${nn}`);
-    } else {
-      setNoSuratJalan("");
-    }
+    } else setNoSuratJalan('');
   }, [selectedDate, shift, manualNN]);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,57 +191,131 @@ const FuelPartnerRitation: React.FC = () => {
     if (file) setPhotoPreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = () => {
-    const before = parseFloat(flowmeterBefore || "0");
-    const after = parseFloat(flowmeterAfter || "0");
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+
+  const handleSubmit = async () => {
+    const before = parseFloat(flowmeterBefore || '0');
+    const after = parseFloat(flowmeterAfter || '0');
     const multiplier = useDekaliter ? 10 : 1;
     const diff = (after - before) * multiplier;
 
-    // validations
-    if (!selectedPetugas) {
-      alert("Pilih Nama Petugas terlebih dahulu!");
-      return;
-    }
-    if (!unit) {
-      alert("Pilih Unit terlebih dahulu!");
-      return;
-    }
-    if (diff < 0) {
-      alert("Selisih flowmeter tidak boleh negatif!");
-      return;
-    }
-    if (after * multiplier > 20000) {
-      alert("Flowmeter tidak boleh melebihi maks tangki 20.000 liter!");
-      return;
-    }
+    if (!selectedPetugas) return alert('Pilih Nama Petugas terlebih dahulu!');
+    if (!unit) return alert('Pilih Unit terlebih dahulu!');
+    if (diff < 0) return alert('Selisih flowmeter tidak boleh negatif!');
+    if (diff > 20000)
+      return alert('Flowmeter tidak boleh melebihi maks tangki 20.000 liter!');
+    if (!noSuratJalan) return alert('Nomor Surat Jalan tidak valid!');
+    if (!operator) return alert('Pilih Operator terlebih dahulu!');
+    if (!fuelman) return alert('Pilih Fuelman terlebih dahulu!');
+    if (!sondingBeforeRear || !sondingBeforeFront)
+      return alert('Isi Sonding Before terlebih dahulu!');
+    if (!sondingAfterRear || !sondingAfterFront)
+      return alert('Isi Sonding After terlebih dahulu!');
+    if (volumeBefore === 0)
+      return alert(
+        'Volume Sonding Before tidak valid atau tidak ditemukan di tera tangki!',
+      );
+    if (volumeAfter === 0)
+      return alert(
+        'Volume Sonding After tidak valid atau tidak ditemukan di tera tangki!',
+      );
+    if (!photoPreview) return alert('Upload foto Surat Jalan terlebih dahulu!');
+
+
+    const selectedWarehouse = units.find(u => u.unit_id === unit)?.warehouse_id || null;
 
     const payload = {
-      tanggal: selectedDate,
-      shift,
-      noSuratJalan,
-      unit,
-      operator,
-      fuelman,
-      namaPetugas: selectedPetugas,
-      sondingBeforeRear,
-      sondingBeforeFront,
-      sondingAfterRear,
-      sondingAfterFront,
-      flowmeterBefore,
-      flowmeterAfter,
-      satuan: useDekaliter ? "Dekaliter" : "Liter",
-      selisihLiter: diff,
+      no_surat_jalan: noSuratJalan,
+      queue_num: queueNum,
+      ritation_date: selectedDate,
+      warehouse_id: selectedWarehouse,
+      qty_sj: diff,
+      qty_sonding_before: volumeBefore,
+      qty_sonding_after: volumeAfter,
+      qty_sonding: volumeAfter - volumeBefore,
+      sonding_before_front: parseFloat(sondingBeforeFront),
+      sonding_before_rear: parseFloat(sondingBeforeRear),
+      sonding_after_front: parseFloat(sondingAfterFront),
+      sonding_after_rear: parseFloat(sondingAfterRear),
+      flowmeter_before_url: '', // nanti bisa diupload ke storage
+      flowmeter_after_url: '',
+      operator_id: operator,
+      fuelman_id: fuelman,
+      qty_flowmeter_before: before,
+      qty_flowmeter_after: after,
+      isValidated: false,
+      petugas_pencatatan : selectedPetugas,
+      shift : shift,
     };
 
-    alert(JSON.stringify(payload, null, 2));
+    try {
+      setLoadingSubmit(true);
+      const { error } = await supabase
+        .from('ritasi_fuel')
+        .insert([payload]);
+      if (error) throw error;
+
+      alert(`Surat Jalan ${noSuratJalan} berhasil dikirim!`);
+
+      // Reset semua field kecuali teraAll
+      setSelectedDate(new Date().toISOString().slice(0, 10));
+      setShift('1');
+      setManualNN('');
+      setNoSuratJalan('');
+      setUnit('');
+      setOperator('');
+      setFuelman('');
+      setSondingBeforeRear('');
+      setSondingBeforeFront('');
+      setSondingAfterRear('');
+      setSondingAfterFront('');
+      setFlowmeterBefore('');
+      setFlowmeterAfter('');
+      setUseDekaliter(true);
+      setVolumeBefore(0);
+      setVolumeAfter(0);
+      setPhotoPreview('');
+    } catch (err: any) {
+      console.error(err);
+      alert(`Gagal mengirim data: ${err.message || err}`);
+    } finally {
+      setLoadingSubmit(false);
+    }
   };
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
+      <ViewTeraModal
+        visible={showTeraModal}
+        onClose={() => setShowTeraModal(false)}
+        teraData={Object.values(teraAll).flat()} // flatten semua unit
+        units={Object.keys(teraAll)}
+      />
+
       <div className="p-4 sm:p-6">
         <h2 className="mb-4 font-bold text-black dark:text-white sm:text-title-sm">
           Fuel Partner Ritation
         </h2>
+
+        {/* tombol refresh tera */}
+        <div className="mb-4 flex items-center gap-2">
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+            onClick={() => setShowTeraModal(true)}
+          >
+            View Tera
+          </button>
+          <button
+            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+            onClick={fetchTeraAll}
+            disabled={loadingTera}
+          >
+            {loadingTera ? 'Refreshing...' : 'Refresh Tera'}
+          </button>
+          {loadingTera && (
+            <span className="text-sm ml-2">Fetching tera...</span>
+          )}
+        </div>
 
         {/* tanggal */}
         <div className="mb-4">
@@ -222,7 +333,7 @@ const FuelPartnerRitation: React.FC = () => {
           <label className="block mb-1">Shift</label>
           <select
             value={shift}
-            onChange={(e) => setShift(e.target.value as "1" | "2")}
+            onChange={(e) => setShift(e.target.value as '1' | '2')}
             className="border rounded p-2 w-full"
           >
             <option value="1">Shift 1 (06.00 - 18.00)</option>
@@ -230,7 +341,7 @@ const FuelPartnerRitation: React.FC = () => {
           </select>
         </div>
 
-        {/* nama petugas (persist di localStorage) */}
+        {/* nama petugas */}
         <div className="mb-4">
           <label className="block mb-1">Nama Petugas</label>
           <select
@@ -253,15 +364,16 @@ const FuelPartnerRitation: React.FC = () => {
 
         {/* nomor surat jalan manual */}
         <div className="mb-4 text-center w-full justify-center">
-          <label className="block mb-1 text-left">Nomor Surat Jalan Manual (NN)</label>
+          <label className="block mb-1 text-left">
+            Nomor Surat Jalan Manual (NN)
+          </label>
           <input
             type="number"
             min={0}
             value={manualNN}
-            onChange={(e) => {
-              // keep only digits, no negative sign
-              const val = e.target.value.replace(/\D/g, "");
-              setManualNN(val);
+            onChange={(e) =>{
+              setManualNN(e.target.value.replace(/\D/g, ''))
+              setQueueNum(parseInt(e.target.value) || null)
             }}
             className="border rounded p-2 w-full"
             placeholder="Masukkan nomor SJ (angka)"
@@ -278,146 +390,89 @@ const FuelPartnerRitation: React.FC = () => {
         <hr className="my-4" />
 
         {/* Data Fleet */}
-        <div className="mb-4 rounded p-4 border">
-          <h3 className="text-center font-bold mb-3">Data Fleet</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block mb-1">Unit</label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className="border rounded p-2 w-full"
-                disabled={loadingDropdowns}
-              >
-                <option value="">Pilih FT</option>
-                {units.map((u) => (
-                  <option key={`${u.id}-${u.unit_id}`} value={u.unit_id}>
-                    {u.unit_id} ({u.warehouse_id})
-                  </option>
-                ))}
-              </select>
-            </div>
+        <DataFleetSelector
+          unit={unit}
+          operator={operator}
+          fuelman={fuelman}
+          units={units}
+          operators={operators}
+          fuelmans={fuelmans}
+          loading={loadingDropdowns}
+          onChange={(field, value) => {
+            if (field === 'unit') setUnit(value);
+            if (field === 'operator') setOperator(value);
+            if (field === 'fuelman') setFuelman(value);
+          }}
+        />
 
-            <div>
-              <label className="block mb-1">Nama Operator</label>
-              <select
-                value={operator}
-                onChange={(e) => setOperator(e.target.value)}
-                className="border rounded p-2 w-full"
-                disabled={loadingDropdowns}
-              >
-                <option value="">Pilih Operator</option>
-                {operators.map((op) => (
-                  <option key={op.nrp} value={op.nrp}>
-                    {op.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* sonding before */}
+        <SondingPanel
+          title="Sonding Before"
+          unitId={unit}
+          teraData={teraAll[unit] || []}
+          sondingRear={sondingBeforeRear}
+          sondingFront={sondingBeforeFront}
+          rearFieldName="sondingBeforeRear"
+          frontFieldName="sondingBeforeFront"
+          onChange={(field, value) => {
+            if (field === 'sondingBeforeRear') setSondingBeforeRear(value);
+            if (field === 'sondingBeforeFront') setSondingBeforeFront(value);
+          }}
+          onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
+        />
 
-            <div>
-              <label className="block mb-1">Nama Fuelman</label>
-              <select
-                value={fuelman}
-                onChange={(e) => setFuelman(e.target.value)}
-                className="border rounded p-2 w-full"
-                disabled={loadingDropdowns}
-              >
-                <option value="">Pilih Fuelman</option>
-                {fuelmans.map((fm) => (
-                  <option key={fm.nrp} value={fm.nrp}>
-                    {fm.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* sonding before panel */}
-        <div className="mb-4 border rounded p-4">
-          <h3 className="text-center font-bold">Sonding Before</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <div>
-              <label className="block mb-1">Belakang (mm)</label>
-              <input
-                type="number"
-                value={sondingBeforeRear}
-                onChange={(e) => setSondingBeforeRear(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Depan (mm)</label>
-              <input
-                type="number"
-                value={sondingBeforeFront}
-                onChange={(e) => setSondingBeforeFront(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* sonding after panel */}
-        <div className="mb-4 border rounded p-4">
-          <h3 className="text-center font-bold">Sonding After</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            <div>
-              <label className="block mb-1">Belakang (mm)</label>
-              <input
-                type="number"
-                value={sondingAfterRear}
-                onChange={(e) => setSondingAfterRear(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Depan (mm)</label>
-              <input
-                type="number"
-                value={sondingAfterFront}
-                onChange={(e) => setSondingAfterFront(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-          </div>
-        </div>
+        {/* sonding after */}
+        <SondingPanel
+          title="Sonding After"
+          unitId={unit}
+          teraData={teraAll[unit] || []}
+          sondingRear={sondingAfterRear}
+          sondingFront={sondingAfterFront}
+          rearFieldName="sondingAfterRear"
+          frontFieldName="sondingAfterFront"
+          onChange={(field, value) => {
+            if (field === 'sondingAfterRear') setSondingAfterRear(value);
+            if (field === 'sondingAfterFront') setSondingAfterFront(value);
+          }}
+          onVolumeChange={(vol) => setVolumeAfter(vol ?? 0)}
+        />
 
         <hr className="my-4" />
 
         {/* flowmeter */}
-        <div className="border rounded p-4">
-          <h3 className="text-center font-bold mb-2">Flowmeter</h3>
-          <div className="flex justify-center mb-4">
-            <ReusableSwitcher
-              textTrue="Dekaliter"
-              textFalse="Liter"
-              onChange={(state) => setUseDekaliter(state)}
-            />
-          </div>
+        <FlowmeterPanel
+          flowmeterBefore={flowmeterBefore}
+          flowmeterAfter={flowmeterAfter}
+          useDekaliter={useDekaliter}
+          onChange={(field, value) => {
+            if (field === 'flowmeterBefore')
+              setFlowmeterBefore(value as string);
+            if (field === 'flowmeterAfter') setFlowmeterAfter(value as string);
+            if (field === 'useDekaliter') setUseDekaliter(value as boolean);
+          }}
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-1">Flowmeter Before</label>
-              <input
-                type="number"
-                value={flowmeterBefore}
-                onChange={(e) => setFlowmeterBefore(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Flowmeter After</label>
-              <input
-                type="number"
-                value={flowmeterAfter}
-                onChange={(e) => setFlowmeterAfter(e.target.value)}
-                className="border rounded p-2 w-full"
-              />
-            </div>
-          </div>
-        </div>
+        <SummaryPanel
+          unit={unit}
+          operator={operator}
+          fuelman={fuelman}
+          beforeRear={
+            sondingBeforeRear.toString() ? parseFloat(sondingBeforeRear) : 0
+          }
+          beforeFront={
+            sondingBeforeFront.toString() ? parseFloat(sondingBeforeFront) : 0
+          }
+          afterRear={
+            sondingAfterRear.toString() ? parseFloat(sondingAfterRear) : 0
+          }
+          afterFront={
+            sondingAfterFront.toString() ? parseFloat(sondingAfterFront) : 0
+          }
+          flowmeterBefore={parseFloat(flowmeterBefore || '0')}
+          flowmeterAfter={parseFloat(flowmeterAfter || '0')}
+          qtyTeraAfter={volumeAfter}
+          qtyTeraBefore={volumeBefore}
+        />
 
         {/* foto */}
         <div className="mt-4">
@@ -436,9 +491,12 @@ const FuelPartnerRitation: React.FC = () => {
 
         <button
           onClick={handleSubmit}
-          className="mt-6 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full sm:w-auto"
+          disabled={loadingSubmit}
+          className={`mt-6 ${
+            loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
+          } text-white px-4 py-2 rounded w-full sm:w-auto`}
         >
-          Submit
+          {loadingSubmit ? 'Mengirim...' : 'Submit'}
         </button>
       </div>
     </div>

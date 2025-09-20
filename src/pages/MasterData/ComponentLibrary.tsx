@@ -65,7 +65,7 @@ useEffect(()=>{},[
               <SwitcherOne></SwitcherOne>
               <SwitcherTwo></SwitcherTwo>
               <SwitcherThree></SwitcherThree>
-              <SwitcherFour></SwitcherFour>
+              <SwitcherFour value></SwitcherFour>
               <TableOne></TableOne>
               <TableTwo></TableTwo>
               <TableThree></TableThree>
