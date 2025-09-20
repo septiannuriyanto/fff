@@ -24,7 +24,6 @@ export interface TeraPoint {
   qty_liter: number;
 }
 
-// Define the shape of a draft object
 interface DraftRitasi {
   no_surat_jalan: string;
   queue_num: number | null;
@@ -45,11 +44,10 @@ interface DraftRitasi {
   isValidated: boolean;
   petugas_pencatatan: string;
   shift: '1' | '2';
-  photoPreview?: string;
+  // photoPreview?: string;
 }
 
 const FuelPartnerRitation: React.FC = () => {
-  // core form state
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
@@ -59,7 +57,6 @@ const FuelPartnerRitation: React.FC = () => {
   const [queueNum, setQueueNum] = useState<number | null>(null);
   const [noSuratJalan, setNoSuratJalan] = useState('');
 
-  // dropdown selections
   const [unit, setUnit] = useState('');
   const [operator, setOperator] = useState('');
   const [fuelman, setFuelman] = useState('');
@@ -67,25 +64,20 @@ const FuelPartnerRitation: React.FC = () => {
     () => localStorage.getItem('selectedPetugas') || '',
   );
 
-  // sonding
   const [sondingBeforeRear, setSondingBeforeRear] = useState('');
   const [sondingBeforeFront, setSondingBeforeFront] = useState('');
   const [sondingAfterRear, setSondingAfterRear] = useState('');
   const [sondingAfterFront, setSondingAfterFront] = useState('');
 
-  // flowmeter
   const [flowmeterBefore, setFlowmeterBefore] = useState('');
   const [flowmeterAfter, setFlowmeterAfter] = useState('');
   const [useDekaliter, setUseDekaliter] = useState(true);
 
-  // volume
   const [volumeBefore, setVolumeBefore] = useState(0);
   const [volumeAfter, setVolumeAfter] = useState(0);
 
-  // foto preview
   const [photoPreview, setPhotoPreview] = useState<string>('');
 
-  // dropdown data
   const [units, setUnits] = useState<StorageItem[]>([]);
   const [operators, setOperators] = useState<ManpowerItem[]>([]);
   const [fuelmans, setFuelmans] = useState<ManpowerItem[]>([]);
@@ -93,30 +85,25 @@ const FuelPartnerRitation: React.FC = () => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // tera tangki
   const [teraAll, setTeraAll] = useState<Record<string, TeraPoint[]>>({});
   const [loadingTera, setLoadingTera] = useState(false);
   const [showTeraModal, setShowTeraModal] = useState(false);
 
-  // Draft Local
   const [localDrafts, setLocalDrafts] = useState<DraftRitasi[]>([]);
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(null);
 
-  // default shift based on time
   useEffect(() => {
     const hour = new Date().getHours();
     setShift(hour >= 6 && hour < 18 ? '1' : '2');
   }, []);
 
-  // Set default petugas
   useEffect(() => {
     if (currentUser && !selectedPetugas) {
       setSelectedPetugas(currentUser.nrp);
     }
   }, [currentUser, selectedPetugas]);
 
-  // Persist selectedPetugas to local storage
   useEffect(() => {
     if (selectedPetugas) {
       localStorage.setItem('selectedPetugas', selectedPetugas);
@@ -125,7 +112,6 @@ const FuelPartnerRitation: React.FC = () => {
     }
   }, [selectedPetugas]);
   
-  // Load drafts from local storage on component mount
   useEffect(() => {
     try {
       const savedDrafts = localStorage.getItem('ritasi_draft');
@@ -138,7 +124,6 @@ const FuelPartnerRitation: React.FC = () => {
     }
   }, []);
 
-  // Fetch dropdowns
   useEffect(() => {
     const fetchDropdowns = async () => {
       setLoadingDropdowns(true);
@@ -185,7 +170,6 @@ const FuelPartnerRitation: React.FC = () => {
     fetchDropdowns();
   }, []);
 
-  // Fetch all tera tangki records
   const fetchTeraAll = async () => {
     setLoadingTera(true);
     try {
@@ -223,25 +207,24 @@ const FuelPartnerRitation: React.FC = () => {
     fetchTeraAll();
   }, []);
 
-  // Generate surat jalan number
+  const generateSuratJalanNumber = (queue: number, dateStr: string, shift: string) => {
+    if (!queue || !dateStr || !shift) return '';
+    const date = new Date(dateStr);
+    const yy = date.getFullYear().toString().slice(-2);
+    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+    const dd = date.getDate().toString().padStart(2, '0');
+    const ss = shift.padStart(2, '0');
+    const nn = String(queue).padStart(2, '0');
+    return `G${yy}${mm}${dd}${ss}${nn}`;
+  };
+
   useEffect(() => {
-    if (selectedDate && shift && manualNN !== '') {
-      const numeric = String(manualNN).replace(/\D/g, '');
-      const nn = numeric ? numeric.padStart(2, '0') : '';
-      if (!nn) {
-        setNoSuratJalan('');
-        return;
-      }
-      const date = new Date(selectedDate);
-      const yy = date.getFullYear().toString().slice(-2);
-      const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-      const dd = date.getDate().toString().padStart(2, '0');
-      const ss = shift.padStart(2, '0');
-      setNoSuratJalan(`G${yy}${mm}${dd}${ss}${nn}`);
+    if (queueNum) {
+      setNoSuratJalan(generateSuratJalanNumber(queueNum, selectedDate, shift));
     } else {
       setNoSuratJalan('');
     }
-  }, [selectedDate, shift, manualNN]);
+  }, [queueNum, selectedDate, shift]);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -271,7 +254,7 @@ const FuelPartnerRitation: React.FC = () => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
-      photoPreview
+      // photoPreview
     });
 
     if (errorMsg) {
@@ -313,7 +296,7 @@ const FuelPartnerRitation: React.FC = () => {
       }
 
       alert(`Surat Jalan ${noSuratJalan} berhasil dikirim!`);
-      // Reset fields...
+      handleResetForm();
     } catch (err: any) {
       console.error(err);
       alert(`Gagal mengirim data: ${err.message || err}`);
@@ -348,12 +331,15 @@ const FuelPartnerRitation: React.FC = () => {
       return alert(errorMsg);
     }
 
-    const selectedWarehouse =
-      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
+    const selectedWarehouse = units.find((u) => u.unit_id === unit)?.warehouse_id || null;
+
+    // Get the next queue number for the draft
+    const nextDraftQueue = (localDrafts.length > 0 ? Math.max(...localDrafts.map(d => d.queue_num ?? 0)) : queueNum ?? 0) + 1;
+    const nextDraftSJ = generateSuratJalanNumber(nextDraftQueue, selectedDate, shift);
 
     const payload: DraftRitasi = {
-      no_surat_jalan: noSuratJalan,
-      queue_num: queueNum,
+      no_surat_jalan: nextDraftSJ,
+      queue_num: nextDraftQueue,
       ritation_date: selectedDate,
       warehouse_id: selectedWarehouse,
       qty_sj: diff,
@@ -371,14 +357,14 @@ const FuelPartnerRitation: React.FC = () => {
       isValidated: false,
       petugas_pencatatan: selectedPetugas,
       shift: shift,
-      photoPreview,
+      // photoPreview,
     };
 
     let updatedDrafts: DraftRitasi[];
     if (editingDraftIndex !== null) {
       updatedDrafts = [...localDrafts];
       updatedDrafts[editingDraftIndex] = payload;
-      setEditingDraftIndex(null); // Reset editing state
+      setEditingDraftIndex(null); 
     } else {
       updatedDrafts = [...localDrafts, payload];
     }
@@ -386,24 +372,35 @@ const FuelPartnerRitation: React.FC = () => {
     setLocalDrafts(updatedDrafts);
     localStorage.setItem('ritasi_draft', JSON.stringify(updatedDrafts));
     alert('Data tersimpan ke lokal!');
+    fetchNextQueue(); 
+    handleResetForm();
   };
 
 
   const handleDeleteDraft = (index: number) => {
     const updated = [...localDrafts];
     updated.splice(index, 1);
-    setLocalDrafts(updated);
-    localStorage.setItem('ritasi_draft', JSON.stringify(updated));
+    // Re-assign sequential queue numbers
+    const newDrafts = updated.map((d, i) => {
+      const newQueue = (d.queue_num ?? 0) - 1;
+      return {
+        ...d,
+        queue_num: newQueue,
+        no_surat_jalan: generateSuratJalanNumber(newQueue, d.ritation_date, d.shift)
+      };
+    });
+    setLocalDrafts(newDrafts);
+    localStorage.setItem('ritasi_draft', JSON.stringify(newDrafts));
+    fetchNextQueue(); 
   };
 
   const handleEditDraft = (index: number) => {
     const draft = localDrafts[index];
-    // Prefill all form state from the draft
     setSelectedDate(draft.ritation_date);
     setQueueNum(draft.queue_num);
     setManualNN(draft.queue_num?.toString() ?? '');
     setNoSuratJalan(draft.no_surat_jalan);
-    setUnit(draft.warehouse_id || ''); // Assuming warehouse_id is used as unit_id
+    setUnit(draft.warehouse_id || '');
     setOperator(draft.operator_id || '');
     setFuelman(draft.fuelman_id || '');
     setSondingBeforeRear(draft.sonding_before_rear?.toString() ?? '');
@@ -414,13 +411,10 @@ const FuelPartnerRitation: React.FC = () => {
     setVolumeAfter(draft.qty_sonding_after || 0);
     setFlowmeterBefore(draft.qty_flowmeter_before?.toString() ?? '');
     setFlowmeterAfter(draft.qty_flowmeter_after?.toString() ?? '');
-    setUseDekaliter(true); // You might need to save this in the draft as well
-    setPhotoPreview(draft.photoPreview || '');
+    setUseDekaliter(true); 
+    // setPhotoPreview(draft.photoPreview || '');
     
-    // Set the editing state
     setEditingDraftIndex(index);
-    
-    // Close the modal
     setShowDraftModal(false);
   };
 
@@ -439,6 +433,7 @@ const FuelPartnerRitation: React.FC = () => {
       setLocalDrafts([]);
       localStorage.removeItem('ritasi_draft');
       setShowDraftModal(false);
+      fetchNextQueue(); 
     } catch (err: any) {
       alert('Gagal submit draft: ' + err.message);
     } finally {
@@ -461,8 +456,11 @@ const FuelPartnerRitation: React.FC = () => {
         throw error;
       }
 
-      const maxQueue = data?.[0]?.queue_num ?? 0;
-      const nextQueue = (maxQueue || 0) + 1;
+      const maxQueueDB = data?.[0]?.queue_num ?? 0;
+      const draftsForDate = localDrafts.filter(d => d.ritation_date === selectedDate);
+      const maxQueueDraft = draftsForDate.length > 0 ? Math.max(...draftsForDate.map(d => d.queue_num ?? 0)) : 0;
+      
+      const nextQueue = Math.max(maxQueueDB, maxQueueDraft) + 1;
 
       if (!manualNN) {
         setQueueNum(nextQueue);
@@ -470,19 +468,21 @@ const FuelPartnerRitation: React.FC = () => {
       }
     } catch (err) {
       console.error('fetchNextQueue error', err);
-      setQueueNum(1);
+      const draftsForDate = localDrafts.filter(d => d.ritation_date === selectedDate);
+      const maxQueueDraft = draftsForDate.length > 0 ? Math.max(...draftsForDate.map(d => d.queue_num ?? 0)) : 0;
+      const nextQueue = maxQueueDraft + 1;
       if (!manualNN) {
-        setManualNN('1');
+        setQueueNum(nextQueue);
+        setManualNN(String(nextQueue));
       }
     }
   };
 
   useEffect(() => {
     fetchNextQueue();
-  }, [selectedDate, shift, unit]);
+  }, [selectedDate, shift, localDrafts]); 
 
   const handleResetForm = () => {
-    // Reset all form states
     setSelectedDate(new Date().toISOString().slice(0, 10));
     setShift(new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2');
     setManualNN('');
@@ -501,7 +501,8 @@ const FuelPartnerRitation: React.FC = () => {
     setFlowmeterAfter('');
     setUseDekaliter(true);
     setPhotoPreview('');
-    setEditingDraftIndex(null); // Crucial: reset editing state
+    setEditingDraftIndex(null);
+    fetchNextQueue();
   };
 
 
@@ -519,7 +520,6 @@ const FuelPartnerRitation: React.FC = () => {
           Fuel Partner Ritation
         </h2>
 
-        {/* tombol refresh tera */}
         <div className="mb-4 flex items-center gap-2">
           <button
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
@@ -539,7 +539,6 @@ const FuelPartnerRitation: React.FC = () => {
           )}
         </div>
 
-        {/* tanggal */}
         <div className="mb-4">
           <label className="block mb-1">Tanggal</label>
           <input
@@ -550,7 +549,6 @@ const FuelPartnerRitation: React.FC = () => {
           />
         </div>
 
-        {/* shift */}
         <div className="mb-4">
           <label className="block mb-1">Shift</label>
           <select
@@ -563,7 +561,6 @@ const FuelPartnerRitation: React.FC = () => {
           </select>
         </div>
 
-        {/* nama petugas */}
         <div className="mb-4">
           <label className="block mb-1">Nama Petugas</label>
           <select
@@ -584,7 +581,6 @@ const FuelPartnerRitation: React.FC = () => {
           )}
         </div>
 
-        {/* nomor surat jalan manual */}
         <div className="mb-4 text-center w-full justify-center">
           <label className="block mb-1 text-left">
             Nomor Surat Jalan Manual (NN)
@@ -612,7 +608,6 @@ const FuelPartnerRitation: React.FC = () => {
 
         <hr className="my-4" />
 
-        {/* Data Fleet */}
         <DataFleetSelector
           unit={unit}
           operator={operator}
@@ -634,7 +629,6 @@ const FuelPartnerRitation: React.FC = () => {
           }}
         />
 
-        {/* sonding before */}
         <SondingPanel
           title="Sonding Before"
           unitId={unit}
@@ -655,7 +649,6 @@ const FuelPartnerRitation: React.FC = () => {
           onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
         />
 
-        {/* sonding after */}
         <SondingPanel
           title="Sonding After"
           unitId={unit}
@@ -678,7 +671,6 @@ const FuelPartnerRitation: React.FC = () => {
 
         <hr className="my-4" />
 
-        {/* flowmeter */}
         <FlowmeterPanel
           flowmeterBefore={flowmeterBefore}
           flowmeterAfter={flowmeterAfter}
@@ -718,7 +710,6 @@ const FuelPartnerRitation: React.FC = () => {
           qtyTeraBefore={volumeBefore}
         />
 
-        {/* foto */}
         <div className="mt-4">
           <label className="block mb-1">Foto Surat Jalan</label>
           <input type="file" accept="image/*" onChange={handlePhoto} />
@@ -768,7 +759,6 @@ const FuelPartnerRitation: React.FC = () => {
         </button>
       )}
 
-      {/* Modal Draft */}
       {showDraftModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-2xl w-full">
