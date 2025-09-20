@@ -80,6 +80,7 @@ const FuelPartnerRitation: React.FC = () => {
           .from("storage")
           .select("id, unit_id, warehouse_id")
           .eq("type", "FT")
+          .eq("status", "RUNNING")
           .order("warehouse_id", { ascending: true });
         if (unitErr) throw unitErr;
         setUnits((unitData as any) || []);
