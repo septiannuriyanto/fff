@@ -275,6 +275,7 @@ const FuelPartnerRitation: React.FC = () => {
       setVolumeBefore(0);
       setVolumeAfter(0);
       setPhotoPreview('');
+      fetchNextQueue();
     } catch (err: any) {
       console.error(err);
       alert(`Gagal mengirim data: ${err.message || err}`);
@@ -282,6 +283,41 @@ const FuelPartnerRitation: React.FC = () => {
       setLoadingSubmit(false);
     }
   };
+
+
+
+  const fetchNextQueue = async () => {
+  if (!selectedDate) return;
+  try {
+    const { data, error } = await supabase
+      .from('ritasi_fuel')
+      .select('queue_num')
+      .eq('ritation_date', selectedDate)
+      .order('queue_num', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+
+    const maxQueue = data?.[0]?.queue_num ?? 0;
+    const nextQueue = (maxQueue || 0) + 1;
+
+    // hanya set kalau user belum mengetik manual
+    if (!manualNN) {
+      setQueueNum(nextQueue);
+      setManualNN(String(nextQueue));
+    }
+
+  } catch (err) {
+    console.error('fetchNextQueue error', err);
+    setQueueNum(1);
+    if (!manualNN) setManualNN('1');
+  }
+};
+
+useEffect(() => {
+  fetchNextQueue();
+}, [selectedDate, shift, unit]);
+
+
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
@@ -368,16 +404,17 @@ const FuelPartnerRitation: React.FC = () => {
             Nomor Surat Jalan Manual (NN)
           </label>
           <input
-            type="number"
-            min={0}
-            value={manualNN}
-            onChange={(e) =>{
-              setManualNN(e.target.value.replace(/\D/g, ''))
-              setQueueNum(parseInt(e.target.value) || null)
-            }}
-            className="border rounded p-2 w-full"
-            placeholder="Masukkan nomor SJ (angka)"
-          />
+  type="number"
+  min={0}
+  value={manualNN}
+  onChange={(e) => {
+    setManualNN(e.target.value.replace(/\D/g, ''))
+    setQueueNum(parseInt(e.target.value) || null)
+  }}
+  className="border rounded p-2 w-full"
+  placeholder="Masukkan nomor SJ (angka)"
+/>
+
           {noSuratJalan ? (
             <p className="mt-1 font-bold text-lg">{noSuratJalan}</p>
           ) : (
@@ -407,19 +444,21 @@ const FuelPartnerRitation: React.FC = () => {
 
         {/* sonding before */}
         <SondingPanel
-          title="Sonding Before"
-          unitId={unit}
-          teraData={teraAll[unit] || []}
-          sondingRear={sondingBeforeRear}
-          sondingFront={sondingBeforeFront}
-          rearFieldName="sondingBeforeRear"
-          frontFieldName="sondingBeforeFront"
-          onChange={(field, value) => {
-            if (field === 'sondingBeforeRear') setSondingBeforeRear(value);
-            if (field === 'sondingBeforeFront') setSondingBeforeFront(value);
-          }}
-          onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
-        />
+  title="Sonding Before"
+  unitId={unit}
+  teraData={teraAll[unit] || []}
+  sondingRear={sondingBeforeRear}
+  sondingFront={sondingBeforeFront}
+  rearFieldName="sondingBeforeRear"
+  frontFieldName="sondingBeforeFront"
+  unit="cm" // <- inputnya cm
+  onChange={(field, value) => {
+    if (field === 'sondingBeforeRear') setSondingBeforeRear(value);
+    if (field === 'sondingBeforeFront') setSondingBeforeFront(value);
+  }}
+  onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
+/>
+
 
         {/* sonding after */}
         <SondingPanel
@@ -430,6 +469,7 @@ const FuelPartnerRitation: React.FC = () => {
           sondingFront={sondingAfterFront}
           rearFieldName="sondingAfterRear"
           frontFieldName="sondingAfterFront"
+          unit="cm" // <- inputnya cm
           onChange={(field, value) => {
             if (field === 'sondingAfterRear') setSondingAfterRear(value);
             if (field === 'sondingAfterFront') setSondingAfterFront(value);
