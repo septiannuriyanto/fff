@@ -72,25 +72,24 @@ const SondingPanel: React.FC<SondingPanelProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
         <div>
           <label className="block mb-1">
-            Belakang ({unit})
-          </label>
-          <input
-            type="number"
-            value={sondingRear}
-            onChange={(e) => onChange(rearFieldName, e.target.value)}
-            className="border rounded p-2 w-full"
-            disabled={disabled}
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">
             Depan ({unit})
           </label>
           <input
             type="number"
             value={sondingFront}
             onChange={(e) => onChange(frontFieldName, e.target.value)}
+            className="border rounded p-2 w-full"
+            disabled={disabled}
+          />
+        </div>
+                <div>
+          <label className="block mb-1">
+            Belakang ({unit})
+          </label>
+          <input
+            type="number"
+            value={sondingRear}
+            onChange={(e) => onChange(rearFieldName, e.target.value)}
             className="border rounded p-2 w-full"
             disabled={disabled}
           />
