@@ -5,6 +5,7 @@ import FlowmeterPanel from './components/FlowmeterPanel';
 import SondingPanel from './components/SondingPanel';
 import ViewTeraModal from './components/ViewTeraModal';
 import SummaryPanel from './components/SummaryPanel';
+import { useAuth } from '../../Authentication/AuthContext';
 
 interface ManpowerItem {
   nrp: string;
@@ -26,6 +27,10 @@ const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
+
+
+  const { currentUser } = useAuth()
+
   const [shift, setShift] = useState<'1' | '2'>('1');
   const [manualNN, setManualNN] = useState('');
   const [queueNum, setQueueNum] = useState<number | null>(null);
@@ -75,6 +80,13 @@ const FuelPartnerRitation: React.FC = () => {
     const hour = new Date().getHours();
     setShift(hour >= 6 && hour < 18 ? '1' : '2');
   }, []);
+
+
+  useEffect(() => {
+    if (currentUser) {
+      setSelectedPetugas(currentUser.nrp);
+    }
+  }, [currentUser]);
 
   // persist selectedPetugas
   useEffect(() => {

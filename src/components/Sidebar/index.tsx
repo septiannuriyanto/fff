@@ -227,7 +227,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               {/* <!-- Menu Item Reporting Pages --> */}
               <SidebarGroup
               currentRole={role!}
-              roles={ALL_ROLES}
+              roles={SUPERVISOR}
                 title="Infrastructure"
                 icon={<TbBuilding />}
                 pathname={pathname}

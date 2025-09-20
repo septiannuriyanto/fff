@@ -7,7 +7,9 @@ const ALL_ROLES = [
     'FUELMAN',
     'FUEL AND OIL ADMIN',
     'OILMAN',
-    'PLANT'
+    'PLANT',
+    'FUELMAN_PARTNER',
+    'FUEL_SUPERVISOR_PARTNER'
   ];
   
   const FUEL_ROLES  = [
