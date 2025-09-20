@@ -6,6 +6,8 @@ import SondingPanel from './components/SondingPanel';
 import ViewTeraModal from './components/ViewTeraModal';
 import SummaryPanel from './components/SummaryPanel';
 import { useAuth } from '../../Authentication/AuthContext';
+import { DocumentTextIcon } from '@heroicons/react/24/solid';
+import { validateRitasiForm } from './functions/validateRitasi';
 
 interface ManpowerItem {
   nrp: string;
@@ -22,15 +24,36 @@ export interface TeraPoint {
   qty_liter: number;
 }
 
+// Define the shape of a draft object
+interface DraftRitasi {
+  no_surat_jalan: string;
+  queue_num: number | null;
+  ritation_date: string;
+  warehouse_id: string | null;
+  qty_sj: number;
+  qty_sonding_before: number;
+  qty_sonding_after: number;
+  qty_sonding: number;
+  sonding_before_front: number;
+  sonding_before_rear: number;
+  sonding_after_front: number;
+  sonding_after_rear: number;
+  operator_id: string;
+  fuelman_id: string;
+  qty_flowmeter_before: number;
+  qty_flowmeter_after: number;
+  isValidated: boolean;
+  petugas_pencatatan: string;
+  shift: '1' | '2';
+  photoPreview?: string;
+}
+
 const FuelPartnerRitation: React.FC = () => {
   // core form state
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
-
-
-  const { currentUser } = useAuth()
-
+  const { currentUser } = useAuth();
   const [shift, setShift] = useState<'1' | '2'>('1');
   const [manualNN, setManualNN] = useState('');
   const [queueNum, setQueueNum] = useState<number | null>(null);
@@ -75,27 +98,47 @@ const FuelPartnerRitation: React.FC = () => {
   const [loadingTera, setLoadingTera] = useState(false);
   const [showTeraModal, setShowTeraModal] = useState(false);
 
-  // default shift berdasarkan jam
+  // Draft Local
+  const [localDrafts, setLocalDrafts] = useState<DraftRitasi[]>([]);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(null);
+
+  // default shift based on time
   useEffect(() => {
     const hour = new Date().getHours();
     setShift(hour >= 6 && hour < 18 ? '1' : '2');
   }, []);
 
-
+  // Set default petugas
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !selectedPetugas) {
       setSelectedPetugas(currentUser.nrp);
     }
-  }, [currentUser]);
+  }, [currentUser, selectedPetugas]);
 
-  // persist selectedPetugas
+  // Persist selectedPetugas to local storage
   useEffect(() => {
-    if (selectedPetugas)
+    if (selectedPetugas) {
       localStorage.setItem('selectedPetugas', selectedPetugas);
-    else localStorage.removeItem('selectedPetugas');
+    } else {
+      localStorage.removeItem('selectedPetugas');
+    }
   }, [selectedPetugas]);
+  
+  // Load drafts from local storage on component mount
+  useEffect(() => {
+    try {
+      const savedDrafts = localStorage.getItem('ritasi_draft');
+      if (savedDrafts) {
+        setLocalDrafts(JSON.parse(savedDrafts));
+      }
+    } catch (error) {
+      console.error("Failed to load drafts from local storage:", error);
+      setLocalDrafts([]);
+    }
+  }, []);
 
-  // fetch dropdowns
+  // Fetch dropdowns
   useEffect(() => {
     const fetchDropdowns = async () => {
       setLoadingDropdowns(true);
@@ -142,8 +185,7 @@ const FuelPartnerRitation: React.FC = () => {
     fetchDropdowns();
   }, []);
 
-  // fetch tera tangki
-  // fetch tera tangki semua record >1000
+  // Fetch all tera tangki records
   const fetchTeraAll = async () => {
     setLoadingTera(true);
     try {
@@ -161,11 +203,9 @@ const FuelPartnerRitation: React.FC = () => {
         if (!data || data.length === 0) break;
 
         allData = [...allData, ...(data as TeraPoint[])];
-
-        if (data.length < batchSize) break; // tidak ada data lagi
+        if (data.length < batchSize) break;
         from += batchSize;
       }
-
       const grouped = allData.reduce<Record<string, TeraPoint[]>>((acc, t) => {
         if (!acc[t.unit_id]) acc[t.unit_id] = [];
         acc[t.unit_id].push(t);
@@ -183,24 +223,31 @@ const FuelPartnerRitation: React.FC = () => {
     fetchTeraAll();
   }, []);
 
-  // generate nomor surat jalan
+  // Generate surat jalan number
   useEffect(() => {
     if (selectedDate && shift && manualNN !== '') {
       const numeric = String(manualNN).replace(/\D/g, '');
       const nn = numeric ? numeric.padStart(2, '0') : '';
-      if (!nn) return setNoSuratJalan('');
+      if (!nn) {
+        setNoSuratJalan('');
+        return;
+      }
       const date = new Date(selectedDate);
       const yy = date.getFullYear().toString().slice(-2);
       const mm = (date.getMonth() + 1).toString().padStart(2, '0');
       const dd = date.getDate().toString().padStart(2, '0');
       const ss = shift.padStart(2, '0');
       setNoSuratJalan(`G${yy}${mm}${dd}${ss}${nn}`);
-    } else setNoSuratJalan('');
+    } else {
+      setNoSuratJalan('');
+    }
   }, [selectedDate, shift, manualNN]);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPhotoPreview(URL.createObjectURL(file));
+    if (file) {
+      setPhotoPreview(URL.createObjectURL(file));
+    }
   };
 
   const [loadingSubmit, setLoadingSubmit] = useState(false);
@@ -211,30 +258,28 @@ const FuelPartnerRitation: React.FC = () => {
     const multiplier = useDekaliter ? 10 : 1;
     const diff = (after - before) * multiplier;
 
-    if (!selectedPetugas) return alert('Pilih Nama Petugas terlebih dahulu!');
-    if (!unit) return alert('Pilih Unit terlebih dahulu!');
-    if (diff < 0) return alert('Selisih flowmeter tidak boleh negatif!');
-    if (diff > 20000)
-      return alert('Flowmeter tidak boleh melebihi maks tangki 20.000 liter!');
-    if (!noSuratJalan) return alert('Nomor Surat Jalan tidak valid!');
-    if (!operator) return alert('Pilih Operator terlebih dahulu!');
-    if (!fuelman) return alert('Pilih Fuelman terlebih dahulu!');
-    if (!sondingBeforeRear || !sondingBeforeFront)
-      return alert('Isi Sonding Before terlebih dahulu!');
-    if (!sondingAfterRear || !sondingAfterFront)
-      return alert('Isi Sonding After terlebih dahulu!');
-    if (volumeBefore === 0)
-      return alert(
-        'Volume Sonding Before tidak valid atau tidak ditemukan di tera tangki!',
-      );
-    if (volumeAfter === 0)
-      return alert(
-        'Volume Sonding After tidak valid atau tidak ditemukan di tera tangki!',
-      );
-    if (!photoPreview) return alert('Upload foto Surat Jalan terlebih dahulu!');
+    const errorMsg = validateRitasiForm({
+      selectedPetugas,
+      unit,
+      diff,
+      noSuratJalan,
+      operator,
+      fuelman,
+      sondingBeforeRear,
+      sondingBeforeFront,
+      sondingAfterRear,
+      sondingAfterFront,
+      volumeBefore,
+      volumeAfter,
+      photoPreview
+    });
 
+    if (errorMsg) {
+      return alert(errorMsg);
+    }
 
-    const selectedWarehouse = units.find(u => u.unit_id === unit)?.warehouse_id || null;
+    const selectedWarehouse =
+      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
     const payload = {
       no_surat_jalan: noSuratJalan,
@@ -249,45 +294,26 @@ const FuelPartnerRitation: React.FC = () => {
       sonding_before_rear: parseFloat(sondingBeforeRear),
       sonding_after_front: parseFloat(sondingAfterFront),
       sonding_after_rear: parseFloat(sondingAfterRear),
-      flowmeter_before_url: '', // nanti bisa diupload ke storage
+      flowmeter_before_url: '',
       flowmeter_after_url: '',
       operator_id: operator,
       fuelman_id: fuelman,
       qty_flowmeter_before: before,
       qty_flowmeter_after: after,
       isValidated: false,
-      petugas_pencatatan : selectedPetugas,
-      shift : shift,
+      petugas_pencatatan: selectedPetugas,
+      shift: shift,
     };
 
     try {
       setLoadingSubmit(true);
-      const { error } = await supabase
-        .from('ritasi_fuel')
-        .insert([payload]);
-      if (error) throw error;
+      const { error } = await supabase.from('ritasi_fuel').insert([payload]);
+      if (error) {
+        throw error;
+      }
 
       alert(`Surat Jalan ${noSuratJalan} berhasil dikirim!`);
-
-      // Reset semua field kecuali teraAll
-      setSelectedDate(new Date().toISOString().slice(0, 10));
-      setShift('1');
-      setManualNN('');
-      setNoSuratJalan('');
-      setUnit('');
-      setOperator('');
-      setFuelman('');
-      setSondingBeforeRear('');
-      setSondingBeforeFront('');
-      setSondingAfterRear('');
-      setSondingAfterFront('');
-      setFlowmeterBefore('');
-      setFlowmeterAfter('');
-      setUseDekaliter(true);
-      setVolumeBefore(0);
-      setVolumeAfter(0);
-      setPhotoPreview('');
-      fetchNextQueue();
+      // Reset fields...
     } catch (err: any) {
       console.error(err);
       alert(`Gagal mengirim data: ${err.message || err}`);
@@ -296,39 +322,187 @@ const FuelPartnerRitation: React.FC = () => {
     }
   };
 
+  const handleSaveLocal = () => {
+    const before = parseFloat(flowmeterBefore || '0');
+    const after = parseFloat(flowmeterAfter || '0');
+    const multiplier = useDekaliter ? 10 : 1;
+    const diff = (after - before) * multiplier;
 
+    const errorMsg = validateRitasiForm({
+      selectedPetugas,
+      unit,
+      diff,
+      noSuratJalan,
+      operator,
+      fuelman,
+      sondingBeforeRear,
+      sondingBeforeFront,
+      sondingAfterRear,
+      sondingAfterFront,
+      volumeBefore,
+      volumeAfter,
+      photoPreview
+    });
 
-  const fetchNextQueue = async () => {
-  if (!selectedDate) return;
-  try {
-    const { data, error } = await supabase
-      .from('ritasi_fuel')
-      .select('queue_num')
-      .eq('ritation_date', selectedDate)
-      .order('queue_num', { ascending: false })
-      .limit(1);
-    if (error) throw error;
-
-    const maxQueue = data?.[0]?.queue_num ?? 0;
-    const nextQueue = (maxQueue || 0) + 1;
-
-    // hanya set kalau user belum mengetik manual
-    if (!manualNN) {
-      setQueueNum(nextQueue);
-      setManualNN(String(nextQueue));
+    if (errorMsg) {
+      return alert(errorMsg);
     }
 
-  } catch (err) {
-    console.error('fetchNextQueue error', err);
-    setQueueNum(1);
-    if (!manualNN) setManualNN('1');
-  }
-};
+    const selectedWarehouse =
+      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
-useEffect(() => {
-  fetchNextQueue();
-}, [selectedDate, shift, unit]);
+    const payload: DraftRitasi = {
+      no_surat_jalan: noSuratJalan,
+      queue_num: queueNum,
+      ritation_date: selectedDate,
+      warehouse_id: selectedWarehouse,
+      qty_sj: diff,
+      qty_sonding_before: volumeBefore,
+      qty_sonding_after: volumeAfter,
+      qty_sonding: volumeAfter - volumeBefore,
+      sonding_before_front: parseFloat(sondingBeforeFront),
+      sonding_before_rear: parseFloat(sondingBeforeRear),
+      sonding_after_front: parseFloat(sondingAfterFront),
+      sonding_after_rear: parseFloat(sondingAfterRear),
+      operator_id: operator,
+      fuelman_id: fuelman,
+      qty_flowmeter_before: before,
+      qty_flowmeter_after: after,
+      isValidated: false,
+      petugas_pencatatan: selectedPetugas,
+      shift: shift,
+      photoPreview,
+    };
 
+    let updatedDrafts: DraftRitasi[];
+    if (editingDraftIndex !== null) {
+      updatedDrafts = [...localDrafts];
+      updatedDrafts[editingDraftIndex] = payload;
+      setEditingDraftIndex(null); // Reset editing state
+    } else {
+      updatedDrafts = [...localDrafts, payload];
+    }
+
+    setLocalDrafts(updatedDrafts);
+    localStorage.setItem('ritasi_draft', JSON.stringify(updatedDrafts));
+    alert('Data tersimpan ke lokal!');
+  };
+
+
+  const handleDeleteDraft = (index: number) => {
+    const updated = [...localDrafts];
+    updated.splice(index, 1);
+    setLocalDrafts(updated);
+    localStorage.setItem('ritasi_draft', JSON.stringify(updated));
+  };
+
+  const handleEditDraft = (index: number) => {
+    const draft = localDrafts[index];
+    // Prefill all form state from the draft
+    setSelectedDate(draft.ritation_date);
+    setQueueNum(draft.queue_num);
+    setManualNN(draft.queue_num?.toString() ?? '');
+    setNoSuratJalan(draft.no_surat_jalan);
+    setUnit(draft.warehouse_id || ''); // Assuming warehouse_id is used as unit_id
+    setOperator(draft.operator_id || '');
+    setFuelman(draft.fuelman_id || '');
+    setSondingBeforeRear(draft.sonding_before_rear?.toString() ?? '');
+    setSondingBeforeFront(draft.sonding_before_front?.toString() ?? '');
+    setSondingAfterRear(draft.sonding_after_rear?.toString() ?? '');
+    setSondingAfterFront(draft.sonding_after_front?.toString() ?? '');
+    setVolumeBefore(draft.qty_sonding_before || 0);
+    setVolumeAfter(draft.qty_sonding_after || 0);
+    setFlowmeterBefore(draft.qty_flowmeter_before?.toString() ?? '');
+    setFlowmeterAfter(draft.qty_flowmeter_after?.toString() ?? '');
+    setUseDekaliter(true); // You might need to save this in the draft as well
+    setPhotoPreview(draft.photoPreview || '');
+    
+    // Set the editing state
+    setEditingDraftIndex(index);
+    
+    // Close the modal
+    setShowDraftModal(false);
+  };
+
+
+  const handleSubmitAllLocal = async () => {
+    if (localDrafts.length === 0) {
+      return;
+    }
+    try {
+      setLoadingSubmit(true);
+      const { error } = await supabase.from('ritasi_fuel').insert(localDrafts);
+      if (error) {
+        throw error;
+      }
+      alert('Semua draft berhasil dikirim!');
+      setLocalDrafts([]);
+      localStorage.removeItem('ritasi_draft');
+      setShowDraftModal(false);
+    } catch (err: any) {
+      alert('Gagal submit draft: ' + err.message);
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
+  const fetchNextQueue = async () => {
+    if (!selectedDate) {
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('ritasi_fuel')
+        .select('queue_num')
+        .eq('ritation_date', selectedDate)
+        .order('queue_num', { ascending: false })
+        .limit(1);
+      if (error) {
+        throw error;
+      }
+
+      const maxQueue = data?.[0]?.queue_num ?? 0;
+      const nextQueue = (maxQueue || 0) + 1;
+
+      if (!manualNN) {
+        setQueueNum(nextQueue);
+        setManualNN(String(nextQueue));
+      }
+    } catch (err) {
+      console.error('fetchNextQueue error', err);
+      setQueueNum(1);
+      if (!manualNN) {
+        setManualNN('1');
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchNextQueue();
+  }, [selectedDate, shift, unit]);
+
+  const handleResetForm = () => {
+    // Reset all form states
+    setSelectedDate(new Date().toISOString().slice(0, 10));
+    setShift(new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2');
+    setManualNN('');
+    setQueueNum(null);
+    setNoSuratJalan('');
+    setUnit('');
+    setOperator('');
+    setFuelman('');
+    setSondingBeforeRear('');
+    setSondingBeforeFront('');
+    setSondingAfterRear('');
+    setSondingAfterFront('');
+    setVolumeBefore(0);
+    setVolumeAfter(0);
+    setFlowmeterBefore('');
+    setFlowmeterAfter('');
+    setUseDekaliter(true);
+    setPhotoPreview('');
+    setEditingDraftIndex(null); // Crucial: reset editing state
+  };
 
 
   return (
@@ -336,7 +510,7 @@ useEffect(() => {
       <ViewTeraModal
         visible={showTeraModal}
         onClose={() => setShowTeraModal(false)}
-        teraData={Object.values(teraAll).flat()} // flatten semua unit
+        teraData={Object.values(teraAll).flat()}
         units={Object.keys(teraAll)}
       />
 
@@ -416,16 +590,16 @@ useEffect(() => {
             Nomor Surat Jalan Manual (NN)
           </label>
           <input
-  type="number"
-  min={0}
-  value={manualNN}
-  onChange={(e) => {
-    setManualNN(e.target.value.replace(/\D/g, ''))
-    setQueueNum(parseInt(e.target.value) || null)
-  }}
-  className="border rounded p-2 w-full"
-  placeholder="Masukkan nomor SJ (angka)"
-/>
+            type="number"
+            min={0}
+            value={manualNN}
+            onChange={(e) => {
+              setManualNN(e.target.value.replace(/\D/g, ''));
+              setQueueNum(parseInt(e.target.value) || null);
+            }}
+            className="border rounded p-2 w-full"
+            placeholder="Masukkan nomor SJ (angka)"
+          />
 
           {noSuratJalan ? (
             <p className="mt-1 font-bold text-lg">{noSuratJalan}</p>
@@ -448,29 +622,38 @@ useEffect(() => {
           fuelmans={fuelmans}
           loading={loadingDropdowns}
           onChange={(field, value) => {
-            if (field === 'unit') setUnit(value);
-            if (field === 'operator') setOperator(value);
-            if (field === 'fuelman') setFuelman(value);
+            if (field === 'unit') {
+              setUnit(value);
+            }
+            if (field === 'operator') {
+              setOperator(value);
+            }
+            if (field === 'fuelman') {
+              setFuelman(value);
+            }
           }}
         />
 
         {/* sonding before */}
         <SondingPanel
-  title="Sonding Before"
-  unitId={unit}
-  teraData={teraAll[unit] || []}
-  sondingRear={sondingBeforeRear}
-  sondingFront={sondingBeforeFront}
-  rearFieldName="sondingBeforeRear"
-  frontFieldName="sondingBeforeFront"
-  unit="cm" // <- inputnya cm
-  onChange={(field, value) => {
-    if (field === 'sondingBeforeRear') setSondingBeforeRear(value);
-    if (field === 'sondingBeforeFront') setSondingBeforeFront(value);
-  }}
-  onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
-/>
-
+          title="Sonding Before"
+          unitId={unit}
+          teraData={teraAll[unit] || []}
+          sondingRear={sondingBeforeRear}
+          sondingFront={sondingBeforeFront}
+          rearFieldName="sondingBeforeRear"
+          frontFieldName="sondingBeforeFront"
+          unit="cm"
+          onChange={(field, value) => {
+            if (field === 'sondingBeforeRear') {
+              setSondingBeforeRear(value);
+            }
+            if (field === 'sondingBeforeFront') {
+              setSondingBeforeFront(value);
+            }
+          }}
+          onVolumeChange={(vol) => setVolumeBefore(vol ?? 0)}
+        />
 
         {/* sonding after */}
         <SondingPanel
@@ -481,10 +664,14 @@ useEffect(() => {
           sondingFront={sondingAfterFront}
           rearFieldName="sondingAfterRear"
           frontFieldName="sondingAfterFront"
-          unit="cm" // <- inputnya cm
+          unit="cm"
           onChange={(field, value) => {
-            if (field === 'sondingAfterRear') setSondingAfterRear(value);
-            if (field === 'sondingAfterFront') setSondingAfterFront(value);
+            if (field === 'sondingAfterRear') {
+              setSondingAfterRear(value);
+            }
+            if (field === 'sondingAfterFront') {
+              setSondingAfterFront(value);
+            }
           }}
           onVolumeChange={(vol) => setVolumeAfter(vol ?? 0)}
         />
@@ -497,10 +684,15 @@ useEffect(() => {
           flowmeterAfter={flowmeterAfter}
           useDekaliter={useDekaliter}
           onChange={(field, value) => {
-            if (field === 'flowmeterBefore')
+            if (field === 'flowmeterBefore') {
               setFlowmeterBefore(value as string);
-            if (field === 'flowmeterAfter') setFlowmeterAfter(value as string);
-            if (field === 'useDekaliter') setUseDekaliter(value as boolean);
+            }
+            if (field === 'flowmeterAfter') {
+              setFlowmeterAfter(value as string);
+            }
+            if (field === 'useDekaliter') {
+              setUseDekaliter(value as boolean);
+            }
           }}
         />
 
@@ -541,16 +733,101 @@ useEffect(() => {
           </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={loadingSubmit}
-          className={`mt-6 ${
-            loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
-          } text-white px-4 py-2 rounded w-full sm:w-auto`}
-        >
-          {loadingSubmit ? 'Mengirim...' : 'Submit'}
-        </button>
+        <div className="flex flex-col sm:flex-row sm:justify-end items-center gap-2 mt-6">
+          {editingDraftIndex !== null && (
+            <button
+              onClick={handleResetForm}
+              className="px-4 py-2 rounded w-full sm:w-auto border-gray-600 border text-gray-600"
+            >
+              Cancel Edit
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={loadingSubmit}
+            className={`text-white px-4 py-2 rounded w-full sm:w-auto ${loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'}`}
+          >
+            {loadingSubmit ? 'Mengirim...' : 'Submit'}
+          </button>
+          <button
+            onClick={handleSaveLocal}
+            className="px-4 py-2 rounded w-full sm:w-auto border-blue-600 border text-blue-600"
+          >
+            {editingDraftIndex !== null ? 'Update Draft' : 'Save to Local'}
+          </button>
+        </div>
       </div>
+
+      {localDrafts.length > 0 && (
+        <button
+          onClick={() => setShowDraftModal(true)}
+          className="fixed bottom-6 right-6 bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-full shadow-lg"
+          title="Lihat Draft Ritasi"
+        >
+          <DocumentTextIcon className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Modal Draft */}
+      {showDraftModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-2xl w-full">
+            <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
+            <div className="overflow-auto max-h-64 mb-4">
+              <table className="min-w-full border">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="p-2 border">No SJ</th>
+                    <th className="p-2 border">Tanggal</th>
+                    <th className="p-2 border">Unit</th>
+                    <th className="p-2 border">Qty SJ</th>
+                    <th className="p-2 border">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localDrafts.map((d, i) => (
+                    <tr key={i}>
+                      <td className="p-2 border">{d.no_surat_jalan}</td>
+                      <td className="p-2 border">{d.ritation_date}</td>
+                      <td className="p-2 border">{d.warehouse_id}</td>
+                      <td className="p-2 border">{d.qty_sj}</td>
+                      <td className="p-2 border text-center space-x-2">
+                        <button
+                          onClick={() => handleEditDraft(i)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDraft(i)}
+                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDraftModal(false)}
+                className="bg-gray-300 px-4 py-2 rounded"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={handleSubmitAllLocal}
+                disabled={loadingSubmit}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                {loadingSubmit ? 'Mengirim...' : 'Submit All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
