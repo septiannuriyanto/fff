@@ -8,6 +8,7 @@ import SummaryPanel from './components/SummaryPanel';
 import { useAuth } from '../../Authentication/AuthContext';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 import { validateRitasiForm } from './functions/validateRitasi';
+import { Camera, ImageIcon } from 'lucide-react';
 
 interface ManpowerItem {
   nrp: string;
@@ -711,9 +712,32 @@ const FuelPartnerRitation: React.FC = () => {
         />
 
         <div className="mt-4">
-          <label className="block mb-1">Foto Surat Jalan</label>
-          <input type="file" accept="image/*" onChange={handlePhoto} />
-        </div>
+      <label className="block mb-1">Foto Surat Jalan</label>
+      <div className="flex gap-3">
+        {/* Tombol Kamera */}
+        <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
+          <Camera className="w-8 h-8 text-blue-400" />
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment" // langsung kamera belakang (di mobile)
+            className="hidden"
+            onChange={handlePhoto}
+          />
+        </label>
+
+        {/* Tombol Galeri */}
+        <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
+          <ImageIcon className="w-8 h-8 text-blue-400" />
+          <input
+            type="file"
+            accept="image/*" // tanpa capture => buka galeri/file picker
+            className="hidden"
+            onChange={handlePhoto}
+          />
+        </label>
+      </div>
+    </div>
         {photoPreview && (
           <div className="mt-2">
             <img
