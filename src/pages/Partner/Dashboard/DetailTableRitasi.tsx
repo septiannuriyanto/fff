@@ -176,8 +176,8 @@ const exportToExcel = async () => {
               <td className="px-2 py-1 border">{r.no_surat_jalan}</td>
               <td className="px-2 py-1 border">{r.queue_num}</td>
               <td className="px-2 py-1 border">{r.unit_id}</td>
-              <td className="px-2 py-1 border">{r.qty_sj}</td>
-              <td className="px-2 py-1 border">{r.qty_sonding}</td>
+              <td className="px-2 py-1 border">{formatIDNumber(r.qty_sj || 0)}</td>
+              <td className="px-2 py-1 border">{formatIDNumber(r.qty_sonding || 0)}</td>
               <td className="px-2 py-1 border">{r.operator_name}</td>
               <td className="px-2 py-1 border">{r.fuelman_name}</td>
               <td className="px-2 py-1 border">{r.shift}</td>
