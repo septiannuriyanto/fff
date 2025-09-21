@@ -2,9 +2,9 @@
 import React, { useState, useMemo } from "react";
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
-import * as XLSX from "xlsx";
 import { Download, Share2 } from "lucide-react";
 import { RitasiFuel } from "../component/ritasiFuel";
+import formatIDNumber from "../Ritation/functions/formatIdNumber";
 
 interface Props {
   records: RitasiFuel[];
@@ -91,7 +91,7 @@ const exportToExcel = async () => {
   });
 
   // border untuk seluruh data
-  sheet.eachRow((row, rowNumber) => {
+  sheet.eachRow((row) => {
     row.eachCell({ includeEmpty: false }, (cell) => {
       cell.border = {
         top: { style: 'thin' },
@@ -128,7 +128,7 @@ const exportToExcel = async () => {
     const recs = shift === 1 ? shift1Records : shift2Records;
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
     recs.forEach((r, idx) => {
-      message += `${idx + 1}. Ft ${r.queue_num} - ${r.qty_sj} Lt\n`;
+      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
     });
     message += `\nTotal Ritasi : ${
       shift === 1 ? totalShift1 : totalShift2
@@ -141,9 +141,10 @@ const exportToExcel = async () => {
   const shareAll = () => {
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nShift 1 & 2\n\n`;
     records.forEach((r, idx) => {
-      message += `${idx + 1}. FT${r.warehouse_id} - ${r.qty_sj} Lt\n`;
+      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
     });
-    message += `\nTotal Ritasi : ${totalShift1 + totalShift2} Lt`;
+    message += `\nTotal Ritasi : ${formatIDNumber(totalShift1 + totalShift2)} Lt`;
+    message += `\n\nPetugas Pencatatan: ${records[0]?.petugas_pencatatan_name || '-'}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
