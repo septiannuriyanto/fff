@@ -15,12 +15,23 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const totalPages = Math.ceil(records.length / pageSize);
+  // 1️⃣ Data yang sudah diurutkan berdasarkan no_surat_jalan
+  const sortedRecords = useMemo(() => {
+    return [...records].sort((a, b) =>
+      (a.no_surat_jalan || "").localeCompare(b.no_surat_jalan || "", "id", {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
+  }, [records]);
+
+
+  const totalPages = Math.ceil(sortedRecords.length / pageSize);
 
   const paginatedRecords = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return records.slice(start, start + pageSize);
-  }, [records, currentPage, pageSize]);
+    return sortedRecords.slice(start, start + pageSize);
+  }, [sortedRecords, currentPage, pageSize]);
 
   const goToPage = (page: number) => {
     if (page < 1 || page > totalPages) return;
@@ -28,8 +39,8 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   };
 
   // Hitung total ritasi per shift
-  const shift1Records = records.filter((r) => r.shift === 1);
-  const shift2Records = records.filter((r) => r.shift === 2);
+  const shift1Records = sortedRecords.filter((r) => r.shift === 1);
+  const shift2Records = sortedRecords.filter((r) => r.shift === 2);
 
   const totalShift1 = shift1Records.reduce((acc, r) => acc + (Number(r.qty_sj) || 0), 0);
   const totalShift2 = shift2Records.reduce((acc, r) => acc + (Number(r.qty_sj) || 0), 0);
@@ -72,7 +83,7 @@ const exportToExcel = async () => {
   }
 
   // data
-  records.forEach((row, index) => {
+  sortedRecords.forEach((row, index) => {
     sheet.addRow([
       index + 1,
       row.ritation_date,
