@@ -8,49 +8,15 @@ import SummaryPanel from './components/SummaryPanel';
 import { useAuth } from '../../Authentication/AuthContext';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 import { validateRitasiForm } from './functions/validateRitasi';
-import { Camera, ImageIcon } from 'lucide-react';
-import Trial from '../../../common/TrialWrapper/Trial';
-import PhotoPreviewWithRotate from './components/PhotoPreviewWithRotate';
-import { set } from 'date-fns';
+import { Camera, ImageIcon, RotateCcw } from 'lucide-react';
+import { DraftRitasi } from './types/drafts';
+import { TeraPoint } from './types/teraPoint';
+import { StorageItem } from './types/storageItem';
+import { ManpowerItem } from './types/manpowerItem';
 
-interface ManpowerItem {
-  nrp: string;
-  nama: string;
-}
-interface StorageItem {
-  id: number;
-  warehouse_id: string;
-  unit_id: string;
-}
-export interface TeraPoint {
-  unit_id: string;
-  height_mm: number;
-  qty_liter: number;
-}
 
-interface DraftRitasi {
-  no_surat_jalan: string;
-  queue_num: number | null;
-  ritation_date: string;
-  warehouse_id: string | null;
-  qty_sj: number;
-  qty_sonding_before: number;
-  qty_sonding_after: number;
-  qty_sonding: number;
-  sonding_before_front: number;
-  sonding_before_rear: number;
-  sonding_after_front: number;
-  sonding_after_rear: number;
-  operator_id: string;
-  fuelman_id: string;
-  qty_flowmeter_before: number;
-  qty_flowmeter_after: number;
-  isValidated: boolean;
-  petugas_pencatatan: string;
-  shift: '1' | '2';
-  photo?: string; 
-  // photoPreview?: string;
-}
+
+
 
 const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
@@ -81,8 +47,10 @@ const FuelPartnerRitation: React.FC = () => {
   const [volumeBefore, setVolumeBefore] = useState(0);
   const [volumeAfter, setVolumeAfter] = useState(0);
 
-  const [photoPreview, setPhotoPreview] = useState<string>('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [rotationAngle, setRotationAngle] = useState(0);
+  const [isPhotoUploaded, setIsPhotoUploaded] = useState(false);
 
   const [units, setUnits] = useState<StorageItem[]>([]);
   const [operators, setOperators] = useState<ManpowerItem[]>([]);
@@ -100,6 +68,8 @@ const FuelPartnerRitation: React.FC = () => {
   const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(
     null,
   );
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -241,56 +211,231 @@ const FuelPartnerRitation: React.FC = () => {
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoPreview(URL.createObjectURL(file));
-    }
-  };
-
-const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  const img = new Image();
-  img.onload = () => {
-    // Cek orientasi
-    const landscapeWidth = Math.max(img.width, img.height);
-    const landscapeHeight = Math.min(img.width, img.height);
-
-    // Buat canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = landscapeWidth;
-    canvas.height = landscapeHeight;
-    const ctx = canvas.getContext("2d")!;
-
-    if (img.height > img.width) {
-      // Gambar portrait, kita rotate supaya landscape
-      ctx.save();
-      ctx.translate(landscapeWidth / 2, landscapeHeight / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      ctx.restore();
-    } else {
-      // Sudah landscape
-      ctx.drawImage(img, 0, 0, landscapeWidth, landscapeHeight);
-    }
-
-    // Buat Blob baru (jpeg/png)
-    canvas.toBlob((blob) => {
-      if (blob) {
-        // preview
-        const previewUrl = URL.createObjectURL(blob);
-        setPhotoPreview(previewUrl);
-        setPhotoFile(new File([blob], file.name, { type: blob.type }));
-
-        // kalau mau upload blob ini ke server:
-        // const newFile = new File([blob], file.name, { type: blob.type });
+      // Validasi file
+      if (file.size > 10 * 1024 * 1024) { // 10MB max
+        alert('File terlalu besar. Maksimal 10MB.');
+        return;
       }
-    }, "image/jpeg", 0.9);
+      
+      if (!file.type.startsWith('image/')) {
+        alert('File harus berupa gambar.');
+        return;
+      }
+
+      console.log('Selected file size:', (file.size / 1024).toFixed(2), 'KB');
+
+      // Cleanup previous blob URL if exists
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview);
+      }
+
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setRotationAngle(0);
+      setIsPhotoUploaded(false);
+    }
   };
-  img.src = URL.createObjectURL(file);
-};
 
+  const handleRotate = () => {
+    setRotationAngle((prevAngle) => (prevAngle + 90) % 360);
+  };
 
-  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  // Fungsi untuk kompresi gambar dengan target maksimal 100KB
+  const compressImage = async (canvas: HTMLCanvasElement, targetSizeKB: number = 100): Promise<Blob> => {
+    const targetSize = targetSizeKB * 1024; // Convert to bytes
+    let quality = 0.9;
+    let blob: Blob | null = null;
+
+    // Binary search untuk menemukan quality yang tepat
+    let minQuality = 0.1;
+    let maxQuality = 0.9;
+    
+    while (minQuality <= maxQuality) {
+      quality = (minQuality + maxQuality) / 2;
+      
+      blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', quality);
+      });
+
+      if (!blob) {
+        throw new Error('Failed to create compressed blob');
+      }
+
+      if (blob.size <= targetSize) {
+        // Size is acceptable, try higher quality
+        minQuality = quality + 0.01;
+      } else {
+        // Size too large, try lower quality
+        maxQuality = quality - 0.01;
+      }
+
+      // Prevent infinite loop
+      if (maxQuality - minQuality < 0.01) {
+        break;
+      }
+    }
+
+    // Final compression with the found quality
+    blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', quality);
+    });
+
+    if (!blob) {
+      throw new Error('Failed to create final compressed blob');
+    }
+
+    // Jika masih terlalu besar, resize canvas dan coba lagi
+    if (blob.size > targetSize) {
+      const maxDimension = 1280; // Reduce max dimension
+      const ratio = Math.min(maxDimension / canvas.width, maxDimension / canvas.height);
+      
+      if (ratio < 1) {
+        const resizeCanvas = document.createElement('canvas');
+        const resizeCtx = resizeCanvas.getContext('2d')!;
+        
+        resizeCanvas.width = canvas.width * ratio;
+        resizeCanvas.height = canvas.height * ratio;
+        
+        // Set background putih
+        resizeCtx.fillStyle = 'white';
+        resizeCtx.fillRect(0, 0, resizeCanvas.width, resizeCanvas.height);
+        
+        // Resize dengan smoothing
+        resizeCtx.imageSmoothingEnabled = true;
+        resizeCtx.imageSmoothingQuality = 'high';
+        resizeCtx.drawImage(canvas, 0, 0, resizeCanvas.width, resizeCanvas.height);
+        
+        // Recursive call dengan canvas yang lebih kecil
+        return compressImage(resizeCanvas, targetSizeKB);
+      }
+    }
+
+    return blob;
+  };
+
+  const handleSaveAndUpload = async () => {
+    if (!photoFile) {
+      alert("Tidak ada foto untuk diunggah.");
+      return;
+    }
+    if (!noSuratJalan) {
+      alert("Mohon isi data Tanggal, Shift, dan Nomor SJ terlebih dahulu.");
+      return;
+    }
+
+    setIsLoadingPhoto(true);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = photoPreview;
+      });
+
+      console.log('Original image size:', (photoFile.size / 1024).toFixed(2), 'KB');
+      console.log('Original dimensions:', img.width, 'x', img.height);
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      // Resize jika gambar terlalu besar untuk menghemat memori dan ukuran file
+      const maxDimension = 1920;
+      let drawWidth = img.width;
+      let drawHeight = img.height;
+      
+      if (img.width > maxDimension || img.height > maxDimension) {
+        const ratio = Math.min(maxDimension / img.width, maxDimension / img.height);
+        drawWidth = img.width * ratio;
+        drawHeight = img.height * ratio;
+      }
+
+      // Calculate proper canvas dimensions based on rotation
+      let canvasWidth, canvasHeight;
+      if (rotationAngle === 90 || rotationAngle === 270) {
+        canvasWidth = drawHeight;
+        canvasHeight = drawWidth;
+      } else {
+        canvasWidth = drawWidth;
+        canvasHeight = drawHeight;
+      }
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      // Set white background to avoid transparency issues
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Clear the canvas and reset transformations
+      ctx.save();
+
+      // Move to center, rotate, then draw
+      ctx.translate(canvasWidth / 2, canvasHeight / 2);
+      ctx.rotate((rotationAngle * Math.PI) / 180);
+      
+      // Draw image centered at origin with proper sizing
+      ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      
+      // Restore the context
+      ctx.restore();
+
+      console.log('Canvas dimensions after rotation:', canvasWidth, 'x', canvasHeight);
+
+      // Compress image to maximum 100KB
+      const compressedBlob = await compressImage(canvas, 100);
+      
+      console.log('Compressed image size:', (compressedBlob.size / 1024).toFixed(2), 'KB');
+
+      if (compressedBlob.size > 102400) { // 100KB + small buffer
+        console.warn('Warning: Compressed image still larger than 100KB');
+      }
+
+      const filename = `${noSuratJalan}.jpg`;
+      const date = new Date(selectedDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const path = `ritasi/${year}/${month}/${day}/${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(path, compressedBlob, {
+          upsert: true,
+          contentType: 'image/jpeg',
+          cacheControl: '3600'
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(path);
+
+      if (publicUrlData) {
+        // Cleanup old blob URL
+        if (photoPreview && photoPreview.startsWith('blob:')) {
+          URL.revokeObjectURL(photoPreview);
+        }
+        
+        // Set new preview with cache busting
+        setPhotoPreview(publicUrlData.publicUrl + '?t=' + Date.now());
+        setIsPhotoUploaded(true);
+        setPhotoFile(null);
+        alert(`Foto berhasil diunggah! (${(compressedBlob.size / 1024).toFixed(2)} KB)`);
+      }
+
+    } catch (err: any) {
+      console.error('Upload foto gagal:', err);
+      alert('Gagal mengunggah foto: ' + err.message);
+      setIsPhotoUploaded(false);
+    } finally {
+      setIsLoadingPhoto(false);
+    }
+  };
 
   const handleSubmit = async () => {
     const before = parseFloat(flowmeterBefore || '0');
@@ -311,7 +456,6 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
-      // photoPreview
     });
 
     if (errorMsg) {
@@ -334,8 +478,7 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
       sonding_before_rear: parseFloat(sondingBeforeRear),
       sonding_after_front: parseFloat(sondingAfterFront),
       sonding_after_rear: parseFloat(sondingAfterRear),
-      flowmeter_before_url: '',
-      flowmeter_after_url: '',
+      photo_url: isPhotoUploaded ? photoPreview : null,
       operator_id: operator,
       fuelman_id: fuelman,
       qty_flowmeter_before: before,
@@ -362,7 +505,7 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
     }
   };
 
-  const handleSaveLocal =async () => {
+  const handleSaveLocal = async () => {
     const before = parseFloat(flowmeterBefore || '0');
     const after = parseFloat(flowmeterAfter || '0');
     const multiplier = useDekaliter ? 10 : 1;
@@ -381,22 +524,15 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
-      // photoPreview,
     });
 
     if (errorMsg) {
       return alert(errorMsg);
     }
 
-      let photoBase64: string | undefined;
-  if (photoFile) { // simpan file asli di state waktu upload
-    photoBase64 = await fileToBase64(photoFile);
-  }
-
     const selectedWarehouse =
       units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
-    // Get the next queue number for the draft
     const nextDraftQueue =
       (localDrafts.length > 0
         ? Math.max(...localDrafts.map((d) => d.queue_num ?? 0))
@@ -427,8 +563,7 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
       isValidated: false,
       petugas_pencatatan: selectedPetugas,
       shift: shift,
-      photo: photoBase64,
-      // photoPreview,
+      photo_url: isPhotoUploaded ? photoPreview : null,
     };
 
     let updatedDrafts: DraftRitasi[];
@@ -450,7 +585,6 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
   const handleDeleteDraft = (index: number) => {
     const updated = [...localDrafts];
     updated.splice(index, 1);
-    // Re-assign sequential queue numbers
     const newDrafts = updated.map((d, i) => {
       const newQueue = (d.queue_num ?? 0) - 1;
       return {
@@ -486,7 +620,10 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFlowmeterBefore(draft.qty_flowmeter_before?.toString() ?? '');
     setFlowmeterAfter(draft.qty_flowmeter_after?.toString() ?? '');
     setUseDekaliter(true);
-    // setPhotoPreview(draft.photoPreview || '');
+    setPhotoPreview(draft.photo_url || '');
+    setIsPhotoUploaded(!!draft.photo_url);
+    setPhotoFile(null);
+    setRotationAngle(0); // Reset rotation untuk draft yang di-edit
 
     setEditingDraftIndex(index);
     setShowDraftModal(false);
@@ -566,6 +703,11 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
   }, [selectedDate, shift, localDrafts]);
 
   const handleResetForm = () => {
+    // Cleanup photo preview URL if it's a blob URL
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    
     setSelectedDate(new Date().toISOString().slice(0, 10));
     setShift(
       new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2',
@@ -586,7 +728,17 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFlowmeterAfter('');
     setUseDekaliter(true);
     setPhotoPreview('');
+    setPhotoFile(null);
+    setRotationAngle(0);
+    setIsPhotoUploaded(false);
     setEditingDraftIndex(null);
+    
+    // Clear file input values
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach((input: any) => {
+      input.value = '';
+    });
+    
     fetchNextQueue();
   };
 
@@ -797,24 +949,21 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="mt-4">
           <label className="block mb-1">Foto Surat Jalan</label>
           <div className="flex gap-3">
-            {/* Tombol Kamera */}
             <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
               <Camera className="w-8 h-8 text-blue-400" />
               <input
                 type="file"
                 accept="image/*"
-                capture="environment" // langsung kamera belakang (di mobile)
+                capture="environment"
                 className="hidden"
                 onChange={handlePhoto}
               />
             </label>
-
-            {/* Tombol Galeri */}
-            <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
+            <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
               <ImageIcon className="w-8 h-8 text-blue-400" />
               <input
                 type="file"
-                accept="image/*" // tanpa capture => buka galeri/file picker
+                accept="image/*"
                 className="hidden"
                 onChange={handlePhoto}
               />
@@ -822,49 +971,111 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
           </div>
         </div>
 
-        <Trial role={currentUser?.role!}>
-          <div className="mt-4">
-          <label className="block mb-1">Foto Surat Jalan</label>
-          <div className="flex gap-3">
-            {/* Tombol Kamera */}
-            <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
-              <Camera className="w-8 h-8 text-blue-400" />
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment" // langsung kamera belakang (di mobile)
-                className="hidden"
-                onChange={handlePhotoTrial}
-              />
-            </label>
-
-            {/* Tombol Galeri */}
-            <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
-              <ImageIcon className="w-8 h-8 text-blue-400" />
-              <input
-                type="file"
-                accept="image/*" // tanpa capture => buka galeri/file picker
-                className="hidden"
-                onChange={handlePhotoTrial}
-              />
-            </label>
+        {photoPreview && (
+          <div className={`mt-4 border-2 border-dashed border-gray-400 rounded-md p-2 flex flex-col items-center ${isLoadingPhoto ? 'opacity-30' : ''}`}>
+            <h4 className="font-semibold mb-2">Pratinjau Foto:</h4>
+            
+            {/* Container dengan aspect ratio yang konsisten */}
+            <div className="w-full max-w-md mx-auto bg-gray-50 rounded overflow-hidden">
+              <div className="relative" style={{ paddingBottom: '75%' }}> {/* 4:3 aspect ratio */}
+                <img
+                  src={photoPreview}
+                  alt="Surat Jalan Preview"
+                  className="absolute inset-0 w-full h-full object-contain"
+                  style={{ 
+                    // Jika sudah diupload, tidak perlu rotasi lagi karena gambar server sudah dalam orientasi yang benar
+                    // Jika belum diupload, terapkan rotasi untuk preview
+                    transform: isPhotoUploaded ? 'none' : `rotate(${rotationAngle}deg)`,
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.3s ease-in-out'
+                  }}
+                  onLoad={(e) => {
+                    console.log('Preview image loaded:', (e.target as HTMLImageElement).naturalWidth, 'x', (e.target as HTMLImageElement).naturalHeight);
+                  }}
+                  onError={(e) => {
+                    console.error('Preview image failed to load');
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Status info dengan size indicator */}
+            <div className="text-sm text-gray-600 mt-2">
+              {isPhotoUploaded ? (
+                <span className="text-green-600 font-medium">✓ Foto telah diunggah dan disimpan</span>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <span>Preview dengan rotasi: {rotationAngle}°</span>
+                  {photoFile && (
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      Ukuran asli: {(photoFile.size / 1024).toFixed(2)} KB
+                      {photoFile.size > 102400 && (
+                        <span className="text-orange-600 ml-1">
+                          (akan dikompres ke ≤100 KB)
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Controls - hanya tampil jika belum diupload */}
+            {!isPhotoUploaded && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleRotate}
+                  disabled={isLoadingPhoto}
+                  className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full flex items-center gap-1 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RotateCcw size={16} /> Rotasi
+                </button>
+                <button
+                  onClick={handleSaveAndUpload}
+                  disabled={isLoadingPhoto || !photoFile}
+                  className={`px-4 py-2 rounded-full text-white flex items-center gap-1 ${
+                    isLoadingPhoto || !photoFile 
+                      ? 'bg-blue-300 cursor-not-allowed' 
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {isLoadingPhoto ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Mengunggah...
+                    </>
+                  ) : (
+                    'Simpan & Unggah'
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Button untuk ganti foto jika sudah diupload */}
+            {isPhotoUploaded && (
+              <button
+                onClick={() => {
+                  // Reset untuk upload foto baru
+                  if (photoPreview && photoPreview.startsWith('blob:')) {
+                    URL.revokeObjectURL(photoPreview);
+                  }
+                  setPhotoPreview('');
+                  setPhotoFile(null);
+                  setRotationAngle(0);
+                  setIsPhotoUploaded(false);
+                  // Clear file inputs
+                  const fileInputs = document.querySelectorAll('input[type="file"]');
+                  fileInputs.forEach((input: any) => {
+                    input.value = '';
+                  });
+                }}
+                className="mt-2 px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Ganti Foto
+              </button>
+            )}
           </div>
-        </div>
-        </Trial>
-
-      {photoPreview && photoFile && (
-  <PhotoPreviewWithRotate
-    photoPreview={photoPreview}
-    originalFile={photoFile}
-    onRotatedFile={(rotatedFile) => {
-      // ini callback waktu tombol "Simpan Rotasi" diklik
-      console.log("file hasil rotasi", rotatedFile);
-      // bisa langsung upload rotatedFile ke server di sini
-    }}
-  />
-)}
-
-
+        )}
 
         <div className="flex flex-col sm:flex-row sm:justify-end items-center gap-2 mt-6">
           {editingDraftIndex !== null && (
@@ -877,15 +1088,16 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
           )}
           <button
             onClick={handleSubmit}
-            disabled={loadingSubmit}
+            disabled={loadingSubmit || isLoadingPhoto}
             className={`text-white px-4 py-2 rounded w-full sm:w-auto ${
-              loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
+              loadingSubmit || isLoadingPhoto ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
             }`}
           >
             {loadingSubmit ? 'Mengirim...' : 'Submit'}
           </button>
           <button
             onClick={handleSaveLocal}
+            disabled={isLoadingPhoto}
             className="px-4 py-2 rounded w-full sm:w-auto border-blue-600 border text-blue-600"
           >
             {editingDraftIndex !== null ? 'Update Draft' : 'Save to Local'}
@@ -905,12 +1117,12 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
 
       {showDraftModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-2xl w-full">
+          <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
             <div className="overflow-auto max-h-64 mb-4">
               <table className="min-w-full border">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 dark:bg-gray-800">
                     <th className="p-2 border">No SJ</th>
                     <th className="p-2 border">Tanggal</th>
                     <th className="p-2 border">Unit</th>
@@ -920,44 +1132,65 @@ const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
                 </thead>
                 <tbody>
                   {localDrafts.map((d, i) => (
-                    <tr key={i}>
+                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="p-2 border">{d.no_surat_jalan}</td>
                       <td className="p-2 border">{d.ritation_date}</td>
                       <td className="p-2 border">{d.warehouse_id}</td>
-                      <td className="p-2 border">{d.qty_sj}</td>
-                      <td className="p-2 border text-center space-x-2">
-                        <button
-                          onClick={() => handleEditDraft(i)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDraft(i)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
-                        >
-                          Hapus
-                        </button>
+                      <td className="p-2 border">{d.qty_sj?.toFixed(2)} L</td>
+                      <td className="p-2 border text-center">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => handleEditDraft(i)}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
+                            title="Edit draft"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Yakin ingin menghapus draft ini?')) {
+                                handleDeleteDraft(i);
+                              }
+                            }}
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                            title="Hapus draft"
+                          >
+                            Hapus
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowDraftModal(false)}
-                className="bg-gray-300 px-4 py-2 rounded"
-              >
-                Tutup
-              </button>
-              <button
-                onClick={handleSubmitAllLocal}
-                disabled={loadingSubmit}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                {loadingSubmit ? 'Mengirim...' : 'Submit All'}
-              </button>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">
+                Total: {localDrafts.length} draft tersimpan
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDraftModal(false)}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
+                >
+                  Tutup
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Yakin ingin mengirim semua ${localDrafts.length} draft?`)) {
+                      handleSubmitAllLocal();
+                    }
+                  }}
+                  disabled={loadingSubmit}
+                  className={`px-4 py-2 rounded text-white ${
+                    loadingSubmit 
+                      ? 'bg-blue-300 cursor-not-allowed' 
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {loadingSubmit ? 'Mengirim...' : `Submit All (${localDrafts.length})`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
