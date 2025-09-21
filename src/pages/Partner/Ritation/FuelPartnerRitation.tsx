@@ -13,6 +13,7 @@ import { DraftRitasi } from './types/drafts';
 import { TeraPoint } from './types/teraPoint';
 import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
+import { set } from 'date-fns';
 
 
 
@@ -49,6 +50,7 @@ const FuelPartnerRitation: React.FC = () => {
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoUrl, setPhotoUrl] = useState<string>('');
   const [rotationAngle, setRotationAngle] = useState(0);
   const [isPhotoUploaded, setIsPhotoUploaded] = useState(false);
 
@@ -422,6 +424,7 @@ const FuelPartnerRitation: React.FC = () => {
         }
         
         // Set new preview with cache busting
+        setPhotoUrl(publicUrlData.publicUrl);
         setPhotoPreview(publicUrlData.publicUrl + '?t=' + Date.now());
         setIsPhotoUploaded(true);
         setPhotoFile(null);
@@ -456,6 +459,7 @@ const FuelPartnerRitation: React.FC = () => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
+      photoUrl,
     });
 
     if (errorMsg) {
@@ -478,7 +482,6 @@ const FuelPartnerRitation: React.FC = () => {
       sonding_before_rear: parseFloat(sondingBeforeRear),
       sonding_after_front: parseFloat(sondingAfterFront),
       sonding_after_rear: parseFloat(sondingAfterRear),
-      photo_url: isPhotoUploaded ? photoPreview : null,
       operator_id: operator,
       fuelman_id: fuelman,
       qty_flowmeter_before: before,
@@ -486,6 +489,7 @@ const FuelPartnerRitation: React.FC = () => {
       isValidated: false,
       petugas_pencatatan: selectedPetugas,
       shift: shift,
+      photo_url: photoUrl,
     };
 
     try {
@@ -524,6 +528,7 @@ const FuelPartnerRitation: React.FC = () => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
+      photoUrl,
     });
 
     if (errorMsg) {
@@ -563,7 +568,7 @@ const FuelPartnerRitation: React.FC = () => {
       isValidated: false,
       petugas_pencatatan: selectedPetugas,
       shift: shift,
-      photo_url: isPhotoUploaded ? photoPreview : null,
+      photo_url: photoUrl,
     };
 
     let updatedDrafts: DraftRitasi[];
@@ -732,6 +737,7 @@ const FuelPartnerRitation: React.FC = () => {
     setRotationAngle(0);
     setIsPhotoUploaded(false);
     setEditingDraftIndex(null);
+    setPhotoUrl('');
     
     // Clear file input values
     const fileInputs = document.querySelectorAll('input[type="file"]');

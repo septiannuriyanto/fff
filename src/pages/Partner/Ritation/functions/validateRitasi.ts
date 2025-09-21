@@ -11,7 +11,7 @@ export function validateRitasiForm({
   sondingAfterFront,
   volumeBefore,
   volumeAfter,
-  photo_url,
+  photoUrl,
 }: any): string | null {
   if (!selectedPetugas) return 'Pilih Nama Petugas terlebih dahulu!';
   if (!unit) return 'Pilih Unit terlebih dahulu!';
@@ -24,7 +24,7 @@ export function validateRitasiForm({
   if (!sondingAfterRear || !sondingAfterFront) return 'Isi Sonding After terlebih dahulu!';
   if (volumeBefore === 0) return 'Volume Sonding Before tidak valid atau tidak ditemukan di tera tangki!';
   if (volumeAfter === 0) return 'Volume Sonding After tidak valid atau tidak ditemukan di tera tangki!';
-  if (!photo_url) return 'Upload foto Surat Jalan terlebih dahulu!';
+  if (!photoUrl) return 'Upload foto Surat Jalan terlebih dahulu!';
 
   return null; // semua oke
 }
