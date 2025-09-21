@@ -9,6 +9,9 @@ import { useAuth } from '../../Authentication/AuthContext';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 import { validateRitasiForm } from './functions/validateRitasi';
 import { Camera, ImageIcon } from 'lucide-react';
+import Trial from '../../../common/TrialWrapper/Trial';
+import PhotoPreviewWithRotate from './components/PhotoPreviewWithRotate';
+import { set } from 'date-fns';
 
 interface ManpowerItem {
   nrp: string;
@@ -45,6 +48,7 @@ interface DraftRitasi {
   isValidated: boolean;
   petugas_pencatatan: string;
   shift: '1' | '2';
+  photo?: string; 
   // photoPreview?: string;
 }
 
@@ -78,6 +82,7 @@ const FuelPartnerRitation: React.FC = () => {
   const [volumeAfter, setVolumeAfter] = useState(0);
 
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const [units, setUnits] = useState<StorageItem[]>([]);
   const [operators, setOperators] = useState<ManpowerItem[]>([]);
@@ -92,7 +97,9 @@ const FuelPartnerRitation: React.FC = () => {
 
   const [localDrafts, setLocalDrafts] = useState<DraftRitasi[]>([]);
   const [showDraftModal, setShowDraftModal] = useState(false);
-  const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(null);
+  const [editingDraftIndex, setEditingDraftIndex] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -112,7 +119,7 @@ const FuelPartnerRitation: React.FC = () => {
       localStorage.removeItem('selectedPetugas');
     }
   }, [selectedPetugas]);
-  
+
   useEffect(() => {
     try {
       const savedDrafts = localStorage.getItem('ritasi_draft');
@@ -120,7 +127,7 @@ const FuelPartnerRitation: React.FC = () => {
         setLocalDrafts(JSON.parse(savedDrafts));
       }
     } catch (error) {
-      console.error("Failed to load drafts from local storage:", error);
+      console.error('Failed to load drafts from local storage:', error);
       setLocalDrafts([]);
     }
   }, []);
@@ -208,7 +215,11 @@ const FuelPartnerRitation: React.FC = () => {
     fetchTeraAll();
   }, []);
 
-  const generateSuratJalanNumber = (queue: number, dateStr: string, shift: string) => {
+  const generateSuratJalanNumber = (
+    queue: number,
+    dateStr: string,
+    shift: string,
+  ) => {
     if (!queue || !dateStr || !shift) return '';
     const date = new Date(dateStr);
     const yy = date.getFullYear().toString().slice(-2);
@@ -233,6 +244,51 @@ const FuelPartnerRitation: React.FC = () => {
       setPhotoPreview(URL.createObjectURL(file));
     }
   };
+
+const handlePhotoTrial = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.onload = () => {
+    // Cek orientasi
+    const landscapeWidth = Math.max(img.width, img.height);
+    const landscapeHeight = Math.min(img.width, img.height);
+
+    // Buat canvas
+    const canvas = document.createElement("canvas");
+    canvas.width = landscapeWidth;
+    canvas.height = landscapeHeight;
+    const ctx = canvas.getContext("2d")!;
+
+    if (img.height > img.width) {
+      // Gambar portrait, kita rotate supaya landscape
+      ctx.save();
+      ctx.translate(landscapeWidth / 2, landscapeHeight / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      ctx.restore();
+    } else {
+      // Sudah landscape
+      ctx.drawImage(img, 0, 0, landscapeWidth, landscapeHeight);
+    }
+
+    // Buat Blob baru (jpeg/png)
+    canvas.toBlob((blob) => {
+      if (blob) {
+        // preview
+        const previewUrl = URL.createObjectURL(blob);
+        setPhotoPreview(previewUrl);
+        setPhotoFile(new File([blob], file.name, { type: blob.type }));
+
+        // kalau mau upload blob ini ke server:
+        // const newFile = new File([blob], file.name, { type: blob.type });
+      }
+    }, "image/jpeg", 0.9);
+  };
+  img.src = URL.createObjectURL(file);
+};
+
 
   const [loadingSubmit, setLoadingSubmit] = useState(false);
 
@@ -306,7 +362,7 @@ const FuelPartnerRitation: React.FC = () => {
     }
   };
 
-  const handleSaveLocal = () => {
+  const handleSaveLocal =async () => {
     const before = parseFloat(flowmeterBefore || '0');
     const after = parseFloat(flowmeterAfter || '0');
     const multiplier = useDekaliter ? 10 : 1;
@@ -325,18 +381,31 @@ const FuelPartnerRitation: React.FC = () => {
       sondingAfterFront,
       volumeBefore,
       volumeAfter,
-      photoPreview
+      // photoPreview,
     });
 
     if (errorMsg) {
       return alert(errorMsg);
     }
 
-    const selectedWarehouse = units.find((u) => u.unit_id === unit)?.warehouse_id || null;
+      let photoBase64: string | undefined;
+  if (photoFile) { // simpan file asli di state waktu upload
+    photoBase64 = await fileToBase64(photoFile);
+  }
+
+    const selectedWarehouse =
+      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
     // Get the next queue number for the draft
-    const nextDraftQueue = (localDrafts.length > 0 ? Math.max(...localDrafts.map(d => d.queue_num ?? 0)) : queueNum ?? 0) + 1;
-    const nextDraftSJ = generateSuratJalanNumber(nextDraftQueue, selectedDate, shift);
+    const nextDraftQueue =
+      (localDrafts.length > 0
+        ? Math.max(...localDrafts.map((d) => d.queue_num ?? 0))
+        : queueNum ?? 0) + 1;
+    const nextDraftSJ = generateSuratJalanNumber(
+      nextDraftQueue,
+      selectedDate,
+      shift,
+    );
 
     const payload: DraftRitasi = {
       no_surat_jalan: nextDraftSJ,
@@ -358,6 +427,7 @@ const FuelPartnerRitation: React.FC = () => {
       isValidated: false,
       petugas_pencatatan: selectedPetugas,
       shift: shift,
+      photo: photoBase64,
       // photoPreview,
     };
 
@@ -365,7 +435,7 @@ const FuelPartnerRitation: React.FC = () => {
     if (editingDraftIndex !== null) {
       updatedDrafts = [...localDrafts];
       updatedDrafts[editingDraftIndex] = payload;
-      setEditingDraftIndex(null); 
+      setEditingDraftIndex(null);
     } else {
       updatedDrafts = [...localDrafts, payload];
     }
@@ -373,10 +443,9 @@ const FuelPartnerRitation: React.FC = () => {
     setLocalDrafts(updatedDrafts);
     localStorage.setItem('ritasi_draft', JSON.stringify(updatedDrafts));
     alert('Data tersimpan ke lokal!');
-    fetchNextQueue(); 
+    fetchNextQueue();
     handleResetForm();
   };
-
 
   const handleDeleteDraft = (index: number) => {
     const updated = [...localDrafts];
@@ -387,12 +456,16 @@ const FuelPartnerRitation: React.FC = () => {
       return {
         ...d,
         queue_num: newQueue,
-        no_surat_jalan: generateSuratJalanNumber(newQueue, d.ritation_date, d.shift)
+        no_surat_jalan: generateSuratJalanNumber(
+          newQueue,
+          d.ritation_date,
+          d.shift,
+        ),
       };
     });
     setLocalDrafts(newDrafts);
     localStorage.setItem('ritasi_draft', JSON.stringify(newDrafts));
-    fetchNextQueue(); 
+    fetchNextQueue();
   };
 
   const handleEditDraft = (index: number) => {
@@ -412,13 +485,12 @@ const FuelPartnerRitation: React.FC = () => {
     setVolumeAfter(draft.qty_sonding_after || 0);
     setFlowmeterBefore(draft.qty_flowmeter_before?.toString() ?? '');
     setFlowmeterAfter(draft.qty_flowmeter_after?.toString() ?? '');
-    setUseDekaliter(true); 
+    setUseDekaliter(true);
     // setPhotoPreview(draft.photoPreview || '');
-    
+
     setEditingDraftIndex(index);
     setShowDraftModal(false);
   };
-
 
   const handleSubmitAllLocal = async () => {
     if (localDrafts.length === 0) {
@@ -434,7 +506,7 @@ const FuelPartnerRitation: React.FC = () => {
       setLocalDrafts([]);
       localStorage.removeItem('ritasi_draft');
       setShowDraftModal(false);
-      fetchNextQueue(); 
+      fetchNextQueue();
     } catch (err: any) {
       alert('Gagal submit draft: ' + err.message);
     } finally {
@@ -458,9 +530,14 @@ const FuelPartnerRitation: React.FC = () => {
       }
 
       const maxQueueDB = data?.[0]?.queue_num ?? 0;
-      const draftsForDate = localDrafts.filter(d => d.ritation_date === selectedDate);
-      const maxQueueDraft = draftsForDate.length > 0 ? Math.max(...draftsForDate.map(d => d.queue_num ?? 0)) : 0;
-      
+      const draftsForDate = localDrafts.filter(
+        (d) => d.ritation_date === selectedDate,
+      );
+      const maxQueueDraft =
+        draftsForDate.length > 0
+          ? Math.max(...draftsForDate.map((d) => d.queue_num ?? 0))
+          : 0;
+
       const nextQueue = Math.max(maxQueueDB, maxQueueDraft) + 1;
 
       if (!manualNN) {
@@ -469,8 +546,13 @@ const FuelPartnerRitation: React.FC = () => {
       }
     } catch (err) {
       console.error('fetchNextQueue error', err);
-      const draftsForDate = localDrafts.filter(d => d.ritation_date === selectedDate);
-      const maxQueueDraft = draftsForDate.length > 0 ? Math.max(...draftsForDate.map(d => d.queue_num ?? 0)) : 0;
+      const draftsForDate = localDrafts.filter(
+        (d) => d.ritation_date === selectedDate,
+      );
+      const maxQueueDraft =
+        draftsForDate.length > 0
+          ? Math.max(...draftsForDate.map((d) => d.queue_num ?? 0))
+          : 0;
       const nextQueue = maxQueueDraft + 1;
       if (!manualNN) {
         setQueueNum(nextQueue);
@@ -481,11 +563,13 @@ const FuelPartnerRitation: React.FC = () => {
 
   useEffect(() => {
     fetchNextQueue();
-  }, [selectedDate, shift, localDrafts]); 
+  }, [selectedDate, shift, localDrafts]);
 
   const handleResetForm = () => {
     setSelectedDate(new Date().toISOString().slice(0, 10));
-    setShift(new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2');
+    setShift(
+      new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2',
+    );
     setManualNN('');
     setQueueNum(null);
     setNoSuratJalan('');
@@ -505,7 +589,6 @@ const FuelPartnerRitation: React.FC = () => {
     setEditingDraftIndex(null);
     fetchNextQueue();
   };
-
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
@@ -712,41 +795,76 @@ const FuelPartnerRitation: React.FC = () => {
         />
 
         <div className="mt-4">
-      <label className="block mb-1">Foto Surat Jalan</label>
-      <div className="flex gap-3">
-        {/* Tombol Kamera */}
-        <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
-          <Camera className="w-8 h-8 text-blue-400" />
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment" // langsung kamera belakang (di mobile)
-            className="hidden"
-            onChange={handlePhoto}
-          />
-        </label>
+          <label className="block mb-1">Foto Surat Jalan</label>
+          <div className="flex gap-3">
+            {/* Tombol Kamera */}
+            <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
+              <Camera className="w-8 h-8 text-blue-400" />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment" // langsung kamera belakang (di mobile)
+                className="hidden"
+                onChange={handlePhoto}
+              />
+            </label>
 
-        {/* Tombol Galeri */}
-        <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
-          <ImageIcon className="w-8 h-8 text-blue-400" />
-          <input
-            type="file"
-            accept="image/*" // tanpa capture => buka galeri/file picker
-            className="hidden"
-            onChange={handlePhoto}
-          />
-        </label>
-      </div>
-    </div>
-        {photoPreview && (
-          <div className="mt-2">
-            <img
-              src={photoPreview}
-              alt="Preview Surat Jalan"
-              className="max-h-64 border rounded mx-auto"
-            />
+            {/* Tombol Galeri */}
+            <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
+              <ImageIcon className="w-8 h-8 text-blue-400" />
+              <input
+                type="file"
+                accept="image/*" // tanpa capture => buka galeri/file picker
+                className="hidden"
+                onChange={handlePhoto}
+              />
+            </label>
           </div>
-        )}
+        </div>
+
+        <Trial role={currentUser?.role!}>
+          <div className="mt-4">
+          <label className="block mb-1">Foto Surat Jalan</label>
+          <div className="flex gap-3">
+            {/* Tombol Kamera */}
+            <label className="cursor-pointer flex flex-col items-center text-center border p-2 rounded border-blue-400">
+              <Camera className="w-8 h-8 text-blue-400" />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment" // langsung kamera belakang (di mobile)
+                className="hidden"
+                onChange={handlePhotoTrial}
+              />
+            </label>
+
+            {/* Tombol Galeri */}
+            <label className="cursor-pointer flex flex-col items-center text-center  border p-2 rounded  border-blue-400">
+              <ImageIcon className="w-8 h-8 text-blue-400" />
+              <input
+                type="file"
+                accept="image/*" // tanpa capture => buka galeri/file picker
+                className="hidden"
+                onChange={handlePhotoTrial}
+              />
+            </label>
+          </div>
+        </div>
+        </Trial>
+
+      {photoPreview && photoFile && (
+  <PhotoPreviewWithRotate
+    photoPreview={photoPreview}
+    originalFile={photoFile}
+    onRotatedFile={(rotatedFile) => {
+      // ini callback waktu tombol "Simpan Rotasi" diklik
+      console.log("file hasil rotasi", rotatedFile);
+      // bisa langsung upload rotatedFile ke server di sini
+    }}
+  />
+)}
+
+
 
         <div className="flex flex-col sm:flex-row sm:justify-end items-center gap-2 mt-6">
           {editingDraftIndex !== null && (
@@ -760,7 +878,9 @@ const FuelPartnerRitation: React.FC = () => {
           <button
             onClick={handleSubmit}
             disabled={loadingSubmit}
-            className={`text-white px-4 py-2 rounded w-full sm:w-auto ${loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'}`}
+            className={`text-white px-4 py-2 rounded w-full sm:w-auto ${
+              loadingSubmit ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
           >
             {loadingSubmit ? 'Mengirim...' : 'Submit'}
           </button>
