@@ -44,8 +44,7 @@ const FuelPartnerDashboard: React.FC = () => {
       shift,
       flowmeter_before_url,
       flowmeter_after_url,
-      sj_url,
-      photoPreview,
+      photo_url,
       storage:warehouse_id (
         unit_id
       ),

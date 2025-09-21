@@ -21,7 +21,7 @@ export interface RitasiFuel {
   shift?: number;
   flowmeter_before_url?: string;
   flowmeter_after_url?: string;
-  sj_url?: string;
+  photo_url?: string;
   photoPreview?: string;
   unit_id?: string;
   fuelman_name?: string;

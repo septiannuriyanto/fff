@@ -17,6 +17,7 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   const [pageSize, setPageSize] = useState(20);
   const [summaryData, setSummaryData] = useState<any>(null); // State untuk data ringkasan dari RPC
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // 1️⃣ Data yang sudah diurutkan berdasarkan no_surat_jalan
   const sortedRecords = useMemo(() => {
@@ -163,7 +164,8 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
     // Data total diambil dari state summaryData
-    const totalQty = shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
+    const totalQty =
+      shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
     const recs = sortedRecords.filter((r) => r.shift === shift);
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
     recs.forEach((r, idx) => {
@@ -237,27 +239,16 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
               <td className="px-2 py-1 border">{r.fuelman_name}</td>
               <td className="px-2 py-1 border">{r.shift}</td>
               <td className="px-2 py-1 border">
-                {r.flowmeter_before_url || r.flowmeter_after_url || r.sj_url ? (
+                {r.flowmeter_before_url ||
+                r.flowmeter_after_url ||
+                r.photo_url ? (
                   <div className="flex space-x-1">
-                    {r.flowmeter_before_url && (
+                    {r.photo_url && (
                       <img
-                        src={r.flowmeter_before_url}
-                        alt="before"
-                        className="w-8 h-8 object-cover rounded cursor-pointer"
-                      />
-                    )}
-                    {r.flowmeter_after_url && (
-                      <img
-                        src={r.flowmeter_after_url}
-                        alt="after"
-                        className="w-8 h-8 object-cover rounded cursor-pointer"
-                      />
-                    )}
-                    {r.sj_url && (
-                      <img
-                        src={r.sj_url}
+                        src={r.photo_url}
                         alt="SJ"
                         className="w-8 h-8 object-cover rounded cursor-pointer"
+                        onClick={() => setSelectedImage(r.photo_url ?? null)}
                       />
                     )}
                   </div>
@@ -277,6 +268,24 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           )}
         </tbody>
       </table>
+      {/* Modal Preview Gambar */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-9999"
+          onClick={() => setSelectedImage(null)} // klik luar area menutup modal
+        >
+          <div
+            className="max-w-4xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()} // supaya klik gambar tidak menutup modal
+          >
+            <img
+              src={selectedImage}
+              alt="preview"
+              className="w-auto h-auto max-w-full max-h-[90vh] rounded shadow-lg"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">
@@ -405,7 +414,10 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                   <td className="px-2 py-1 border text-center">
                     <button
                       onClick={() =>
-                        shareSummary('Total Ritasi MTD', summaryData?.mtd_qty || 0)
+                        shareSummary(
+                          'Total Ritasi MTD',
+                          summaryData?.mtd_qty || 0,
+                        )
                       }
                       className="p-1 rounded hover:bg-slate-100"
                     >

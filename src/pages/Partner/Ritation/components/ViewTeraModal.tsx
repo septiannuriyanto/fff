@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TeraPoint } from '../FuelPartnerRitation';
+import { TeraPoint } from '../types/teraPoint';
 
 interface ViewTeraModalProps {
   visible: boolean;
