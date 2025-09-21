@@ -131,8 +131,9 @@ const exportToExcel = async () => {
       message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
     });
     message += `\nTotal Ritasi : ${
-      shift === 1 ? totalShift1 : totalShift2
+      shift === 1 ? formatIDNumber(totalShift1) : formatIDNumber(totalShift2)
     } Lt`;
+     message += `\n\nPetugas Pencatatan: ${records[0]?.petugas_pencatatan_name || '-'}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -265,7 +266,7 @@ const exportToExcel = async () => {
       <div className="border rounded mt-4 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="font-semibold">
-            Total Ritasi Shift 1 : {totalShift1} Lt
+            Total Ritasi Shift 1 : {formatIDNumber(totalShift1)} Lt
           </span>
           <button
             onClick={() => shareShift(1)}
@@ -277,7 +278,7 @@ const exportToExcel = async () => {
         </div>
         <div className="flex items-center justify-between">
           <span className="font-semibold">
-            Total Ritasi Shift 2 : {totalShift2} Lt
+            Total Ritasi Shift 2 : {formatIDNumber(totalShift2)} Lt
           </span>
           <button
             onClick={() => shareShift(2)}
@@ -289,20 +290,22 @@ const exportToExcel = async () => {
         </div>
 
         {/* tombol bawah */}
-        <div className="flex items-center gap-2 mt-3">
-          <button
-            onClick={exportToExcel}
-            className="flex items-center gap-1 px-3 py-1 border rounded hover:bg-slate-100"
-          >
-            <Download size={16} /> Export
-          </button>
-          <button
-            onClick={shareAll}
-            className="flex items-center gap-1 px-3 py-1 border rounded hover:bg-slate-100"
-          >
-            <Share2 size={16} /> Share
-          </button>
-        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
+  <button
+    onClick={shareAll}
+    className="flex items-center justify-center sm:justify-start gap-1 px-3 py-1 border rounded hover:bg-slate-100 bg-blue-600 text-white w-full sm:w-auto"
+  >
+    <Share2 size={16} /> Share All
+  </button>
+  <button
+    onClick={exportToExcel}
+    className="flex items-center justify-center sm:justify-start gap-1 px-3 py-1 border rounded hover:bg-slate-100 border-blue-600 text-blue-600 w-full sm:w-auto"
+  >
+    <Download size={16} /> Export All
+  </button>
+</div>
+
+
       </div>
     </div>
   );
