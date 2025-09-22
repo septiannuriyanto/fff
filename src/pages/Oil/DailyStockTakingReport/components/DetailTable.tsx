@@ -6,6 +6,9 @@ import StockTakingOilChart from './StockTakingOilChart';
 import StockLevelMonitoring from './StockLevelMonitoring';
 import { fetchStorageOilSetup } from './fetchSelectedSpecialMonitoring';
 import * as XLSX from 'xlsx';
+import { getValidMaterials } from './getValidMaterial';
+import { UploadConfig } from './uploadConfig';
+import { detectAndUpload } from './sourceFileProcessing';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -177,6 +180,19 @@ const handleFileSelect = (files: FileList | null) => {
   }
 };
 
+const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+    try {
+      await detectAndUpload(e.target.files[0]);
+      alert('Upload berhasil!');
+    } catch (err) {
+      console.error(err);
+      alert('Upload gagal: ' + err);
+    }
+  }
+};
+
+
 
 
 const handleUpload = async () => {
@@ -229,6 +245,104 @@ const handleUpload = async () => {
   fetchRecords();
   setUploadModalOpen(false);
 };
+
+
+const handleUploadDst = async (file: File, selectedDate: string, config: UploadConfig) => {
+  if (!file || !selectedDate) return;
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+
+    // Map kolom Excel ke kolom target dst_system
+    const extracted = allRows.map((row) => {
+      const mapped: any = {};
+      for (const [excelCol, targetField] of Object.entries(config.sheetMapping)) {
+        mapped[targetField as string] = row[excelCol as string];
+      }
+      return mapped;
+    });
+
+    // Ambil material valid
+    const validMaterials = await getValidMaterials();
+
+    // Filter hanya material valid
+    const filtered = extracted.filter((row) => validMaterials.has(row.material_code));
+
+    // Upsert ke dst_system
+    for (const row of filtered) {
+      const { error } = await supabase.from('dst_system').upsert({
+        dst_date: selectedDate,
+        warehouse_id: row.warehouse_id,
+        qty: row.qty,
+        type: config.type,
+      });
+      if (error) console.error(`Gagal upsert ${row.material_code}:`, error);
+    }
+
+    alert(`Upload ${config.type} sukses!`);
+  } catch (e) {
+    console.error('Upload error:', e);
+  }
+};
+
+
+
+
+const handleUploadSohTactys = async () => {
+  if (!selectedFile) return;
+
+  // 1️⃣ Baca file Excel / CSV
+  const fileBuffer = await selectedFile.arrayBuffer();
+  const workbook = XLSX.read(fileBuffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
+  const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+
+  // 2️⃣ Ambil kolom yang dibutuhkan & filter material valid
+  const validMaterialsResp = await supabase
+    .from('materials')
+    .select('material_code');
+  const validMaterials = validMaterialsResp.data?.map((m) => m.material_code) || [];
+
+  const extracted = allRows
+    .map((row) => ({
+      warehouse_id: row['WAREHOUSE'],
+      material_code: row['STOCKCODE'],
+      qty: Number(row['SOH']) || 0,
+    }))
+    .filter((row) => validMaterials.includes(row.material_code)); // filter
+
+  // 3️⃣ Format tanggal
+  const formattedDate = selectedDate; // misal input user
+
+  // 4️⃣ Loop insert ke dst_system
+  for (const row of extracted) {
+    const { error } = await supabase.from('dst_system').insert([
+      {
+        dst_date: formattedDate,
+        warehouse_id: row.warehouse_id,
+        qty: row.qty,
+        type: 'SOH_TACTYS',
+      },
+    ]);
+
+    if (error) {
+      console.error(`Gagal insert ${row.material_code} @${row.warehouse_id}:`, error);
+    } else {
+      console.log(`Berhasil insert ${row.material_code} @${row.warehouse_id}`);
+    }
+  }
+
+  alert('Upload SOH_TACTYS berhasil!');
+};
+
+
 
 
 
