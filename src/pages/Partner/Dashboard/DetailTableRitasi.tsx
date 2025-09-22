@@ -57,6 +57,8 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           console.error('Error fetching summary:', error);
           setSummaryData(null);
         } else {
+          console.log(data);
+          
           setSummaryData(data[0]); // Ambil baris pertama dari hasil
         }
       } catch (e) {
@@ -221,21 +223,34 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
   // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
-    // Data total diambil dari state summaryData
-    const totalQty =
-      shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
-    const recs = sortedRecords.filter((r) => r.shift === shift);
-    let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
-    recs.forEach((r, idx) => {
-      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
-    });
-    message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
-    message += `\n\nPetugas Pencatatan: ${
-      records[0]?.petugas_pencatatan_name || '-'
-    }`;
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-  };
+  // Data total diambil dari state summaryData
+  const totalQty =
+    shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
+
+  // Ambil array nama petugas sesuai shift
+  const petugasNames =
+    shift === 1
+      ? summaryData?.shift1_petugas_names || []
+      : summaryData?.shift2_petugas_names || [];
+
+  // Format jadi string: "PETUGAS_A, PETUGAS_B" atau "-"
+  const petugasText =
+    petugasNames.length > 0 ? petugasNames.join(', ') : '-';
+
+  const recs = sortedRecords.filter((r) => r.shift === shift);
+  let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
+  recs.forEach((r, idx) => {
+    message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt (SJ: ${
+      r.queue_num || '-'
+    })\n`;
+  });
+  message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
+  message += `\n\nPetugas Pencatatan: ${petugasText}`;
+
+  const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+};
+
 
   // Share laporan semua shift
   const shareAll = () => {
