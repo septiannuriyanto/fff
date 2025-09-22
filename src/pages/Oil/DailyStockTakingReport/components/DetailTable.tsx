@@ -9,6 +9,10 @@ import * as XLSX from 'xlsx';
 import { getValidMaterials } from './getValidMaterial';
 import { UploadConfig } from './uploadConfig';
 import { detectAndUpload } from './sourceFileProcessing';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import { FileSpreadsheet, Upload } from 'lucide-react';
+import UploadModal from './UploadModal';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -19,7 +23,7 @@ interface DetailTableProps {
   materialFilter: string;
   setMaterialFilter: (val: string) => void;
   selectedDate: string;
-  fetchRecords: () => void; // refetch after submit
+  fetchRecords: (date: string) => void; // refetch after submit
 }
 
 const DetailTable: React.FC<DetailTableProps> = ({
@@ -45,7 +49,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [liquidMeters, setLiquidMeters] = useState<any[]>([]); // data special_monitoring
 
-   useEffect(() => {
+  useEffect(() => {
     // fetch storage_oil_setup untuk LiquidMeter
     const fetchLiquidMeterData = async () => {
       const { data, error } = await supabase
@@ -105,20 +109,83 @@ const DetailTable: React.FC<DetailTableProps> = ({
   };
 
   // Save modal
+  // ubah signature jadi menerima typeDst
+  // saat save:
   const saveModal = async () => {
-    if (modalRecordId == null || modalField === '') return;
-    const numericVal = modalValue === '' ? null : Number(modalValue);
-    const { error } = await supabase
-      .from('dst_oli')
-      .update({ [modalField]: numericVal })
-      .eq('id', modalRecordId);
+    const record = records.find((r) => r.id === modalRecordId);
+    if (!record) return;
 
-    if (error) {
-      alert(error.message);
+    const value = modalValue === '' ? null : Number(modalValue);
+
+    // mapping field → type dst_system
+    const systemFieldMap: Record<
+      string,
+      'SOH_SAP' | 'SOH_TACTYS' | 'PENDING_RECEIVE' | 'FAILED_POSTING'
+    > = {
+      qty_system_1: 'SOH_SAP',
+      qty_system_2: 'SOH_TACTYS',
+      pending_receive: 'PENDING_RECEIVE',
+      failed_posting: 'FAILED_POSTING',
+    };
+
+    if (systemFieldMap[modalField]) {
+      // berarti field ini harus update di dst_system
+      const typeDst = systemFieldMap[modalField];
+
+      const filter = {
+        dst_date: record.date_dst,
+        warehouse_id: record.warehouse_id,
+        material_code: record.material_code,
+        type: typeDst,
+      };
+
+      const { data: existing, error: errCheck } = await supabase
+        .from('dst_system')
+        .select('id')
+        .match(filter)
+        .maybeSingle();
+      if (errCheck) {
+        alert(errCheck.message);
+        return;
+      }
+
+      if (!value || value === 0) {
+        if (existing) {
+          const { error: delErr } = await supabase
+            .from('dst_system')
+            .delete()
+            .eq('id', existing.id);
+          if (delErr) alert(delErr.message);
+        }
+      } else {
+        if (existing) {
+          const { error: updErr } = await supabase
+            .from('dst_system')
+            .update({ qty: value })
+            .eq('id', existing.id);
+          if (updErr) alert(updErr.message);
+        } else {
+          const { error: insErr } = await supabase.from('dst_system').insert({
+            dst_date: record.date_dst,
+            warehouse_id: record.warehouse_id,
+            material_code: record.material_code,
+            type: typeDst,
+            qty: value,
+          });
+          if (insErr) alert(insErr.message);
+        }
+      }
     } else {
-      setModalOpen(false);
-      fetchRecords();
+      // field ini langsung update di dst_oli
+      const { error } = await supabase
+        .from('dst_oli')
+        .update({ [modalField]: value })
+        .eq('id', modalRecordId);
+      if (error) alert(error.message);
     }
+
+    setModalOpen(false);
+    fetchRecords(selectedDate);
   };
 
   // Filtered records
@@ -145,13 +212,20 @@ const DetailTable: React.FC<DetailTableProps> = ({
       !tankFilter ||
       (r.tank_number?.toString() ?? '').includes(tankFilter.toString());
     const uoiOk =
-      !uoiFilter || (r.uoi?.toLowerCase() ?? '').includes(uoiFilter.toLowerCase());
+      !uoiFilter ||
+      (r.uoi?.toLowerCase() ?? '').includes(uoiFilter.toLowerCase());
     const locationOk =
       !locationFilter ||
       (r.location?.toLowerCase() ?? '').includes(locationFilter.toLowerCase());
 
     return (
-      warehouseOk && unitOk && materialOk && descriptionOk && tankOk && uoiOk && locationOk
+      warehouseOk &&
+      unitOk &&
+      materialOk &&
+      descriptionOk &&
+      tankOk &&
+      uoiOk &&
+      locationOk
     );
   });
 
@@ -159,201 +233,202 @@ const DetailTable: React.FC<DetailTableProps> = ({
   let lastWarehouse = '';
   let isOddGroup = false;
 
-
-
   // Tambah state di atas (sebelum return)
-const [uploadModalOpen, setUploadModalOpen] = useState(false);
-const [uploadTarget, setUploadTarget] = useState<'system1' | 'system2' | null>(null);
-const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadTarget, setUploadTarget] = useState<
+    'system1' | 'system2' | 'failed_posting' | null
+  >(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-// fungsi buka modal
-const openUploadModal = (target: 'system1' | 'system2') => {
-  setUploadTarget(target);
-  setUploadModalOpen(true);
-  setSelectedFile(null);
-};
+  // fungsi buka modal
+  const openUploadModal = (
+    target: 'system1' | 'system2' | 'failed_posting',
+  ) => {
+    setUploadTarget(target);
+    setUploadModalOpen(true);
+    setSelectedFile(null);
+  };
 
-// fungsi handle file drop / select
-const handleFileSelect = (files: FileList | null) => {
-  if (files && files.length > 0) {
-    setSelectedFile(files[0]);
-  }
-};
+  // handle file selection
+  const handleFileSelect = (fileList: FileList | null) => {
+    if (!fileList) return;
+    // ubah FileList → array File
+    const filesArray = Array.from(fileList);
+    setSelectedFiles(filesArray);
+  };
 
-const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (e.target.files && e.target.files[0]) {
+  const handleUpload = async () => {
+    if (!selectedFile || !uploadTarget) return;
+
     try {
-      await detectAndUpload(e.target.files[0]);
-      alert('Upload berhasil!');
+      // proses upload
+      await detectAndUpload(selectedFile);
+      // refresh data setelah upload
+      await fetchRecords(selectedDate);
+      // tutup modal
+      setUploadModalOpen(false);
     } catch (err) {
-      console.error(err);
-      alert('Upload gagal: ' + err);
-    }
-  }
-};
-
-
-
-
-const handleUpload = async () => {
-  if (!selectedFile || !uploadTarget) return;
-
-
-  // 2. Baca file Excel
-  const fileBuffer = await selectedFile.arrayBuffer();
-  const workbook = XLSX.read(fileBuffer, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-
-  const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
-
-  // 3. Ambil hanya kolom yang dibutuhkan
-  const extracted = allRows.map((row) => ({
-    storageLocation: row['Storage Location'], // warehouse_id
-    materialNumber: row['Material Number'],   // material_code
-    totalStock: row['Total Stock'],           // qty_system_1
-  }));
-
-  console.log('Extracted:', extracted);
-
-  // 4. Format tanggal yyyy-mm-dd untuk filter date_dst
-  const formattedDate = selectedDate;
-
-  // 5. Loop update ke Supabase untuk setiap baris
-  for (const row of extracted) {
-    const { error: updateError } = await supabase
-      .from('dst_oli')
-      .update({ qty_system_1: row.totalStock })
-      .eq('tank_number', 1)
-      .eq('warehouse_id', row.storageLocation)
-      .eq('material_code', row.materialNumber)
-      .eq('date_dst', formattedDate);
-
-    if (updateError) {
-      console.error(
-        `Gagal update material ${row.materialNumber} @${row.storageLocation}:`,
-        updateError
-      );
-    } else {
-      console.log(
-        `Berhasil update material ${row.materialNumber} @${row.storageLocation}`
+      // tangkap error dari detectAndUpload atau fetchRecords
+      console.error('Upload error:', err);
+      // tampilkan ke user sesuai UI kamu
+      alert(
+        err instanceof Error
+          ? `Gagal upload: ${err.message}`
+          : 'Gagal upload: Terjadi kesalahan tak terduga.',
       );
     }
-  }
+  };
 
-  alert('Upload sukses dan qty_system_1 sudah diupdate untuk semua baris!');
-  fetchRecords();
-  setUploadModalOpen(false);
-};
+  const handleUploadMultiple = async () => {
+    // pastikan ada file & target
+    if (!selectedFiles?.length || !uploadTarget) return;
 
-
-const handleUploadDst = async (file: File, selectedDate: string, config: UploadConfig) => {
-  if (!file || !selectedDate) return;
-
-  try {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-
-    const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
-
-    // Map kolom Excel ke kolom target dst_system
-    const extracted = allRows.map((row) => {
-      const mapped: any = {};
-      for (const [excelCol, targetField] of Object.entries(config.sheetMapping)) {
-        mapped[targetField as string] = row[excelCol as string];
+    try {
+      // jalankan detectAndUpload untuk semua file secara berurutan
+      for (const file of selectedFiles) {
+        await detectAndUpload(file);
       }
-      return mapped;
+
+      // setelah semua upload selesai refresh data
+      await fetchRecords(selectedDate);
+
+      // tutup modal
+      setUploadModalOpen(false);
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert(
+        err instanceof Error
+          ? `Gagal upload: ${err.message}`
+          : 'Gagal upload: Terjadi kesalahan tak terduga.',
+      );
+    }
+  };
+
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('StockTaking');
+
+    // header row 1
+    const headerRow1 = [
+      'No',
+      'Key', // kolom baru
+      'Warehouse',
+      'Unit',
+      'Material',
+      'Description',
+      'Tank',
+      'UOI',
+      'Location',
+      'SOH',
+      '',
+      '',
+      'Pending',
+      '',
+      '',
+    ];
+    const headerRow2 = [
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Fisik',
+      'System1',
+      'System2',
+      'Receive',
+      'Failed',
+      'Input',
+    ];
+
+    sheet.addRow(headerRow1);
+    sheet.addRow(headerRow2);
+
+    // merge cells untuk kolom induk
+    sheet.mergeCells('J1:L1'); // SOH  (karena kita nambah 1 kolom di depan)
+    sheet.mergeCells('M1:O1'); // Pending
+    // merge kolom lain jadi single cell
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach((col) => {
+      sheet.mergeCells(`${col}1:${col}2`);
     });
 
-    // Ambil material valid
-    const validMaterials = await getValidMaterials();
+    // isi data
+    filteredRecords.forEach((r, idx) => {
+      const key = `${r.warehouse_id}-${r.material_code}`;
+      sheet.addRow([
+        idx + 1,
+        key, // kolom baru
+        r.warehouse_id,
+        r.unit_id,
+        r.material_code,
+        r.item_description,
+        r.tank_number,
+        r.uoi,
+        r.location,
+        r.qty ?? 0,
+        r.qty_system_1 ?? 0,
+        r.qty_system_2 ?? 0,
+        r.pending_receive ?? 0,
+        r.failed_posting ?? 0,
+        r.pending_input ?? 0,
+      ]);
+    });
 
-    // Filter hanya material valid
-    const filtered = extracted.filter((row) => validMaterials.has(row.material_code));
-
-    // Upsert ke dst_system
-    for (const row of filtered) {
-      const { error } = await supabase.from('dst_system').upsert({
-        dst_date: selectedDate,
-        warehouse_id: row.warehouse_id,
-        qty: row.qty,
-        type: config.type,
+    // styling border + shading
+    sheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        // shading header
+        if (rowNumber <= 2) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFBFBFBF' },
+          };
+          cell.font = { bold: true };
+        }
       });
-      if (error) console.error(`Gagal upsert ${row.material_code}:`, error);
-    }
+    });
 
-    alert(`Upload ${config.type} sukses!`);
-  } catch (e) {
-    console.error('Upload error:', e);
-  }
-};
+    // autosize kolom
+    sheet.columns.forEach((col) => {
+      let maxLength = 10;
+      if (typeof col.eachCell === 'function') {
+        col.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 0;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+      }
+      col.width = maxLength + 2;
+    });
 
-
-
-
-const handleUploadSohTactys = async () => {
-  if (!selectedFile) return;
-
-  // 1️⃣ Baca file Excel / CSV
-  const fileBuffer = await selectedFile.arrayBuffer();
-  const workbook = XLSX.read(fileBuffer, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-
-  const allRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
-
-  // 2️⃣ Ambil kolom yang dibutuhkan & filter material valid
-  const validMaterialsResp = await supabase
-    .from('materials')
-    .select('material_code');
-  const validMaterials = validMaterialsResp.data?.map((m) => m.material_code) || [];
-
-  const extracted = allRows
-    .map((row) => ({
-      warehouse_id: row['WAREHOUSE'],
-      material_code: row['STOCKCODE'],
-      qty: Number(row['SOH']) || 0,
-    }))
-    .filter((row) => validMaterials.includes(row.material_code)); // filter
-
-  // 3️⃣ Format tanggal
-  const formattedDate = selectedDate; // misal input user
-
-  // 4️⃣ Loop insert ke dst_system
-  for (const row of extracted) {
-    const { error } = await supabase.from('dst_system').insert([
-      {
-        dst_date: formattedDate,
-        warehouse_id: row.warehouse_id,
-        qty: row.qty,
-        type: 'SOH_TACTYS',
-      },
-    ]);
-
-    if (error) {
-      console.error(`Gagal insert ${row.material_code} @${row.warehouse_id}:`, error);
-    } else {
-      console.log(`Berhasil insert ${row.material_code} @${row.warehouse_id}`);
-    }
-  }
-
-  alert('Upload SOH_TACTYS berhasil!');
-};
-
-
-
-
+    // export
+    const buf = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buf]), `StockTaking-${selectedDate}.xlsx`);
+  };
 
   return (
     <div>
+      <StockLevelMonitoring
+        onUpdated={fetchStorageOilSetup}
+        selectedDate={selectedDate}
+      />
 
-<StockLevelMonitoring onUpdated={fetchStorageOilSetup} selectedDate={selectedDate}/>
-   
       <div className="chart__and-summary p-4 border rounded mb-4">
         {/* Chart summary */}
-      
+
         <div className="mb-4">
           <StockTakingOilChart
             sohFisik={sohFisik}
@@ -394,7 +469,6 @@ const handleUploadSohTactys = async () => {
           </div>
         </div>
       </div>
-      
 
       <h3 className="text-center font-semibold mb-2">
         Detail Stock Taking – {filteredRecords[0]?.date_dst ?? ''}
@@ -404,26 +478,50 @@ const handleUploadSohTactys = async () => {
       <div className="switcher flex flex-wrap justify-center gap-4 mb-2">
         <div className="buttons__border border border-slate-200 rounded-md p-2 bg-slate-200 dark:bg-boxdark-2">
           <button
-          onClick={() => setViewMode('SOH')}
-          className={`px-4 py-1 rounded ${
-            viewMode === 'SOH' ? 'bg-slate-400 text-white' : 'bg-gray-200'
-          }`}
-        >
-          SOH
-        </button>
-        <button
-          onClick={() => setViewMode('Pending')}
-          className={`px-4 py-1 rounded ${
-            viewMode === 'Pending' ? 'bg-slate-400 text-white' : 'bg-gray-200'
-          }`}
-        >
-          Pending
-        </button>
+            onClick={() => setViewMode('SOH')}
+            className={`px-4 py-1 rounded ${
+              viewMode === 'SOH' ? 'bg-slate-400 text-white' : 'bg-gray-200'
+            }`}
+          >
+            SOH
+          </button>
+          <button
+            onClick={() => setViewMode('Pending')}
+            className={`px-4 py-1 rounded ${
+              viewMode === 'Pending' ? 'bg-slate-400 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Pending
+          </button>
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            Export Excel
+          </button>
+
+          <button
+            onClick={() => setUploadModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            <Upload className="w-5 h-5" />
+            Upload Semua
+          </button>
+
+          <UploadModal
+            open={uploadModalOpen}
+            onClose={() => setUploadModalOpen(false)}
+            onUpload={handleUploadMultiple}
+          />
+        </div>
+
         <table className="min-w-full border-collapse border border-slate-400 dark:border-slate-300">
           <thead className="bg-slate-200 dark:bg-slate-800">
             {/* Baris 1: Headers */}
@@ -484,8 +582,7 @@ const handleUploadSohTactys = async () => {
                       <option key={m} value={m}>
                         {m}
                       </option>
-                    ),
-                  )}
+                    ))}
                 </select>
               </th>
               <th className="px-3 py-1 border">
@@ -501,8 +598,7 @@ const handleUploadSohTactys = async () => {
                       <option key={d ?? ''} value={d ?? ''}>
                         {d ?? ''}
                       </option>
-                    ),
-                  )}
+                    ))}
                 </select>
               </th>
               <th className="px-3 py-1 border">
@@ -548,39 +644,49 @@ const handleUploadSohTactys = async () => {
                 </select>
               </th>
               {viewMode === 'SOH' ? (
-  <>
-    <th className="px-3 py-1 border">
-      <div className="flex flex-col items-center">
-        <span>Fisik</span>
-      </div>
-    </th>
-    <th className="px-3 py-1 border">
-      <div className="flex flex-col items-center">
-        <span>System1</span>
-        <button
-          onClick={() => openUploadModal('system1')}
-          className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
-        >
-          Upload
-        </button>
-      </div>
-    </th>
-    <th className="px-3 py-1 border">
-      <div className="flex flex-col items-center">
-        <span>System2</span>
-        <button
-          onClick={() => openUploadModal('system2')}
-          className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
-        >
-          Upload
-        </button>
-      </div>
-    </th>
-  </>
-) : (
+                <>
+                  <th className="px-3 py-1 border">
+                    <div className="flex flex-col items-center">
+                      <span>Fisik</span>
+                    </div>
+                  </th>
+                  <th className="px-3 py-1 border">
+                    <div className="flex flex-col items-center">
+                      <span>System1</span>
+                      <button
+                        onClick={() => openUploadModal('system1')}
+                        className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
+                      >
+                        Upload
+                      </button>
+                    </div>
+                  </th>
+                  <th className="px-3 py-1 border">
+                    <div className="flex flex-col items-center">
+                      <span>System2</span>
+                      <button
+                        onClick={() => openUploadModal('system2')}
+                        className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
+                      >
+                        Upload
+                      </button>
+                    </div>
+                  </th>
+                </>
+              ) : (
                 <>
                   <th className="px-3 py-1 border">Receive</th>
-                  <th className="px-3 py-1 border">Failed</th>
+                  <th className="px-3 py-1 border">
+                    <div className="flex flex-col items-center">
+                      <span>Failed</span>
+                      <button
+                        onClick={() => openUploadModal('failed_posting')}
+                        className="mt-1 px-2 py-0.5 text-xs bg-slate-400 text-white rounded"
+                      >
+                        Upload
+                      </button>
+                    </div>
+                  </th>
                   <th className="px-3 py-1 border">Input</th>
                 </>
               )}
@@ -693,59 +799,63 @@ const handleUploadSohTactys = async () => {
             })}
           </tbody>
         </table>
-        
       </div>
-
-      
 
       {/* Modal */}
       {uploadModalOpen && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-    <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-md w-96">
-      <h4 className="mb-2 font-semibold">
-        Upload file untuk {uploadTarget === 'system1' ? 'System 1' : 'System 2'}
-      </h4>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-md w-96">
+            <h4 className="mb-2 font-semibold">
+              Upload file untuk{' '}
+              {uploadTarget === 'system1'
+                ? 'System 1'
+                : uploadTarget === 'system2'
+                ? 'System 2'
+                : uploadTarget === 'failed_posting'
+                ? 'Failed Posting'
+                : ''}
+            </h4>
 
-      <div
-        onDrop={(e) => {
-          e.preventDefault();
-          handleFileSelect(e.dataTransfer.files);
-        }}
-        onDragOver={(e) => e.preventDefault()}
-        className="border-2 border-dashed border-gray-400 rounded p-6 text-center cursor-pointer"
-        onClick={() => document.getElementById('fileInput')?.click()}
-      >
-        {selectedFile ? (
-          <p>{selectedFile.name}</p>
-        ) : (
-          <p>Drag & drop file di sini atau klik untuk memilih file</p>
-        )}
-      </div>
-      <input
-        id="fileInput"
-        type="file"
-        className="hidden"
-        onChange={(e) => handleFileSelect(e.target.files)}
-      />
+            <div
+              onDrop={(e) => {
+                e.preventDefault();
+                handleFileSelect(e.dataTransfer.files);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              className="border-2 border-dashed border-gray-400 rounded p-6 text-center cursor-pointer"
+              onClick={() => document.getElementById('fileInput')?.click()}
+            >
+              {selectedFile ? (
+                <p>{selectedFile.name}</p>
+              ) : (
+                <p>Drag & drop file di sini atau klik untuk memilih file</p>
+              )}
+            </div>
+            <input
+              id="fileInput"
+              type="file"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e.target.files)}
+            />
 
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          onClick={() => setUploadModalOpen(false)}
-          className="px-3 py-1 bg-gray-300 rounded"
-        >
-          Batal
-        </button>
-        <button
-          onClick={handleUpload}
-          disabled={!selectedFile}
-          className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
-        >
-          Upload
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setUploadModalOpen(false)}
+                className="px-3 py-1 bg-gray-300 rounded"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!selectedFile}
+                className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">

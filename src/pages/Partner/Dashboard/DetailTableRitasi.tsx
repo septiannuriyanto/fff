@@ -147,11 +147,11 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
     const totalRow = sheet.addRow([
       'TOTAL', '', '', '',
-      totalFlowBefore,
-      totalFlowAfter,
+      '',
+      '',
       totalSJ,
-      totalSondingBefore,
-      totalSondingAfter,
+      '',
+      '',
       '', '', '', '', ''
     ]);
     totalRow.font = { bold: true };
