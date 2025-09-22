@@ -3,6 +3,7 @@ import { supabase } from '../../../db/SupabaseClient';
 import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import formatIDNumber from '../Ritation/functions/formatIdNumber';
 
 interface AdditiveRow {
   date: string;
@@ -320,7 +321,7 @@ const AdditiveMonitoring: React.FC = () => {
                 <td className="border px-2 py-1 text-right">
                   {row.freqRitasi}
                 </td>
-                <td className="border px-2 py-1 text-right">{row.qtyRitasi}</td>
+                <td className="border px-2 py-1 text-right">{formatIDNumber(row.qtyRitasi)}</td>
                 <td className="border px-2 py-1 text-right">
                   {row.qtyAdditive.toFixed(2)}
                 </td>
@@ -391,7 +392,7 @@ const AdditiveMonitoring: React.FC = () => {
         <div className="grid grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-gray-500">Qty Ritasi MTD</div>
-            <div className="font-bold">{summary.qtyRitasiMTD.toFixed(2)}</div>
+            <div className="font-bold">{formatIDNumber(Number(summary.qtyRitasiMTD.toFixed(2)))}</div>
           </div>
           <div>
             <div className="text-sm text-gray-500">Qty Additive Created</div>
