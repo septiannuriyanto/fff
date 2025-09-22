@@ -7,6 +7,10 @@ import { RitasiFuel } from '../component/ritasiFuel';
 import formatIDNumber from '../Ritation/functions/formatIdNumber';
 import { supabase } from '../../../db/SupabaseClient';
 import * as QRCode from 'qrcode';
+import { ADMIN } from '../../../store/roles';
+import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
+import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
+import AdditiveInput from './AdditiveInput';
 interface Props {
   records: RitasiFuel[];
   tanggal: string; // kirim tanggal ke komponen
@@ -272,6 +276,9 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
             <th className="px-2 py-1 border">Fuelman ID</th>
             <th className="px-2 py-1 border">Shift</th>
             <th className="px-2 py-1 border">Photo</th>
+            <ExclusiveWidget allowedRoles={ADMIN}>
+              <th className="px-2 py-1 border">PO Alloc</th>
+            </ExclusiveWidget>
           </tr>
         </thead>
         <tbody>
@@ -312,6 +319,9 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                   '-'
                 )}
               </td>
+              <ExclusiveWidget allowedRoles={ADMIN}>
+                <td className="po_input px-2 py-1 border"></td>
+              </ExclusiveWidget>
             </tr>
           ))}
 
@@ -481,6 +491,24 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                     </button>
                   </td>
                 </tr>
+                <ExclusiveWidget allowedRoles={ADMIN}>
+                  <tr>
+                    <td className="px-2 py-1 border font-semibold">
+                      Total Additive Daily
+                    </td>
+                    <td className="px-2 py-1 border text-right font-semibold">
+                      {formatIDNumber(
+                        summaryData?.daily_qty / ADDITIVE_PORTION || 0,
+                      )}
+                    </td>
+                    <td className="px-2 py-1 border text-center">
+                      {summaryData?.daily_freq || 0}
+                    </td>
+                    <td className="px-2 py-1 border text-center">
+                      <AdditiveInput tanggal={tanggal} summaryData={summaryData}></AdditiveInput>
+                    </td>
+                  </tr>
+                </ExclusiveWidget>
               </tbody>
             </table>
           </div>

@@ -1,0 +1,5 @@
+
+const ADDITIVE_PORTION = 30000;
+
+
+export { ADDITIVE_PORTION };
