@@ -46,6 +46,7 @@ import AddMaterialPage from './pages/MasterData/Materials/AddMaterialPage';
 import DstOilReport from './pages/Oil/DailyStockTakingReport/DstOilReport';
 import FuelPartnerDashboard from './pages/Partner/Dashboard/FuelPartnerDashboard';
 import FuelPartnerRitation from './pages/Partner/Ritation/FuelPartnerRitation';
+import AdditiveMonitoring from './pages/Partner/Additive/AdditiveMonitoring';
 
 
 const routes = [
@@ -233,6 +234,12 @@ const routes = [
     component: <FuelPartnerRitation />,
     title: 'FFF | Fuel Partner Ritation',
     allowedRoles: FUEL_PARTNER
+  },
+  {
+    path: '/partner/fuel/additive',
+    component: <AdditiveMonitoring />,
+    title: 'FFF | Additive Monitoring',
+    allowedRoles: ADMIN
   },
 
   // Oil Reporting Routes

@@ -16,6 +16,7 @@ import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
 import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from '../../store/roles';
+import ExclusiveWidget from '../../common/TrialWrapper/ExclusiveWidget';
 
 interface SidebarProps {
   role?:string | null;
@@ -206,6 +207,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/partner/fuel" label="Fuel Dashboard" />
                 <SidebarLink to="/partner/fuel/ritation" label="Fuel Ritation" />
+                <ExclusiveWidget allowedRoles={ADMIN}>
+                  <SidebarLink to="/partner/fuel/additive" label="Fuel Additive" />
+                </ExclusiveWidget>
               </SidebarGroup>
 
              {/* <!-- Menu Item Oil Reporting Pages --> */}
