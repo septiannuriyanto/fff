@@ -300,7 +300,7 @@ const AdditiveMonitoring: React.FC = () => {
 
       <table className="table-auto w-full border-collapse">
         <thead>
-          <tr className="bg-gray-100">
+          <tr className="bg-slate-200">
             <th className="border px-2 py-1">No</th>
             <th className="border px-2 py-1">Tanggal Ritasi</th>
             <th className="border px-2 py-1">Freq Ritasi</th>
