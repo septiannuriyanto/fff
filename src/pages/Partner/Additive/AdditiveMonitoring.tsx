@@ -298,93 +298,87 @@ const AdditiveMonitoring: React.FC = () => {
         </button>
       </div>
 
-      <table className="table-auto w-full border-collapse">
-        <thead>
-          <tr className="bg-slate-200">
-            <th className="border px-2 py-1">No</th>
-            <th className="border px-2 py-1">Tanggal Ritasi</th>
-            <th className="border px-2 py-1">Freq Ritasi</th>
-            <th className="border px-2 py-1">Qty Ritasi</th>
-            <th className="border px-2 py-1">Qty Additive</th>
-            <th className="border px-2 py-1">MR Number</th>
-            <th className="border px-2 py-1">Qty Reserve</th>
-            <th className="border px-2 py-1">Nomor Reserve</th>
+      {/* Table dibungkus overflow-x-auto */}
+<div className="overflow-x-auto">
+  <table className="table-auto w-full border-collapse min-w-max">
+    <thead>
+      <tr className="bg-slate-200">
+        <th className="border px-2 py-1">No</th>
+        <th className="border px-2 py-1">Tanggal Ritasi</th>
+        <th className="border px-2 py-1">Freq Ritasi</th>
+        <th className="border px-2 py-1">Qty Ritasi</th>
+        <th className="border px-2 py-1">Qty Additive</th>
+        <th className="border px-2 py-1">MR Number</th>
+        <th className="border px-2 py-1">Qty Reserve</th>
+        <th className="border px-2 py-1">Nomor Reserve</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row, idx) => {
+        const isEditing = !row.qtyReserve && !row.reservNumber;
+        return (
+          <tr key={row.date}>
+            <td className="border px-2 py-1 text-center">{idx + 1}</td>
+            <td className="border px-2 py-1">{row.date}</td>
+            <td className="border px-2 py-1 text-right">{row.freqRitasi}</td>
+            <td className="border px-2 py-1 text-right">
+              {formatIDNumber(row.qtyRitasi)}
+            </td>
+            <td className="border px-2 py-1 text-right">
+              {row.qtyAdditive.toFixed(2)}
+            </td>
+            <td className="border px-2 py-1">{row.mrNumber}</td>
+            <td className="border px-2 py-1">
+              {isEditing ? (
+                <input
+                  type="number"
+                  className="border rounded px-1 w-20"
+                  placeholder="Click..."
+                  value={editing[row.date]?.qtyReserve || ''}
+                  onFocus={() => {
+                    if (!editing[row.date]?.qtyReserve) {
+                      setEditing((prev) => ({
+                        ...prev,
+                        [row.date]: {
+                          ...prev[row.date],
+                          qtyReserve: Math.ceil(row.qtyAdditive).toString(),
+                          reservNumber: prev[row.date]?.reservNumber || '',
+                        },
+                      }));
+                    }
+                  }}
+                  onChange={(e) =>
+                    handleInputChange(row.date, 'qtyReserve', e.target.value)
+                  }
+                  onKeyDown={(e) => handleKeyDown(row.date, e)}
+                />
+              ) : (
+                row.qtyReserve
+              )}
+            </td>
+            <td className="border px-2 py-1">
+              {isEditing ? (
+                <input
+                  type="text"
+                  className="border rounded px-1 w-28"
+                  placeholder="Input and Enter"
+                  value={editing[row.date]?.reservNumber || ''}
+                  onChange={(e) =>
+                    handleInputChange(row.date, 'reservNumber', e.target.value)
+                  }
+                  onKeyDown={(e) => handleKeyDown(row.date, e)}
+                />
+              ) : (
+                row.reservNumber
+              )}
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => {
-            const isEditing = !row.qtyReserve && !row.reservNumber;
-            return (
-              <tr key={row.date}>
-                <td className="border px-2 py-1 text-center">{idx + 1}</td>
-                <td className="border px-2 py-1">{row.date}</td>
-                <td className="border px-2 py-1 text-right">
-                  {row.freqRitasi}
-                </td>
-                <td className="border px-2 py-1 text-right">{formatIDNumber(row.qtyRitasi)}</td>
-                <td className="border px-2 py-1 text-right">
-                  {row.qtyAdditive.toFixed(2)}
-                </td>
-                <td className="border px-2 py-1">{row.mrNumber}</td>
-                <td className="border px-2 py-1">
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      className="border rounded px-1 w-20"
-                      placeholder="Click..."
-                      value={editing[row.date]?.qtyReserve || ''}
-                      onFocus={() => {
-                        // jika kosong, isi otomatis dengan pembulatan ke atas qtyAdditive
-                        if (!editing[row.date]?.qtyReserve) {
-                          setEditing((prev) => ({
-                            ...prev,
-                            [row.date]: {
-                              ...prev[row.date],
-                              qtyReserve: Math.ceil(row.qtyAdditive).toString(),
-                              reservNumber: prev[row.date]?.reservNumber || '',
-                            },
-                          }));
-                        }
-                      }}
-                      onChange={(e) =>
-                        handleInputChange(
-                          row.date,
-                          'qtyReserve',
-                          e.target.value,
-                        )
-                      }
-                      onKeyDown={(e) => handleKeyDown(row.date, e)}
-                    />
-                  ) : (
-                    row.qtyReserve
-                  )}
-                </td>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
 
-                <td className="border px-2 py-1">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      className="border rounded px-1 w-28"
-                      placeholder="Input and Enter"
-                      value={editing[row.date]?.reservNumber || ''}
-                      onChange={(e) =>
-                        handleInputChange(
-                          row.date,
-                          'reservNumber',
-                          e.target.value,
-                        )
-                      }
-                      onKeyDown={(e) => handleKeyDown(row.date, e)}
-                    />
-                  ) : (
-                    row.reservNumber
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
 
       {/* Summary */}
       <div className="mt-4 border p-4 rounded">
