@@ -42,6 +42,7 @@ const ALL_ROLES = [
     'CREATOR',
     'GROUP LEADER',
     'FUELMAN_PARTNER',
+    'FUEL AND OIL ADMIN',
     'FUEL_SUPERVISOR_PARTNER'
   ]
 

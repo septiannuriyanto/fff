@@ -45,6 +45,7 @@ const FuelPartnerDashboard: React.FC = () => {
       flowmeter_before_url,
       flowmeter_after_url,
       photo_url,
+      rotate_constant,
       storage:warehouse_id (
         unit_id
       ),
@@ -74,6 +75,7 @@ const FuelPartnerDashboard: React.FC = () => {
       operator_name: item.operator?.nama ?? null,
       petugas_pencatatan_name: item.petugas?.nama ?? null,
       ritation_date: item.ritation_date ?? "",
+      rotate_constant: item.rotate_constant ?? 0,
     })) as RitasiFuel[]
   );
 };

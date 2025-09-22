@@ -1,4 +1,3 @@
-// DetailTableRitasi.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
@@ -11,19 +10,25 @@ import { ADMIN } from '../../../store/roles';
 import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
 import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
 import AdditiveInput from './AdditiveInput';
+import ImagePreviewModal from './ImagePreviewModal';
+
 interface Props {
   records: RitasiFuel[];
-  tanggal: string; // kirim tanggal ke komponen
+  tanggal: string;
 }
 
 const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [summaryData, setSummaryData] = useState<any>(null); // State untuk data ringkasan dari RPC
+  const [summaryData, setSummaryData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // State untuk gambar yang dipilih
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedNoSuratJalan, setSelectedNoSuratJalan] = useState<string | null>(null);
+  const [currentRotation, setCurrentRotation] = useState<number>(0);
 
-  // 1️⃣ Data yang sudah diurutkan berdasarkan no_surat_jalan
+  // Data yang sudah diurutkan
   const sortedRecords = useMemo(() => {
     return [...records].sort((a, b) =>
       (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
@@ -45,7 +50,6 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     setCurrentPage(page);
   };
 
-  // --- Memanggil RPC untuk mengambil data ringkasan ---
   useEffect(() => {
     const fetchSummary = async () => {
       setIsLoading(true);
@@ -57,9 +61,7 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           console.error('Error fetching summary:', error);
           setSummaryData(null);
         } else {
-          console.log(data);
-          
-          setSummaryData(data[0]); // Ambil baris pertama dari hasil
+          setSummaryData(data[0]);
         }
       } catch (e) {
         console.error('RPC call failed:', e);
@@ -71,15 +73,12 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     if (tanggal) {
       fetchSummary();
     }
-  }, [tanggal]); // Jalankan setiap kali tanggal berubah
+  }, [tanggal]);
 
   // Export ke Excel (semua shift)
-
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Ritasi Fuel');
-
-    // header + Evidence
     const headers = [
       'No',
       'Tanggal',
@@ -94,47 +93,31 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       'Operator',
       'Warehouse',
       'Shift',
-      'Evidence', // kolom baru
+      'Evidence',
     ];
 
-    const maxColumnsToStyle = headers.length;
     const headerRow = sheet.addRow(headers);
-
-    // style header
-    for (let i = 1; i <= maxColumnsToStyle; i++) {
+    for (let i = 1; i <= headers.length; i++) {
       const cell = headerRow.getCell(i);
       cell.font = { bold: true };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'D3D3D3' },
-      };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D3D3D3' } };
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     }
 
-    // total accumulator
     let totalFlowBefore = 0;
     let totalFlowAfter = 0;
     let totalSJ = 0;
     let totalSondingBefore = 0;
     let totalSondingAfter = 0;
 
-    // data rows with QR code
     for (let i = 0; i < sortedRecords.length; i++) {
       const row = sortedRecords[i];
-
       totalFlowBefore += Number(row.qty_flowmeter_before) || 0;
       totalFlowAfter += Number(row.qty_flowmeter_after) || 0;
       totalSJ += Number(row.qty_sj) || 0;
       totalSondingBefore += Number(row.qty_sonding_before) || 0;
       totalSondingAfter += Number(row.qty_sonding_after) || 0;
 
-      // add row first (empty Evidence)
       const dataRow = sheet.addRow([
         i + 1,
         row.ritation_date,
@@ -149,62 +132,36 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
         row.operator_name,
         row.warehouse_id,
         row.shift,
-        '', // cell Evidence nanti kita isi gambar
+        '',
       ]);
 
-      // generate QR code untuk photo_url
-      // generate QR code untuk photo_url
       if (row.photo_url) {
         const qrBase64 = await QRCode.toDataURL(row.photo_url);
-        // ExcelJS: remove prefix data:image
         const base64Data = qrBase64.replace(/^data:image\/png;base64,/, '');
-
-        const imageId = workbook.addImage({
-          base64: base64Data,
-          extension: 'png',
-        });
-
+        const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
         const rowNum = dataRow.number;
-        sheet.addImage(imageId, {
-          tl: { col: 13.3, row: rowNum - 0.3 }, // geser kanan 0.3 kolom & turun 0.3 baris
-          ext: { width: 50, height: 50 },
-        });
+        sheet.addImage(imageId, { tl: { col: 13.3, row: rowNum - 0.3 }, ext: { width: 50, height: 50 } });
         sheet.getRow(rowNum).height = 40;
       }
     }
 
-    // baris total
     const totalRow = sheet.addRow([
-      'TOTAL',
-      '',
-      '',
-      '',
+      'TOTAL', '', '', '',
       totalFlowBefore,
       totalFlowAfter,
       totalSJ,
       totalSondingBefore,
       totalSondingAfter,
-      '',
-      '',
-      '',
-      '',
-      '', // kolom kosong lainnya
+      '', '', '', '', ''
     ]);
     totalRow.font = { bold: true };
 
-    // border untuk seluruh data
     sheet.eachRow((row) => {
       row.eachCell({ includeEmpty: false }, (cell) => {
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
-        };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       });
     });
 
-    // auto-fit
     sheet.columns.forEach((column, i) => {
       let maxLength = headers[i] ? headers[i].length : 10;
       if (column && typeof column.eachCell === 'function') {
@@ -216,54 +173,40 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       column.width = maxLength + 2;
     });
 
-    // save file
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Ritasi_Fuel_${tanggal}.xlsx`);
   };
 
   // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
-  // Data total diambil dari state summaryData
-  const totalQty =
-    shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
-
-  // Ambil array nama petugas sesuai shift
-  const petugasNames =
-    shift === 1
+    const totalQty = shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
+    const petugasNames = shift === 1
       ? summaryData?.shift1_petugas_names || []
       : summaryData?.shift2_petugas_names || [];
 
-  // Format jadi string: "PETUGAS_A, PETUGAS_B" atau "-"
-  const petugasText =
-    petugasNames.length > 0 ? petugasNames.join(', ') : '-';
+    const petugasText = petugasNames.length > 0 ? petugasNames.join(', ') : '-';
+    const recs = sortedRecords.filter((r) => r.shift === shift);
 
-  const recs = sortedRecords.filter((r) => r.shift === shift);
-  let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
-  recs.forEach((r, idx) => {
-    message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt (SJ: ${
-      r.queue_num || '-'
-    })\n`;
-  });
-  message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
-  message += `\n\nPetugas Pencatatan: ${petugasText}`;
+    let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
+    recs.forEach((r, idx) => {
+      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt (SJ: ${r.queue_num || '-'})\n`;
+    });
+    message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
+    message += `\n\nPetugas Pencatatan: ${petugasText}`;
 
-  const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-  window.open(url, '_blank');
-};
-
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   // Share laporan semua shift
   const shareAll = () => {
-    // Data total diambil dari state summaryData
     const totalQty = summaryData?.daily_qty;
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nShift 1 & 2\n\n`;
     records.forEach((r, idx) => {
       message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
     });
     message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
-    message += `\n\nPetugas Pencatatan: ${
-      records[0]?.petugas_pencatatan_name || '-'
-    }`;
+    message += `\n\nPetugas Pencatatan: ${records[0]?.petugas_pencatatan_name || '-'}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -315,16 +258,23 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
               <td className="px-2 py-1 border">{r.fuelman_name}</td>
               <td className="px-2 py-1 border">{r.shift}</td>
               <td className="px-2 py-1 border">
-                {r.flowmeter_before_url ||
-                r.flowmeter_after_url ||
-                r.photo_url ? (
+                {r.flowmeter_before_url || r.flowmeter_after_url || r.photo_url ? (
                   <div className="flex space-x-1">
                     {r.photo_url && (
                       <img
                         src={r.photo_url}
                         alt="SJ"
                         className="w-8 h-8 object-cover rounded cursor-pointer"
-                        onClick={() => setSelectedImage(r.photo_url ?? null)}
+                        style={{
+                          transform: r.rotate_constant
+                            ? `rotate(${r.rotate_constant}deg)`
+                            : 'none',
+                        }}
+                        onClick={() => {
+                          setSelectedImage(r.photo_url ?? null);
+                          setSelectedNoSuratJalan(r.no_surat_jalan ?? null);
+                          setCurrentRotation(r.rotate_constant ?? 0); // Set initial rotation
+                        }}
                         loading="lazy"
                         srcSet={`${r.photo_url}?w=32&h=32&q=60 1x, ${r.photo_url}?w=64&h=64&q=60 2x`}
                       />
@@ -349,23 +299,30 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           )}
         </tbody>
       </table>
+      
       {/* Modal Preview Gambar */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-9999"
-          onClick={() => setSelectedImage(null)} // klik luar area menutup modal
-        >
-          <div
-            className="max-w-4xl max-h-[90vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()} // supaya klik gambar tidak menutup modal
-          >
-            <img
-              src={selectedImage}
-              alt="preview"
-              className="w-auto h-auto max-w-full max-h-[90vh] rounded shadow-lg"
-            />
-          </div>
-        </div>
+      {selectedImage && selectedNoSuratJalan && (
+        <ImagePreviewModal
+          noSuratJalan={selectedNoSuratJalan}
+          imageUrl={selectedImage}
+          currentRotation={currentRotation} // Pass rotation from state
+          onClose={() => {
+            setSelectedImage(null);
+            setSelectedNoSuratJalan(null);
+            setCurrentRotation(0); // Reset rotation on close
+          }}
+          onUpdate={(newRotation) => {
+            // update state records agar UI langsung refleks
+            const updatedRecords = records.map((rec) =>
+              rec.no_surat_jalan === selectedNoSuratJalan
+                ? { ...rec, rotate_constant: newRotation }
+                : rec,
+            );
+            // Anda perlu memanggil fungsi set state dari parent jika records berasal dari sana
+            // Misalnya: setRecords(updatedRecords);
+            setCurrentRotation(newRotation);
+          }}
+        />
       )}
 
       {/* Pagination */}

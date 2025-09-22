@@ -27,4 +27,5 @@ export interface RitasiFuel {
   fuelman_name?: string;
   operator_name?: string;
   petugas_pencatatan_name?: string;
+  rotate_constant?: number; // untuk menyimpan rotasi gambar
 }
