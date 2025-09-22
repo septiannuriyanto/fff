@@ -19,4 +19,5 @@ export interface DraftRitasi {
   petugas_pencatatan: string;
   shift: '1' | '2';
   photo_url?: string | null;
+  photo_file?: File; 
 }

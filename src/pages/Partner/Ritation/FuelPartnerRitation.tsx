@@ -7,13 +7,14 @@ import ViewTeraModal from './components/ViewTeraModal';
 import SummaryPanel from './components/SummaryPanel';
 import { useAuth } from '../../Authentication/AuthContext';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
-import { validateRitasiForm } from './functions/validateRitasi';
+import { validateRitasiForm, validateRitasiLocal } from './functions/validateRitasi';
 import { Camera, ImageIcon, RotateCcw } from 'lucide-react';
 import { DraftRitasi } from './types/drafts';
 import { TeraPoint } from './types/teraPoint';
 import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
 import { set } from 'date-fns';
+import formatIDNumber from './functions/formatIdNumber';
 
 
 
@@ -72,6 +73,7 @@ const FuelPartnerRitation: React.FC = () => {
   );
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -237,6 +239,17 @@ const FuelPartnerRitation: React.FC = () => {
       setIsPhotoUploaded(false);
     }
   };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    const blobUrl = URL.createObjectURL(file); // preview lokal
+
+    setPhotoUrl(blobUrl);
+    setPhotoFile(file);
+  }
+};
+
 
   const handleRotate = () => {
     setRotationAngle((prevAngle) => (prevAngle + 90) % 360);
@@ -510,82 +523,131 @@ const FuelPartnerRitation: React.FC = () => {
   };
 
   const handleSaveLocal = async () => {
-    const before = parseFloat(flowmeterBefore || '0');
-    const after = parseFloat(flowmeterAfter || '0');
-    const multiplier = useDekaliter ? 10 : 1;
-    const diff = (after - before) * multiplier;
+  const before = parseFloat(flowmeterBefore || '0');
+  const after = parseFloat(flowmeterAfter || '0');
+  const multiplier = useDekaliter ? 10 : 1;
+  const diff = (after - before) * multiplier;
 
-    const errorMsg = validateRitasiForm({
-      selectedPetugas,
-      unit,
-      diff,
-      noSuratJalan,
-      operator,
-      fuelman,
-      sondingBeforeRear,
-      sondingBeforeFront,
-      sondingAfterRear,
-      sondingAfterFront,
-      volumeBefore,
-      volumeAfter,
-      photoUrl,
-    });
+  // validasi lokal: kirim file juga
+  const errorMsg = validateRitasiLocal({
+    selectedPetugas,
+    unit,
+    diff,
+    noSuratJalan,
+    operator,
+    fuelman,
+    sondingBeforeRear,
+    sondingBeforeFront,
+    sondingAfterRear,
+    sondingAfterFront,
+    volumeBefore,
+    volumeAfter,
+    photoFile, // kirim file yang dipilih
+  });
 
-    if (errorMsg) {
-      return alert(errorMsg);
-    }
+  if (errorMsg) {
+    return alert(errorMsg);
+  }
 
-    const selectedWarehouse =
-      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
+  const selectedWarehouse =
+    units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
-    const nextDraftQueue =
-      (localDrafts.length > 0
-        ? Math.max(...localDrafts.map((d) => d.queue_num ?? 0))
-        : queueNum ?? 0) + 1;
-    const nextDraftSJ = generateSuratJalanNumber(
-      nextDraftQueue,
-      selectedDate,
-      shift,
-    );
+  // Ambil draft yang sedang diedit (jika ada)
+  const editingDraft = editingDraftIndex !== null ? localDrafts[editingDraftIndex] : null;
 
-    const payload: DraftRitasi = {
-      no_surat_jalan: nextDraftSJ,
-      queue_num: nextDraftQueue,
-      ritation_date: selectedDate,
-      warehouse_id: selectedWarehouse,
-      qty_sj: diff,
-      qty_sonding_before: volumeBefore,
-      qty_sonding_after: volumeAfter,
-      qty_sonding: volumeAfter - volumeBefore,
-      sonding_before_front: parseFloat(sondingBeforeFront),
-      sonding_before_rear: parseFloat(sondingBeforeRear),
-      sonding_after_front: parseFloat(sondingAfterFront),
-      sonding_after_rear: parseFloat(sondingAfterRear),
-      operator_id: operator,
-      fuelman_id: fuelman,
-      qty_flowmeter_before: before,
-      qty_flowmeter_after: after,
-      isValidated: false,
-      petugas_pencatatan: selectedPetugas,
-      shift: shift,
-      photo_url: photoUrl,
-    };
+  // Tentukan assignedQueue:
+  // - kalau edit: pakai queue dari draft yang diedit (jangan ubah)
+  // - kalau tambah baru: gunakan queueNum kalau ada, kalau tidak fallback ke max local + 1
+  let assignedQueue: number;
+  if (editingDraft) {
+    assignedQueue = (editingDraft.queue_num as number) ?? (queueNum ?? 1);
+  } else {
+    const maxLocal = localDrafts.length > 0 ? Math.max(...localDrafts.map(d => d.queue_num ?? 0)) : 0;
+    assignedQueue = (typeof queueNum === 'number' && queueNum > 0) ? queueNum : maxLocal + 1;
+  }
 
-    let updatedDrafts: DraftRitasi[];
-    if (editingDraftIndex !== null) {
-      updatedDrafts = [...localDrafts];
-      updatedDrafts[editingDraftIndex] = payload;
-      setEditingDraftIndex(null);
-    } else {
-      updatedDrafts = [...localDrafts, payload];
-    }
+  // buat no surat jalan berdasarkan assignedQueue
+  const assignedSJ = generateSuratJalanNumber(assignedQueue, selectedDate, shift);
 
-    setLocalDrafts(updatedDrafts);
-    localStorage.setItem('ritasi_draft', JSON.stringify(updatedDrafts));
-    alert('Data tersimpan ke lokal!');
-    fetchNextQueue();
-    handleResetForm();
+  // previewUrl: jika ada file baru gunakan blob, kalau edit dan tidak mengganti file pakai existing preview
+  const previewUrl =
+    photoFile ? URL.createObjectURL(photoFile) : (editingDraft?.photo_url ?? undefined);
+
+  // simpan file asli di draft (untuk upload nanti saat Submit All)
+  const payload: DraftRitasi = {
+    no_surat_jalan: assignedSJ,
+    queue_num: assignedQueue,
+    ritation_date: selectedDate,
+    warehouse_id: selectedWarehouse,
+    qty_sj: diff,
+    qty_sonding_before: volumeBefore,
+    qty_sonding_after: volumeAfter,
+    qty_sonding: volumeAfter - volumeBefore,
+    sonding_before_front: parseFloat(sondingBeforeFront || '0'),
+    sonding_before_rear: parseFloat(sondingBeforeRear || '0'),
+    sonding_after_front: parseFloat(sondingAfterFront || '0'),
+    sonding_after_rear: parseFloat(sondingAfterRear || '0'),
+    operator_id: operator,
+    fuelman_id: fuelman,
+    qty_flowmeter_before: before,
+    qty_flowmeter_after: after,
+    isValidated: false,
+    petugas_pencatatan: selectedPetugas,
+    shift: shift,
+    // simpan file & preview url di draft (File disimpan di memory, tidak ke localStorage)
+    photo_file: photoFile ?? editingDraft?.photo_file ?? undefined,
+    photo_url: previewUrl,
   };
+
+  // update array drafts
+  let updatedDrafts: DraftRitasi[];
+  if (editingDraftIndex !== null) {
+    updatedDrafts = [...localDrafts];
+    updatedDrafts[editingDraftIndex] = payload;
+    setEditingDraftIndex(null);
+  } else {
+    updatedDrafts = [...localDrafts, payload];
+  }
+
+  // simpan ke state
+  setLocalDrafts(updatedDrafts);
+
+  // simpan ke localStorage tanpa property photo_file (File tidak serializable)
+  const draftsToSave = updatedDrafts.map(d => {
+    const { photo_file, ...rest } = d;
+    return rest;
+  });
+  localStorage.setItem('ritasi_draft', JSON.stringify(draftsToSave));
+
+  // Setelah sukses simpan lokal, baru increment queueNum (hanya untuk penambahan baru)
+  if (editingDraftIndex === null) {
+    const nextQueue = assignedQueue + 1;
+    setQueueNum(nextQueue);
+    setManualNN(String(nextQueue));
+  }
+
+  // Reset fields form (manual) — JANGAN reset queueNum
+  setNoSuratJalan('');
+  setUnit('');
+  setOperator('');
+  setFuelman('');
+  setSondingBeforeRear('');
+  setSondingBeforeFront('');
+  setSondingAfterRear('');
+  setSondingAfterFront('');
+  setVolumeBefore(0);
+  setVolumeAfter(0);
+  setFlowmeterBefore('');
+  setFlowmeterAfter('');
+  setUseDekaliter(true);
+  setPhotoPreview('');
+  setPhotoFile(null);
+
+  alert('Data tersimpan ke lokal!');
+  // optional: kalau mau sinkronisasi penuh dengan DB, panggil fetchNextQueue() di tempat terpisah
+};
+
+
 
   const handleDeleteDraft = (index: number) => {
     const updated = [...localDrafts];
@@ -635,26 +697,67 @@ const FuelPartnerRitation: React.FC = () => {
   };
 
   const handleSubmitAllLocal = async () => {
-    if (localDrafts.length === 0) {
-      return;
-    }
-    try {
-      setLoadingSubmit(true);
-      const { error } = await supabase.from('ritasi_fuel').insert(localDrafts);
-      if (error) {
-        throw error;
-      }
-      alert('Semua draft berhasil dikirim!');
-      setLocalDrafts([]);
-      localStorage.removeItem('ritasi_draft');
-      setShowDraftModal(false);
-      fetchNextQueue();
-    } catch (err: any) {
-      alert('Gagal submit draft: ' + err.message);
-    } finally {
-      setLoadingSubmit(false);
-    }
-  };
+  if (localDrafts.length === 0) {
+    return;
+  }
+  try {
+    setLoadingSubmit(true);
+
+    // upload foto + update photo_url dulu
+    const draftsWithPhotoUrl = await Promise.all(
+      localDrafts.map(async (draft) => {
+        // kalau ada file foto dan photo_url belum berupa publicUrl
+        if (draft.photo_file && !(draft.photo_url && draft.photo_url.startsWith('http'))) {
+          // format tanggal jadi yyyy/mm/dd
+          const date = new Date(draft.ritation_date);
+          const yyyy = date.getFullYear();
+          const mm = String(date.getMonth() + 1).padStart(2, '0');
+          const dd = String(date.getDate()).padStart(2, '0');
+
+          // path file sesuai permintaan: yyyy/mm/dd/<no_surat_jalan>.jpg
+          const filePath = `${yyyy}/${mm}/${dd}/${draft.no_surat_jalan}.jpg`;
+
+          // upload file
+          const { error: uploadError } = await supabase.storage
+            .from('ritasi')
+            .upload(filePath, draft.photo_file, { upsert: true });
+          if (uploadError) throw uploadError;
+
+          // ambil public url
+          const { data: publicData } = supabase.storage
+            .from('ritasi')
+            .getPublicUrl(filePath);
+
+          // update photo_url di draft
+          return { ...draft, photo_url: publicData.publicUrl };
+        }
+
+        // kalau tidak ada file baru, pakai draft apa adanya
+        console.log('No new photo to upload for draft:', draft.no_surat_jalan);
+        return draft;
+      })
+    );
+
+    // setelah semua foto terupload, insert ke table ritasi_fuel
+
+    console.log('Drafts to insert:', draftsWithPhotoUrl);
+    return;
+
+    const { error } = await supabase.from('ritasi_fuel').insert(draftsWithPhotoUrl);
+    if (error) throw error;
+
+    alert('Semua draft berhasil dikirim!');
+    setShowDraftModal(false);
+    fetchNextQueue();
+  } catch (err: any) {
+    alert('Gagal submit draft: ' + err.message);
+  } finally {
+    setLoadingSubmit(false);
+  }
+};
+
+
+
 
   const fetchNextQueue = async () => {
     if (!selectedDate) {
@@ -1122,85 +1225,115 @@ const FuelPartnerRitation: React.FC = () => {
       )}
 
       {showDraftModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
-            <div className="overflow-auto max-h-64 mb-4">
-              <table className="min-w-full border">
-                <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-800">
-                    <th className="p-2 border">No SJ</th>
-                    <th className="p-2 border">Tanggal</th>
-                    <th className="p-2 border">Unit</th>
-                    <th className="p-2 border">Qty SJ</th>
-                    <th className="p-2 border">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {localDrafts.map((d, i) => (
-                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="p-2 border">{d.no_surat_jalan}</td>
-                      <td className="p-2 border">{d.ritation_date}</td>
-                      <td className="p-2 border">{d.warehouse_id}</td>
-                      <td className="p-2 border">{d.qty_sj?.toFixed(2)} L</td>
-                      <td className="p-2 border text-center">
-                        <div className="flex justify-center gap-1">
-                          <button
-                            onClick={() => handleEditDraft(i)}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
-                            title="Edit draft"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Yakin ingin menghapus draft ini?')) {
-                                handleDeleteDraft(i);
-                              }
-                            }}
-                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
-                            title="Hapus draft"
-                          >
-                            Hapus
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">
-                Total: {localDrafts.length} draft tersimpan
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowDraftModal(false)}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
-                >
-                  Tutup
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Yakin ingin mengirim semua ${localDrafts.length} draft?`)) {
-                      handleSubmitAllLocal();
-                    }
-                  }}
-                  disabled={loadingSubmit}
-                  className={`px-4 py-2 rounded text-white ${
-                    loadingSubmit 
-                      ? 'bg-blue-300 cursor-not-allowed' 
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  }`}
-                >
-                  {loadingSubmit ? 'Mengirim...' : `Submit All (${localDrafts.length})`}
-                </button>
-              </div>
-            </div>
+  <>
+    {/* Modal daftar draft */}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+        <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
+        <div className="overflow-auto max-h-64 mb-4">
+          <table className="min-w-full border">
+            <thead>
+              <tr className="bg-gray-100 dark:bg-gray-800">
+                <th className="p-2 border">No SJ</th>
+                <th className="p-2 border">Tanggal</th>
+                <th className="p-2 border">Unit</th>
+                <th className="p-2 border">Qty SJ</th>
+                <th className="p-2 border">Foto</th>
+                <th className="p-2 border">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {localDrafts.map((d, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="p-2 border">{d.no_surat_jalan}</td>
+                  <td className="p-2 border">{d.ritation_date}</td>
+                  <td className="p-2 border">{d.warehouse_id}</td>
+                  <td className="p-2 border">{formatIDNumber(d.qty_sj)} L</td>
+                  <td className="p-2 border text-center">
+                    {d.photo_url && (
+                      <img
+                        src={d.photo_url}
+                        alt="thumb"
+                        className="h-12 w-12 object-cover rounded cursor-zoom-in"
+                        onClick={() => setZoomUrl(d.photo_url!)}
+                      />
+                    )}
+                  </td>
+                  <td className="p-2 border text-center">
+                    <div className="flex justify-center gap-1">
+                      <button
+                        onClick={() => handleEditDraft(i)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
+                        title="Edit draft"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Yakin ingin menghapus draft ini?')) {
+                            handleDeleteDraft(i);
+                          }
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                        title="Hapus draft"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">
+            Total: {localDrafts.length} draft tersimpan
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowDraftModal(false)}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={() => {
+                if (confirm(`Yakin ingin mengirim semua ${localDrafts.length} draft?`)) {
+                  handleSubmitAllLocal();
+                }
+              }}
+              disabled={loadingSubmit}
+              className={`px-4 py-2 rounded text-white ${
+                loadingSubmit
+                  ? 'bg-blue-300 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600'
+              }`}
+            >
+              {loadingSubmit ? 'Mengirim...' : `Submit All (${localDrafts.length})`}
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+
+    {/* Modal zoom foto */}
+    {zoomUrl && (
+      <div
+        className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center"
+        onClick={() => setZoomUrl(null)}
+      >
+        <img
+          src={zoomUrl}
+          alt="zoom"
+          className="max-h-[90vh] max-w-[90vw] object-contain rounded"
+          onClick={(e) => e.stopPropagation()} // supaya klik fotonya tidak close
+        />
+      </div>
+    )}
+  </>
+)}
+
     </div>
   );
 };

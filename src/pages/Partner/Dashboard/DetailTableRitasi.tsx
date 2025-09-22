@@ -69,147 +69,151 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
   // Export ke Excel (semua shift)
 
-const exportToExcel = async () => {
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Ritasi Fuel');
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Ritasi Fuel');
 
-  // header + Evidence
-  const headers = [
-    'No',
-    'Tanggal',
-    'No Surat Jalan',
-    'Unit',
-    'Qty Flowmeter Before',
-    'Qty Flowmeter After',
-    'Qty SJ',
-    'Qty Sonding Before',
-    'Qty Sonding After',
-    'Fuelman',
-    'Operator',
-    'Warehouse',
-    'Shift',
-    'Evidence', // kolom baru
-  ];
+    // header + Evidence
+    const headers = [
+      'No',
+      'Tanggal',
+      'No Surat Jalan',
+      'Unit',
+      'Qty Flowmeter Before',
+      'Qty Flowmeter After',
+      'Qty SJ',
+      'Qty Sonding Before',
+      'Qty Sonding After',
+      'Fuelman',
+      'Operator',
+      'Warehouse',
+      'Shift',
+      'Evidence', // kolom baru
+    ];
 
-  const maxColumnsToStyle = headers.length;
-  const headerRow = sheet.addRow(headers);
+    const maxColumnsToStyle = headers.length;
+    const headerRow = sheet.addRow(headers);
 
-  // style header
-  for (let i = 1; i <= maxColumnsToStyle; i++) {
-    const cell = headerRow.getCell(i);
-    cell.font = { bold: true };
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'D3D3D3' },
-    };
-    cell.border = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
-    };
-  }
-
-  // total accumulator
-  let totalFlowBefore = 0;
-  let totalFlowAfter = 0;
-  let totalSJ = 0;
-  let totalSondingBefore = 0;
-  let totalSondingAfter = 0;
-
-  // data rows with QR code
-  for (let i = 0; i < sortedRecords.length; i++) {
-    const row = sortedRecords[i];
-
-    totalFlowBefore += Number(row.qty_flowmeter_before) || 0;
-    totalFlowAfter += Number(row.qty_flowmeter_after) || 0;
-    totalSJ += Number(row.qty_sj) || 0;
-    totalSondingBefore += Number(row.qty_sonding_before) || 0;
-    totalSondingAfter += Number(row.qty_sonding_after) || 0;
-
-    // add row first (empty Evidence)
-    const dataRow = sheet.addRow([
-      i + 1,
-      row.ritation_date,
-      row.no_surat_jalan,
-      row.unit_id,
-      row.qty_flowmeter_before,
-      row.qty_flowmeter_after,
-      row.qty_sj,
-      row.qty_sonding_before,
-      row.qty_sonding_after,
-      row.fuelman_name,
-      row.operator_name,
-      row.warehouse_id,
-      row.shift,
-      '', // cell Evidence nanti kita isi gambar
-    ]);
-
-    // generate QR code untuk photo_url
-    // generate QR code untuk photo_url
-if (row.photo_url) {
-  const qrBase64 = await QRCode.toDataURL(row.photo_url); 
-  // ExcelJS: remove prefix data:image
-  const base64Data = qrBase64.replace(/^data:image\/png;base64,/, '');
-  
-  const imageId = workbook.addImage({
-    base64: base64Data,
-    extension: 'png',
-  });
-
-  const rowNum = dataRow.number;
-  sheet.addImage(imageId, {
-  tl: { col: 13.3, row: rowNum - 0.3 }, // geser kanan 0.3 kolom & turun 0.3 baris
-  ext: { width: 50, height: 50 },
-});
-  sheet.getRow(rowNum).height = 40;
-}
-
-  }
-
-  // baris total
-  const totalRow = sheet.addRow([
-    'TOTAL',
-    '', '', '',
-    totalFlowBefore,
-    totalFlowAfter,
-    totalSJ,
-    totalSondingBefore,
-    totalSondingAfter,
-    '', '', '', '', '' // kolom kosong lainnya
-  ]);
-  totalRow.font = { bold: true };
-
-  // border untuk seluruh data
-  sheet.eachRow((row) => {
-    row.eachCell({ includeEmpty: false }, (cell) => {
+    // style header
+    for (let i = 1; i <= maxColumnsToStyle; i++) {
+      const cell = headerRow.getCell(i);
+      cell.font = { bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'D3D3D3' },
+      };
       cell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
         bottom: { style: 'thin' },
         right: { style: 'thin' },
       };
-    });
-  });
-
-  // auto-fit
-  sheet.columns.forEach((column, i) => {
-    let maxLength = headers[i] ? headers[i].length : 10;
-    if (column && typeof column.eachCell === 'function') {
-      column.eachCell({ includeEmpty: true }, (cell) => {
-        const cellLength = cell.value ? cell.value.toString().length : 10;
-        maxLength = Math.max(maxLength, cellLength);
-      });
     }
-    column.width = maxLength + 2;
-  });
 
-  // save file
-  const buffer = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buffer]), `Ritasi_Fuel_${tanggal}.xlsx`);
-};
+    // total accumulator
+    let totalFlowBefore = 0;
+    let totalFlowAfter = 0;
+    let totalSJ = 0;
+    let totalSondingBefore = 0;
+    let totalSondingAfter = 0;
 
+    // data rows with QR code
+    for (let i = 0; i < sortedRecords.length; i++) {
+      const row = sortedRecords[i];
+
+      totalFlowBefore += Number(row.qty_flowmeter_before) || 0;
+      totalFlowAfter += Number(row.qty_flowmeter_after) || 0;
+      totalSJ += Number(row.qty_sj) || 0;
+      totalSondingBefore += Number(row.qty_sonding_before) || 0;
+      totalSondingAfter += Number(row.qty_sonding_after) || 0;
+
+      // add row first (empty Evidence)
+      const dataRow = sheet.addRow([
+        i + 1,
+        row.ritation_date,
+        row.no_surat_jalan,
+        row.unit_id,
+        row.qty_flowmeter_before,
+        row.qty_flowmeter_after,
+        row.qty_sj,
+        row.qty_sonding_before,
+        row.qty_sonding_after,
+        row.fuelman_name,
+        row.operator_name,
+        row.warehouse_id,
+        row.shift,
+        '', // cell Evidence nanti kita isi gambar
+      ]);
+
+      // generate QR code untuk photo_url
+      // generate QR code untuk photo_url
+      if (row.photo_url) {
+        const qrBase64 = await QRCode.toDataURL(row.photo_url);
+        // ExcelJS: remove prefix data:image
+        const base64Data = qrBase64.replace(/^data:image\/png;base64,/, '');
+
+        const imageId = workbook.addImage({
+          base64: base64Data,
+          extension: 'png',
+        });
+
+        const rowNum = dataRow.number;
+        sheet.addImage(imageId, {
+          tl: { col: 13.3, row: rowNum - 0.3 }, // geser kanan 0.3 kolom & turun 0.3 baris
+          ext: { width: 50, height: 50 },
+        });
+        sheet.getRow(rowNum).height = 40;
+      }
+    }
+
+    // baris total
+    const totalRow = sheet.addRow([
+      'TOTAL',
+      '',
+      '',
+      '',
+      totalFlowBefore,
+      totalFlowAfter,
+      totalSJ,
+      totalSondingBefore,
+      totalSondingAfter,
+      '',
+      '',
+      '',
+      '',
+      '', // kolom kosong lainnya
+    ]);
+    totalRow.font = { bold: true };
+
+    // border untuk seluruh data
+    sheet.eachRow((row) => {
+      row.eachCell({ includeEmpty: false }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    });
+
+    // auto-fit
+    sheet.columns.forEach((column, i) => {
+      let maxLength = headers[i] ? headers[i].length : 10;
+      if (column && typeof column.eachCell === 'function') {
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const cellLength = cell.value ? cell.value.toString().length : 10;
+          maxLength = Math.max(maxLength, cellLength);
+        });
+      }
+      column.width = maxLength + 2;
+    });
+
+    // save file
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `Ritasi_Fuel_${tanggal}.xlsx`);
+  };
 
   // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
@@ -299,6 +303,8 @@ if (row.photo_url) {
                         alt="SJ"
                         className="w-8 h-8 object-cover rounded cursor-pointer"
                         onClick={() => setSelectedImage(r.photo_url ?? null)}
+                        loading="lazy"
+                        srcSet={`${r.photo_url}?w=32&h=32&q=60 1x, ${r.photo_url}?w=64&h=64&q=60 2x`}
                       />
                     )}
                   </div>
