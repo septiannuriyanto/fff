@@ -10,7 +10,7 @@ module.exports = {
   darkMode: 'class',
   theme: {
     fontFamily: {
-      satoshi: ['Satoshi', 'sans-serif'],
+      satoshi: ['Roboto', 'sans-serif'],
       serif: ['Lora', 'serif'],
     },
     screens: {
