@@ -238,8 +238,7 @@ const routes = [
   {
     path: '/partner/fuel/additive',
     component: <AdditiveMonitoring />,
-    title: 'FFF | Additive Monitoring',
-    allowedRoles: ADMIN
+    allowedRoles: ALL_ROLES
   },
 
   // Oil Reporting Routes
