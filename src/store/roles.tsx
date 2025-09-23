@@ -23,6 +23,7 @@ const ALL_ROLES = [
   const OIL_ROLES = [
     'CREATOR',
     'GROUP LEADER',
+    'FUEL AND OIL ADMIN',
     'OILMAN'
   ];
   
