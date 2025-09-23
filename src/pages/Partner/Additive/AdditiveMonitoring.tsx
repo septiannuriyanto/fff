@@ -44,7 +44,9 @@ const AdditiveMonitoring: React.FC = () => {
       .from('ritasi_fuel')
       .select('ritation_date, qty_sj')
       .gte('ritation_date', start.toISOString())
-      .lte('ritation_date', end.toISOString());
+      .lte('ritation_date', end.toISOString())
+      .order('ritation_date', { ascending: false })
+      ;
 
     if (error) {
       console.error(error);
