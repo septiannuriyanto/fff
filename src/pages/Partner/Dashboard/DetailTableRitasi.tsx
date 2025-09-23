@@ -11,6 +11,7 @@ import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
 import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
 import AdditiveInput from './AdditiveInput';
 import ImagePreviewModal from './ImagePreviewModal';
+import { set } from 'date-fns';
 
 interface Props {
   records: RitasiFuel[];
@@ -22,21 +23,20 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   const [pageSize, setPageSize] = useState(20);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // State untuk gambar yang dipilih
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedNoSuratJalan, setSelectedNoSuratJalan] = useState<string | null>(null);
-  const [currentRotation, setCurrentRotation] = useState<number>(0);
+
+  const [selectedRecord, setSelectedRecord] = useState<RitasiFuel | null>(null);
+  const [recordsState, setRecords] = useState<RitasiFuel[]>(records);
 
   // Data yang sudah diurutkan
   const sortedRecords = useMemo(() => {
-    return [...records].sort((a, b) =>
-      (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
-        numeric: true,
-        sensitivity: 'base',
-      }),
-    );
-  }, [records]);
+  return [...recordsState].sort((a, b) =>
+    (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+  );
+}, [recordsState]);
+
 
   const totalPages = Math.ceil(sortedRecords.length / pageSize);
 
@@ -100,8 +100,17 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     for (let i = 1; i <= headers.length; i++) {
       const cell = headerRow.getCell(i);
       cell.font = { bold: true };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D3D3D3' } };
-      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'D3D3D3' },
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
     }
 
     let totalFlowBefore = 0;
@@ -138,27 +147,45 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       if (row.photo_url) {
         const qrBase64 = await QRCode.toDataURL(row.photo_url);
         const base64Data = qrBase64.replace(/^data:image\/png;base64,/, '');
-        const imageId = workbook.addImage({ base64: base64Data, extension: 'png' });
+        const imageId = workbook.addImage({
+          base64: base64Data,
+          extension: 'png',
+        });
         const rowNum = dataRow.number;
-        sheet.addImage(imageId, { tl: { col: 13.3, row: rowNum - 0.3 }, ext: { width: 50, height: 50 } });
+        sheet.addImage(imageId, {
+          tl: { col: 13.3, row: rowNum - 0.3 },
+          ext: { width: 50, height: 50 },
+        });
         sheet.getRow(rowNum).height = 40;
       }
     }
 
     const totalRow = sheet.addRow([
-      'TOTAL', '', '', '',
+      'TOTAL',
+      '',
+      '',
+      '',
       '',
       '',
       totalSJ,
       '',
       '',
-      '', '', '', '', ''
+      '',
+      '',
+      '',
+      '',
+      '',
     ]);
     totalRow.font = { bold: true };
 
     sheet.eachRow((row) => {
       row.eachCell({ includeEmpty: false }, (cell) => {
-        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
       });
     });
 
@@ -179,17 +206,21 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
   // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
-    const totalQty = shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
-    const petugasNames = shift === 1
-      ? summaryData?.shift1_petugas_names || []
-      : summaryData?.shift2_petugas_names || [];
+    const totalQty =
+      shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
+    const petugasNames =
+      shift === 1
+        ? summaryData?.shift1_petugas_names || []
+        : summaryData?.shift2_petugas_names || [];
 
     const petugasText = petugasNames.length > 0 ? petugasNames.join(', ') : '-';
     const recs = sortedRecords.filter((r) => r.shift === shift);
 
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nSHIFT : ${shift}\n\n`;
     recs.forEach((r, idx) => {
-      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt (SJ: ${r.queue_num || '-'})\n`;
+      message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(
+        r.qty_sj!,
+      )} Lt (SJ: ${r.queue_num || '-'})\n`;
     });
     message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
     message += `\n\nPetugas Pencatatan: ${petugasText}`;
@@ -206,7 +237,9 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       message += `${idx + 1}. ${r.unit_id} - ${formatIDNumber(r.qty_sj!)} Lt\n`;
     });
     message += `\nTotal Ritasi : ${formatIDNumber(totalQty || 0)} Lt`;
-    message += `\n\nPetugas Pencatatan: ${records[0]?.petugas_pencatatan_name || '-'}`;
+    message += `\n\nPetugas Pencatatan: ${
+      records[0]?.petugas_pencatatan_name || '-'
+    }`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -241,7 +274,10 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
         </thead>
         <tbody>
           {paginatedRecords.map((r, idx) => (
-            <tr key={r.id}>
+            <tr
+              key={r.id}
+              className={r.isValidated ? 'bg-green-50' : ''} // baris jadi hijau muda kalau valid
+            >
               <td className="px-2 py-1 border">
                 {(currentPage - 1) * pageSize + idx + 1}
               </td>
@@ -258,7 +294,9 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
               <td className="px-2 py-1 border">{r.fuelman_name}</td>
               <td className="px-2 py-1 border">{r.shift}</td>
               <td className="px-2 py-1 border">
-                {r.flowmeter_before_url || r.flowmeter_after_url || r.photo_url ? (
+                {r.flowmeter_before_url ||
+                r.flowmeter_after_url ||
+                r.photo_url ? (
                   <div className="flex space-x-1">
                     {r.photo_url && (
                       <img
@@ -271,9 +309,10 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                             : 'none',
                         }}
                         onClick={() => {
-                          setSelectedImage(r.photo_url ?? null);
-                          setSelectedNoSuratJalan(r.no_surat_jalan ?? null);
-                          setCurrentRotation(r.rotate_constant ?? 0); // Set initial rotation
+                          setSelectedRecord(r);
+                          // setSelectedImage(r.photo_url ?? null);
+                          // setSelectedNoSuratJalan(r.no_surat_jalan ?? null);
+                          // setCurrentRotation(r.rotate_constant ?? 0); // Set initial rotation
                         }}
                         loading="lazy"
                         srcSet={`${r.photo_url}?w=32&h=32&q=60 1x, ${r.photo_url}?w=64&h=64&q=60 2x`}
@@ -299,31 +338,33 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           )}
         </tbody>
       </table>
-      
+
       {/* Modal Preview Gambar */}
-      {selectedImage && selectedNoSuratJalan && (
-        <ImagePreviewModal
-          noSuratJalan={selectedNoSuratJalan}
-          imageUrl={selectedImage}
-          currentRotation={currentRotation} // Pass rotation from state
-          onClose={() => {
-            setSelectedImage(null);
-            setSelectedNoSuratJalan(null);
-            setCurrentRotation(0); // Reset rotation on close
-          }}
-          onUpdate={(newRotation) => {
-            // update state records agar UI langsung refleks
-            const updatedRecords = records.map((rec) =>
-              rec.no_surat_jalan === selectedNoSuratJalan
-                ? { ...rec, rotate_constant: newRotation }
-                : rec,
-            );
-            // Anda perlu memanggil fungsi set state dari parent jika records berasal dari sana
-            // Misalnya: setRecords(updatedRecords);
-            setCurrentRotation(newRotation);
-          }}
-        />
-      )}
+      {selectedRecord && (
+  <ImagePreviewModal
+    selectedRecord={selectedRecord}
+    onClose={() => setSelectedRecord(null)}
+    onUpdate={(newRotation) => {
+      setRecords((prev) =>
+        prev.map((r) =>
+          r.no_surat_jalan === selectedRecord.no_surat_jalan
+            ? { ...r, rotate_constant: newRotation }
+            : r,
+        ),
+      );
+    }}
+    onValidationChange={(validated) => {
+      setRecords((prev) =>
+        prev.map((r) =>
+          r.no_surat_jalan === selectedRecord.no_surat_jalan
+            ? { ...r, isValidated: validated }
+            : r,
+        ),
+      );
+    }}
+  />
+)}
+
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">
@@ -477,7 +518,10 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                       {summaryData?.daily_freq || 0}
                     </td>
                     <td className="px-2 py-1 border text-center">
-                      <AdditiveInput tanggal={tanggal} summaryData={summaryData}></AdditiveInput>
+                      <AdditiveInput
+                        tanggal={tanggal}
+                        summaryData={summaryData}
+                      ></AdditiveInput>
                     </td>
                   </tr>
                 </ExclusiveWidget>
