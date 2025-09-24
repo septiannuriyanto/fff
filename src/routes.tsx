@@ -30,8 +30,8 @@ import BreakdownRfuReport from './pages/Reporting/Breakdown/BreakdownRfuReport';
 import BastFuel from './pages/Export/BastFuel/BastFuel';
 import BastOli from './pages/Export/BastOli/BastOli';
 import BaReconcile from './pages/Export/BaReconcile/BaReconcile';
-import ComponentLibrary from './pages/MasterData/ComponentLibrary';
-import MasterManpower from './pages/MasterData/MasterManpower';
+
+import MasterManpower from './pages/MasterData/MasterManpower/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
 import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from './store/roles';
@@ -47,6 +47,8 @@ import DstOilReport from './pages/Oil/DailyStockTakingReport/DstOilReport';
 import FuelPartnerDashboard from './pages/Partner/Dashboard/FuelPartnerDashboard';
 import FuelPartnerRitation from './pages/Partner/Ritation/FuelPartnerRitation';
 import AdditiveMonitoring from './pages/Partner/Additive/AdditiveMonitoring';
+import { RefuelingSchedule } from './pages/MasterData/MasterSchedule/RefuelingSchedule';
+import ComponentLibrary from './pages/MasterData/ComponentLibrary/ComponentLibrary';
 
 
 const routes = [
@@ -318,6 +320,12 @@ const routes = [
     path: '/master/manpower/add',
     component: <ManpowerRegistration />,
     title: 'FFF | Master Manpower',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/master/schedule/refueling',
+    component: <RefuelingSchedule />,
+    title: 'FFF | Refueling Schedule',
     allowedRoles: SUPERVISOR
   },
 

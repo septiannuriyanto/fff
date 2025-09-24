@@ -277,6 +277,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/master/equipment" label="Equipment" />
                 <SidebarLink to="/master/fueltruck" label="Fuel Truck" />
                 <SidebarLink to="/master/library" label="Component Library" />
+                <SidebarLink to="/master/schedule/refueling" label="Refueling Schedule" />
               </SidebarGroup>
 
               {/* <!-- Menu Item Export --> */}
