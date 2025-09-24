@@ -11,7 +11,6 @@ import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
 import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
 import AdditiveInput from './AdditiveInput';
 import ImagePreviewModal from './ImagePreviewModal';
-import { set } from 'date-fns';
 
 interface Props {
   records: RitasiFuel[];
@@ -29,14 +28,13 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
   // Data yang sudah diurutkan
   const sortedRecords = useMemo(() => {
-  return [...recordsState].sort((a, b) =>
-    (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
-      numeric: true,
-      sensitivity: 'base',
-    }),
-  );
-}, [recordsState]);
-
+    return [...recordsState].sort((a, b) =>
+      (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
+        numeric: true,
+        sensitivity: 'base',
+      }),
+    );
+  }, [recordsState]);
 
   const totalPages = Math.ceil(sortedRecords.length / pageSize);
 
@@ -324,7 +322,9 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                 )}
               </td>
               <ExclusiveWidget allowedRoles={ADMIN}>
-                <td className="po_input px-2 py-1 border"></td>
+                <td className="po_input px-2 py-1 border text-center">
+                  {r.po_allocation}
+                </td>
               </ExclusiveWidget>
             </tr>
           ))}
@@ -341,30 +341,38 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
       {/* Modal Preview Gambar */}
       {selectedRecord && (
-  <ImagePreviewModal
-    selectedRecord={selectedRecord}
-    onClose={() => setSelectedRecord(null)}
-    onUpdate={(newRotation) => {
-      setRecords((prev) =>
-        prev.map((r) =>
-          r.no_surat_jalan === selectedRecord.no_surat_jalan
-            ? { ...r, rotate_constant: newRotation }
-            : r,
-        ),
-      );
-    }}
-    onValidationChange={(validated) => {
-      setRecords((prev) =>
-        prev.map((r) =>
-          r.no_surat_jalan === selectedRecord.no_surat_jalan
-            ? { ...r, isValidated: validated }
-            : r,
-        ),
-      );
-    }}
-  />
-)}
-
+        <ImagePreviewModal
+          records={recordsState}
+          currentIndex={recordsState.findIndex(
+            (r) => r.id === selectedRecord.id,
+          )}
+          onChangeIndex={(index) => setSelectedRecord(recordsState[index])}
+          onClose={() => setSelectedRecord(null)}
+          onUpdate={(newRotation) => {
+            setRecords((prev) =>
+              prev.map((r) =>
+                r.no_surat_jalan === selectedRecord.no_surat_jalan
+                  ? { ...r, rotate_constant: newRotation }
+                  : r,
+              ),
+            );
+          }}
+          onValidationChange={(validated) => {
+            setRecords((prev) =>
+              prev.map((r) =>
+                r.no_surat_jalan === selectedRecord.no_surat_jalan
+                  ? { ...r, isValidated: validated }
+                  : r,
+              ),
+            );
+          }}
+          onUpdateRecord={(index, updatedRecord) => {
+            setRecords((prev) =>
+              prev.map((r, i) => (i === index ? updatedRecord : r)),
+            );
+          }}
+        />
+      )}
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">

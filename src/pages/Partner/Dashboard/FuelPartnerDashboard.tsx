@@ -45,6 +45,7 @@ const FuelPartnerDashboard: React.FC = () => {
       flowmeter_before_url,
       flowmeter_after_url,
       photo_url,
+      po_allocation,
       rotate_constant,
       storage:warehouse_id (
         unit_id
