@@ -10,7 +10,6 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import UploadModal from './UploadModal';
-import CompanyLogo from '../../../../images/logo/company_logo.png'
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -303,236 +302,120 @@ const DetailTable: React.FC<DetailTableProps> = ({
     }
   };
 
-const exportToExcel = async () => {
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('StockTaking');
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('StockTaking');
 
-  // Variabel untuk logo perusahaan 
-  const logoUrl = CompanyLogo; // Ganti dengan path atau URL logo perusahaan
-
-  // Baris 1: Logo dan info perusahaan + kode form
-  // Logo di A1 (merge A1:A3 untuk logo perusahaan)
-  sheet.mergeCells('A1:A3');
-  const logoCell = sheet.getCell('A1');
-  logoCell.alignment = { vertical: 'middle', horizontal: 'center' };
-  
-  // Insert logo gambar dari URL/path public
-  try {
-    // Fetch gambar dan convert ke base64
-    const response = await fetch(logoUrl);
-    if (response.ok) {
-      const arrayBuffer = await response.arrayBuffer();
-      const logoImageId = workbook.addImage({
-        buffer: arrayBuffer,
-        extension: 'png',
-      });
-      
-      sheet.addImage(logoImageId, {
-        tl: { col: 0, row: 0 }, // top-left di A1
-        ext: { width: 60, height: 60 }, // ukuran persegi 60x60 pixel
-      });
-    } else {
-      throw new Error('Logo tidak dapat dimuat dari URL');
-    }
-  } catch (error) {
-    // Jika error insert gambar (file tidak ditemukan/tidak valid), tampilkan text placeholder
-    console.warn('Logo tidak dapat dimuat:', error);
-    logoCell.value = 'LOGO\nPERUSAHAAN';
-    logoCell.font = { size: 10, bold: true };
-  }
-
-  // Info perusahaan di B1:K3
-  sheet.getCell('B1').value = 'PT. MAJU MUNDUR';
-  sheet.getCell('B2').value = 'DISTRICT KARAWANG';
-  sheet.getCell('B3').value = 'KARAWANG - JAWA BARAT';
-
-  // Kode form di L1:O1 (merge dan align right)
-  sheet.mergeCells('L1:O1');
-  const codeCell = sheet.getCell('L1');
-  codeCell.value = 'MJMD/MMDV/F-01';
-  codeCell.alignment = { horizontal: 'right', vertical: 'middle' };
-  codeCell.font = { size: 10, bold: true };
-
-  // Baris 6: Judul (merge A6:O6) dengan tinggi 0,85 cm
-  sheet.mergeCells('A6:O6');
-  const titleCell = sheet.getCell('A6');
-  titleCell.value = 'FORMULIR STOCK TAKING PELUMAS & ADDITIVE';
-  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-  titleCell.font = { size: 22, bold: true };
-  
-  // Set tinggi baris 6 = 0,85 cm (konversi ke points: 0.85 cm * 28.35 = 24.1 points)
-  sheet.getRow(6).height = 24.1;
-
-  // Baris 8: District info
-  sheet.getCell('B8').value = 'DISTRICT';
-  sheet.getCell('C8').value = 'KARAWANG';
-
-  // Baris 9: Tanggal info
-  sheet.getCell('C9').value = 'TANGGAL';
-  // Format tanggal ke dd/mm/yyyy
-  const dateObj = new Date(selectedDate);
-  const formattedDate = dateObj.toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  sheet.getCell('D9').value = formattedDate;
-
-  // Header row 1 (baris 11)
-  const headerRow1 = [
-    'No',
-    'Key', // kolom baru
-    'Warehouse',
-    'Unit',
-    'Material',
-    'Description',
-    'Tank',
-    'UOI',
-    'Location',
-    'SOH',
-    '',
-    '',
-    'Pending',
-    '',
-    '',
-  ];
-  
-  // Header row 2 (baris 12)
-  const headerRow2 = [
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    'Fisik',
-    'System1',
-    'System2',
-    'Receive',
-    'Failed',
-    'Input',
-  ];
-
-  // Insert headers di baris 11 dan 12
-  sheet.insertRow(11, headerRow1);
-  sheet.insertRow(12, headerRow2);
-
-  // Merge cells untuk kolom induk (adjust untuk baris 11)
-  sheet.mergeCells('J11:L11'); // SOH
-  sheet.mergeCells('M11:O11'); // Pending
-  
-  // Merge kolom lain jadi single cell (dari baris 11 ke 12)
-  ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach((col) => {
-    sheet.mergeCells(`${col}11:${col}12`);
-  });
-
-  // Style untuk header
-  for (let rowNum = 11; rowNum <= 12; rowNum++) {
-    const row = sheet.getRow(rowNum);
-    row.eachCell((cell) => {
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFBFBFBF' },
-      };
-      cell.font = { bold: true };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-    });
-  }
-
-  // Isi data mulai dari baris 13
-  filteredRecords.forEach((r, idx) => {
-    const key = `${r.warehouse_id}-${r.material_code}`;
-    const rowData = [
-      idx + 1,
-      key, // kolom baru
-      r.warehouse_id,
-      r.unit_id,
-      r.material_code,
-      r.item_description,
-      r.tank_number,
-      r.uoi,
-      r.location,
-      r.qty ?? 0,
-      r.qty_system_1 ?? 0,
-      r.qty_system_2 ?? 0,
-      r.pending_receive ?? 0,
-      r.failed_posting ?? 0,
-      r.pending_input ?? 0,
+    // header row 1
+    const headerRow1 = [
+      'No',
+      'Key', // kolom baru
+      'Warehouse',
+      'Unit',
+      'Material',
+      'Description',
+      'Tank',
+      'UOI',
+      'Location',
+      'SOH',
+      '',
+      '',
+      'Pending',
+      '',
+      '',
     ];
-    
-    sheet.addRow(rowData);
-  });
+    const headerRow2 = [
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Fisik',
+      'System1',
+      'System2',
+      'Receive',
+      'Failed',
+      'Input',
+    ];
 
-  // Styling untuk data rows (mulai dari baris 13)
-  const dataStartRow = 13;
-  const dataEndRow = 12 + filteredRecords.length;
-  
-  for (let rowNum = dataStartRow; rowNum <= dataEndRow; rowNum++) {
-    const row = sheet.getRow(rowNum);
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.addRow(headerRow1);
+    sheet.addRow(headerRow2);
+
+    // merge cells untuk kolom induk
+    sheet.mergeCells('J1:L1'); // SOH  (karena kita nambah 1 kolom di depan)
+    sheet.mergeCells('M1:O1'); // Pending
+    // merge kolom lain jadi single cell
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach((col) => {
+      sheet.mergeCells(`${col}1:${col}2`);
     });
-  }
 
-  // Style untuk info perusahaan
-  ['B1', 'B2', 'B3'].forEach(cellAddr => {
-    const cell = sheet.getCell(cellAddr);
-    cell.font = { size: 12, bold: true };
-    cell.alignment = { vertical: 'middle' };
-  });
+    // isi data
+    filteredRecords.forEach((r, idx) => {
+      const key = `${r.warehouse_id}-${r.material_code}`;
+      sheet.addRow([
+        idx + 1,
+        key, // kolom baru
+        r.warehouse_id,
+        r.unit_id,
+        r.material_code,
+        r.item_description,
+        r.tank_number,
+        r.uoi,
+        r.location,
+        r.qty ?? 0,
+        r.qty_system_1 ?? 0,
+        r.qty_system_2 ?? 0,
+        r.pending_receive ?? 0,
+        r.failed_posting ?? 0,
+        r.pending_input ?? 0,
+      ]);
+    });
 
-  // Style untuk label district dan tanggal
-  ['C8', 'C9'].forEach(cellAddr => {
-    const cell = sheet.getCell(cellAddr);
-    cell.font = { bold: true };
-  });
-
-  ['D8', 'D9'].forEach(cellAddr => {
-    const cell = sheet.getCell(cellAddr);
-    cell.font = { bold: true };
-  });
-
-  // Export
-  const buf = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buf]), `StockTaking-${selectedDate}.xlsx`);
-
-  // Autofit kolom terlebih dahulu
-  sheet.columns.forEach((col) => {
-    let maxLength = 10;
-    if (typeof col.eachCell === 'function') {
-      col.eachCell({ includeEmpty: true }, (cell) => {
-        const columnLength = cell.value ? cell.value.toString().length : 0;
-        if (columnLength > maxLength) {
-          maxLength = columnLength;
+    // styling border + shading
+    sheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        // shading header
+        if (rowNumber <= 2) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFBFBFBF' },
+          };
+          cell.font = { bold: true };
         }
       });
-    }
-    col.width = maxLength + 2;
-  });
-  
-  // Kemudian override dengan lebar kolom khusus (konversi cm ke character width)
-  // 1 cm ≈ 2.83 character width
-  sheet.getColumn('A').width = 1.7 * 2.83; // 1,7 cm
-  sheet.getColumn('B').width = 3.60 * 2.83; // 3,60 cm  
-  sheet.getColumn('C').width = 2.2 * 2.83; // 2,2 cm
-  sheet.getColumn('F').width = 4.8 * 2.83; // 4,8 cm
-};
+    });
+
+    // autosize kolom
+    sheet.columns.forEach((col) => {
+      let maxLength = 10;
+      if (typeof col.eachCell === 'function') {
+        col.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 0;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+      }
+      col.width = maxLength + 2;
+    });
+
+    // export
+    const buf = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buf]), `StockTaking-${selectedDate}.xlsx`);
+  };
+
   return (
     <div>
       <StockLevelMonitoring
