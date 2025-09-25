@@ -15,6 +15,7 @@ import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
 import { set } from 'date-fns';
 import formatIDNumber from './functions/formatIdNumber';
+import { getMakassarDate } from '../../../Utils/TimeUtility';
 
 
 
@@ -22,7 +23,7 @@ import formatIDNumber from './functions/formatIdNumber';
 
 const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().slice(0, 10),
+    getMakassarDate(),
   );
   const { currentUser } = useAuth();
   const [shift, setShift] = useState<'1' | '2'>('1');

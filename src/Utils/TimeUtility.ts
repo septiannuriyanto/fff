@@ -68,6 +68,23 @@ function getWeekStartAndEndDate(year: number, weekNumber: number): { startDate: 
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
 }
+
+const getMakassarDate = () => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Makassar',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year')!.value;
+  const month = parts.find(p => p.type === 'month')!.value;
+  const day = parts.find(p => p.type === 'day')!.value;
+
+  return `${year}-${month}-${day}`;
+};
+
   
 
-export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, formatTimeStamp }
+export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, formatTimeStamp, getMakassarDate }
