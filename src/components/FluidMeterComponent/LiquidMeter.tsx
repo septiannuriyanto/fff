@@ -71,9 +71,9 @@ const LiquidMeter: React.FC<LiquidMeterProps> = ({ filled, max, whId, diameter }
               <tspan className="value" style={{ fontSize: textPixels }}>{val}</tspan>
               <tspan style={{ fontSize: textPixels * 0.5 }}>{props.percent}</tspan>
 
-              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.5 }}>{max - filled}</tspan>
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.5 }}>{(max - filled).toFixed(2)}</tspan>
               <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.3 }}>X</tspan>
-              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.5 }}>{filled}</tspan>
+              <tspan x="0" dy="1.5em" style={{ fontSize: textPixels * 0.5 }}>{(filled).toFixed(2)}</tspan>
               
             </tspan>
           );
