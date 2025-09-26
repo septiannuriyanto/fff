@@ -73,6 +73,12 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     }
   }, [tanggal]);
 
+  useEffect(() => {
+  setRecords(records);
+  setCurrentPage(1); // kalau perlu reset ke page pertama
+}, [records, tanggal]);
+
+
   // Export ke Excel (semua shift)
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
