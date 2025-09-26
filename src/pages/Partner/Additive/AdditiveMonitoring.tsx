@@ -74,32 +74,37 @@ const AdditiveMonitoring: React.FC = () => {
     });
 
     const newRows: AdditiveRow[] = Object.entries(grouped).map(
-      ([date, val]) => {
-        const qtyAdditive = val.totalQty / ADDITIVE_PORTION;
-        const mrNumber = generateMRNumber(date);
-        const additiveRow = additiveMap[date];
-        return {
-          date,
-          qtyRitasi: val.totalQty,
-          freqRitasi: val.freq,
-          qtyAdditive,
-          mrNumber,
-          qtyReserve: additiveRow?.qty_ritasi ?? null,
-          reservNumber: additiveRow?.reserv_number ?? null,
-        };
-      },
-    );
+  ([date, val]) => {
+    const qtyAdditive = val.totalQty / ADDITIVE_PORTION;
+    const mrNumber = generateMRNumber(date);
+    const additiveRow = additiveMap[date];
+    return {
+      date,
+      qtyRitasi: val.totalQty,
+      freqRitasi: val.freq,
+      qtyAdditive,
+      mrNumber,
+      // ambil reserve_qty yang sebenarnya, bukan qty_ritasi
+      qtyReserve: additiveRow?.reserve_qty ?? null,
+      reservNumber: additiveRow?.reserv_number ?? null,
+    };
+  },
+);
+
 
     // summary calc
     const qtyRitasiMTD = newRows.reduce((acc, r) => acc + r.qtyRitasi, 0);
+    const qtyAdditiveNeeded = newRows
+      .filter((r) => r.qtyAdditive != null)
+      .reduce((acc, r) => acc + (r.qtyAdditive ?? 0), 0);
     const qtyAdditiveCreated = newRows
       .filter((r) => r.qtyReserve != null)
-      .reduce((acc, r) => acc + (r.qtyAdditive ?? 0), 0);
+      .reduce((acc, r) => acc + (r.qtyReserve ?? 0), 0);
     const qtyAdditivePending = newRows
       .filter((r) => r.qtyReserve == null)
       .reduce((acc, r) => acc + (r.qtyAdditive ?? 0), 0);
     const achievement =
-      (qtyAdditiveCreated / (qtyAdditiveCreated + qtyAdditivePending)) * 100 ||
+      (qtyAdditiveCreated / qtyAdditiveNeeded) * 100 ||
       0;
 
     setSummary({
@@ -151,13 +156,15 @@ const AdditiveMonitoring: React.FC = () => {
       }
 
       const { error } = await supabase.from('additive_record').insert({
-        ritation_date: date,
-        qty_ritasi: row.qtyRitasi,
-        qty_additive: Number(row.qtyAdditive.toFixed(2)),
-        mr_number: row.mrNumber,
-        reserv_number: reservNumber,
-        record_by: null,
-      });
+  ritation_date: date,
+  qty_ritasi: row.qtyRitasi,
+  qty_additive: Number(row.qtyAdditive.toFixed(2)),
+  mr_number: row.mrNumber,
+  reserv_number: reservNumber,
+  reserve_qty: Number(qtyReserve), // <— tambahkan ini
+  record_by: null,
+});
+
 
       if (error) {
         console.error(error);

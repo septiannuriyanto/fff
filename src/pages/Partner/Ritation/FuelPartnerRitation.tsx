@@ -13,13 +13,8 @@ import { DraftRitasi } from './types/drafts';
 import { TeraPoint } from './types/teraPoint';
 import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
-import { set } from 'date-fns';
 import formatIDNumber from './functions/formatIdNumber';
 import { getMakassarDate } from '../../../Utils/TimeUtility';
-
-
-
-
 
 const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
