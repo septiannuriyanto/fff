@@ -224,6 +224,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/oil/storagemgmt" label="Stor. Mgmt" />
                 <SidebarLink to="/oil/dst" label="DST Oil" />
                 <SidebarLink to="/oil/dstreport" label="DST Report" />
+                <SidebarLink to="/oil/grease" label="Grease" />
                 <SidebarLink to="/oil/housekeeping" label="Housekeeping" />
               </SidebarGroup>
 
@@ -278,6 +279,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/master/fueltruck" label="Fuel Truck" />
                 <SidebarLink to="/master/library" label="Component Library" />
                 <SidebarLink to="/master/schedule/refueling" label="Refueling Schedule" />
+                <SidebarLink to="/master/mrp" label="MRP Database" />
               </SidebarGroup>
 
               {/* <!-- Menu Item Export --> */}

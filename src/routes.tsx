@@ -49,6 +49,8 @@ import FuelPartnerRitation from './pages/Partner/Ritation/FuelPartnerRitation';
 import AdditiveMonitoring from './pages/Partner/Additive/AdditiveMonitoring';
 import { RefuelingSchedule } from './pages/MasterData/MasterSchedule/RefuelingSchedule';
 import ComponentLibrary from './pages/MasterData/ComponentLibrary/ComponentLibrary';
+import MaterialRequirementPlanning from './pages/MasterData/MaterialRequirementPlanning.tsx/MaterialRequirementPlanning';
+import GreaseMonitoring from './pages/Dashboard/Infrastructure/Grease/GreaseMonitoring';
 
 
 const routes = [
@@ -268,6 +270,12 @@ const routes = [
     title: 'FFF | Daily Stock Taking Oil Report',
     allowedRoles: OIL_ROLES
   },
+      {
+    path: '/oil/grease',
+    component: <GreaseMonitoring />,
+    title: 'FFF | Grease Monitoring',
+    allowedRoles: OIL_ROLES,
+  },
 
     {
     path: '/oil/housekeeping',
@@ -326,6 +334,12 @@ const routes = [
     path: '/master/schedule/refueling',
     component: <RefuelingSchedule />,
     title: 'FFF | Refueling Schedule',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/master/mrp',
+    component: <MaterialRequirementPlanning />,
+    title: 'FFF | MRP Database',
     allowedRoles: SUPERVISOR
   },
 
