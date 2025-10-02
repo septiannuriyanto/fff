@@ -1,3 +1,5 @@
+import { toZonedTime } from "date-fns-tz";
+
 function getWeekNumber(date: Date): number {
     // Copying date so the original date won't be modified
     const tempDate = new Date(date.valueOf());
@@ -77,6 +79,7 @@ const getMakassarDate = () => {
     day: '2-digit'
   });
 
+
   const parts = formatter.formatToParts(new Date());
   const year = parts.find(p => p.type === 'year')!.value;
   const month = parts.find(p => p.type === 'month')!.value;
@@ -85,6 +88,13 @@ const getMakassarDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+  const getMakassarDateObject = () => {
+  const timeZone = 'Asia/Makassar';
+  const now = new Date();
+  const zonedDate = toZonedTime(now, timeZone);
+  return zonedDate; // hasilnya Date object sesuai waktu Makassar
+};
+
   
 
-export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, formatTimeStamp, getMakassarDate }
+export { getWeekNumber, getWeekStartAndEndDate, getCurrentMonthDates, getLastMonthDates, formatTimeStamp, getMakassarDate, getMakassarDateObject }

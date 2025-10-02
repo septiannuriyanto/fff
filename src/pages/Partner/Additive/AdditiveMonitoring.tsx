@@ -4,6 +4,7 @@ import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import formatIDNumber from '../Ritation/functions/formatIdNumber';
+import { getMakassarDate, getMakassarDateObject } from '../../../Utils/TimeUtility';
 
 interface AdditiveRow {
   date: string;
@@ -16,7 +17,7 @@ interface AdditiveRow {
 }
 
 const AdditiveMonitoring: React.FC = () => {
-  const now = new Date();
+  const now = getMakassarDateObject()
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [rows, setRows] = useState<AdditiveRow[]>([]);
@@ -45,9 +46,7 @@ const AdditiveMonitoring: React.FC = () => {
       .select('ritation_date, qty_sj')
       .gte('ritation_date', start.toISOString())
       .lte('ritation_date', end.toISOString())
-      .order('ritation_date', { ascending: false })
-      ;
-
+      .order('ritation_date', { ascending: false });
     if (error) {
       console.error(error);
       return;
@@ -74,23 +73,22 @@ const AdditiveMonitoring: React.FC = () => {
     });
 
     const newRows: AdditiveRow[] = Object.entries(grouped).map(
-  ([date, val]) => {
-    const qtyAdditive = val.totalQty / ADDITIVE_PORTION;
-    const mrNumber = generateMRNumber(date);
-    const additiveRow = additiveMap[date];
-    return {
-      date,
-      qtyRitasi: val.totalQty,
-      freqRitasi: val.freq,
-      qtyAdditive,
-      mrNumber,
-      // ambil reserve_qty yang sebenarnya, bukan qty_ritasi
-      qtyReserve: additiveRow?.reserve_qty ?? null,
-      reservNumber: additiveRow?.reserv_number ?? null,
-    };
-  },
-);
-
+      ([date, val]) => {
+        const qtyAdditive = val.totalQty / ADDITIVE_PORTION;
+        const mrNumber = generateMRNumber(date);
+        const additiveRow = additiveMap[date];
+        return {
+          date,
+          qtyRitasi: val.totalQty,
+          freqRitasi: val.freq,
+          qtyAdditive,
+          mrNumber,
+          // ambil reserve_qty yang sebenarnya, bukan qty_ritasi
+          qtyReserve: additiveRow?.reserve_qty ?? null,
+          reservNumber: additiveRow?.reserv_number ?? null,
+        };
+      },
+    );
 
     // summary calc
     const qtyRitasiMTD = newRows.reduce((acc, r) => acc + r.qtyRitasi, 0);
@@ -103,9 +101,7 @@ const AdditiveMonitoring: React.FC = () => {
     const qtyAdditivePending = newRows
       .filter((r) => r.qtyReserve == null)
       .reduce((acc, r) => acc + (r.qtyAdditive ?? 0), 0);
-    const achievement =
-      (qtyAdditiveCreated / qtyAdditiveNeeded) * 100 ||
-      0;
+    const achievement = (qtyAdditiveCreated / qtyAdditiveNeeded) * 100 || 0;
 
     setSummary({
       qtyRitasiMTD,
@@ -156,15 +152,14 @@ const AdditiveMonitoring: React.FC = () => {
       }
 
       const { error } = await supabase.from('additive_record').insert({
-  ritation_date: date,
-  qty_ritasi: row.qtyRitasi,
-  qty_additive: Number(row.qtyAdditive.toFixed(2)),
-  mr_number: row.mrNumber,
-  reserv_number: reservNumber,
-  reserve_qty: Number(qtyReserve), // <— tambahkan ini
-  record_by: null,
-});
-
+        ritation_date: date,
+        qty_ritasi: row.qtyRitasi,
+        qty_additive: Number(row.qtyAdditive.toFixed(2)),
+        mr_number: row.mrNumber,
+        reserv_number: reservNumber,
+        reserve_qty: Number(qtyReserve), // <— tambahkan ini
+        record_by: null,
+      });
 
       if (error) {
         console.error(error);
@@ -265,171 +260,196 @@ const AdditiveMonitoring: React.FC = () => {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-          <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-        <div className="flex flex-wrap items-center">
-          <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
-            <div className="w-full p-4 sm:p-12.5 xl:p-5">
+    <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
+      <div className="flex flex-wrap items-center">
+        <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
+          <div className="w-full p-4 sm:p-12.5 xl:p-5">
             <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full">
-                Additive Monitoring
-              </h2>
-  
-              <div className="main-content  w-full">
-                <div className="space-y-4">
-      <div className="flex space-x-4">
-        <select
-          className="border rounded px-2 py-1"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+              Additive Monitoring
+            </h2>
 
-        <select
-          className="border rounded px-2 py-1"
-          value={month}
-          onChange={(e) => setMonth(Number(e.target.value))}
-        >
-          {months.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={exportToExcel}
-          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-        >
-          Export to Excel
-        </button>
-      </div>
+            <div className="main-content  w-full">
+              <div className="space-y-4">
+                <div className="flex space-x-4">
+                  <select
+                    className="border rounded px-2 py-1"
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
 
-      {/* Table dibungkus overflow-x-auto */}
-<div className="overflow-x-auto">
-  <table className="table-auto w-full border-collapse min-w-max">
-    <thead>
-      <tr className="bg-slate-200">
-        <th className="border px-2 py-1">No</th>
-        <th className="border px-2 py-1">Tanggal Ritasi</th>
-        <th className="border px-2 py-1">Freq Ritasi</th>
-        <th className="border px-2 py-1">Qty Ritasi</th>
-        <th className="border px-2 py-1">Qty Additive</th>
-        <th className="border px-2 py-1">MR Number</th>
-        <th className="border px-2 py-1">Qty Reserve</th>
-        <th className="border px-2 py-1">Nomor Reserve</th>
-      </tr>
-    </thead>
-    <tbody>
-      {rows.map((row, idx) => {
-        const isEditing = !row.qtyReserve && !row.reservNumber;
-        return (
-          <tr key={row.date}>
-            <td className="border px-2 py-1 text-center">{idx + 1}</td>
-            <td className="border px-2 py-1">{row.date}</td>
-            <td className="border px-2 py-1 text-right">{row.freqRitasi}</td>
-            <td className="border px-2 py-1 text-right">
-              {formatIDNumber(row.qtyRitasi)}
-            </td>
-            <td className="border px-2 py-1 text-right">
-              {row.qtyAdditive.toFixed(2)}
-            </td>
-            <td className="border px-2 py-1">{row.mrNumber}</td>
-            <td className="border px-2 py-1">
-              {isEditing ? (
-                <input
-                  type="number"
-                  className="border rounded px-1 w-20"
-                  placeholder="Click..."
-                  value={editing[row.date]?.qtyReserve || ''}
-                  onFocus={() => {
-                    if (!editing[row.date]?.qtyReserve) {
-                      setEditing((prev) => ({
-                        ...prev,
-                        [row.date]: {
-                          ...prev[row.date],
-                          qtyReserve: Math.ceil(row.qtyAdditive).toString(),
-                          reservNumber: prev[row.date]?.reservNumber || '',
-                        },
-                      }));
-                    }
-                  }}
-                  onChange={(e) =>
-                    handleInputChange(row.date, 'qtyReserve', e.target.value)
-                  }
-                  onKeyDown={(e) => handleKeyDown(row.date, e)}
-                />
-              ) : (
-                row.qtyReserve
-              )}
-            </td>
-            <td className="border px-2 py-1">
-              {isEditing ? (
-                <input
-                  type="text"
-                  className="border rounded px-1 w-28"
-                  placeholder="Input and Enter"
-                  value={editing[row.date]?.reservNumber || ''}
-                  onChange={(e) =>
-                    handleInputChange(row.date, 'reservNumber', e.target.value)
-                  }
-                  onKeyDown={(e) => handleKeyDown(row.date, e)}
-                />
-              ) : (
-                row.reservNumber
-              )}
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-</div>
+                  <select
+                    className="border rounded px-2 py-1"
+                    value={month}
+                    onChange={(e) => setMonth(Number(e.target.value))}
+                  >
+                    {months.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={exportToExcel}
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                  >
+                    Export to Excel
+                  </button>
+                </div>
 
+                {/* Table dibungkus overflow-x-auto */}
+                <div className="overflow-x-auto">
+                  <table className="table-auto w-full border-collapse min-w-max">
+                    <thead>
+                      <tr className="bg-slate-200">
+                        <th className="border px-2 py-1">No</th>
+                        <th className="border px-2 py-1">Tanggal Ritasi</th>
+                        <th className="border px-2 py-1">Freq Ritasi</th>
+                        <th className="border px-2 py-1">Qty Ritasi</th>
+                        <th className="border px-2 py-1">Qty Additive</th>
+                        <th className="border px-2 py-1">MR Number</th>
+                        <th className="border px-2 py-1">Qty Reserve</th>
+                        <th className="border px-2 py-1">Nomor Reserve</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, idx) => {
+                        const isEditing = !row.qtyReserve && !row.reservNumber;
+                        return (
+                          <tr key={row.date}>
+                            <td className="border px-2 py-1 text-center">
+                              {idx + 1}
+                            </td>
+                            <td className="border px-2 py-1">{row.date}</td>
+                            <td className="border px-2 py-1 text-right">
+                              {row.freqRitasi}
+                            </td>
+                            <td className="border px-2 py-1 text-right">
+                              {formatIDNumber(row.qtyRitasi)}
+                            </td>
+                            <td className="border px-2 py-1 text-right">
+                              {row.qtyAdditive.toFixed(2)}
+                            </td>
+                            <td className="border px-2 py-1">{row.mrNumber}</td>
+                            <td className="border px-2 py-1">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  className="border rounded px-1 w-20"
+                                  placeholder="Click..."
+                                  value={editing[row.date]?.qtyReserve || ''}
+                                  onFocus={() => {
+                                    if (!editing[row.date]?.qtyReserve) {
+                                      setEditing((prev) => ({
+                                        ...prev,
+                                        [row.date]: {
+                                          ...prev[row.date],
+                                          qtyReserve: Math.ceil(
+                                            row.qtyAdditive,
+                                          ).toString(),
+                                          reservNumber:
+                                            prev[row.date]?.reservNumber || '',
+                                        },
+                                      }));
+                                    }
+                                  }}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      row.date,
+                                      'qtyReserve',
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) => handleKeyDown(row.date, e)}
+                                />
+                              ) : (
+                                row.qtyReserve
+                              )}
+                            </td>
+                            <td className="border px-2 py-1">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  className="border rounded px-1 w-28"
+                                  placeholder="Input and Enter"
+                                  value={editing[row.date]?.reservNumber || ''}
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      row.date,
+                                      'reservNumber',
+                                      e.target.value,
+                                    )
+                                  }
+                                  onKeyDown={(e) => handleKeyDown(row.date, e)}
+                                />
+                              ) : (
+                                row.reservNumber
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-      {/* Summary */}
-      <div className="mt-4 border p-4 rounded">
-        <h3 className="font-bold mb-2">Summary MTD</h3>
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <div className="text-sm text-gray-500">Qty Ritasi MTD</div>
-            <div className="font-bold">{formatIDNumber(Number(summary.qtyRitasiMTD.toFixed(2)))}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Qty Additive Created</div>
-            <div className="font-bold">
-              {summary.qtyAdditiveCreated.toFixed(2)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Qty Additive Pending</div>
-            <div className="font-bold">
-              {summary.qtyAdditivePending.toFixed(2)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">
-              Additive Percent Achievement
-            </div>
-            <div
-              className={`font-bold ${
-                summary.achievement >= 100 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {summary.achievement.toFixed(2)}%
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                {/* Summary */}
+                <div className="mt-4 border p-4 rounded">
+                  <h3 className="font-bold mb-2">Summary MTD</h3>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-500">
+                        Qty Ritasi MTD
+                      </div>
+                      <div className="font-bold">
+                        {formatIDNumber(
+                          Number(summary.qtyRitasiMTD.toFixed(2)),
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">
+                        Qty Additive Created
+                      </div>
+                      <div className="font-bold">
+                        {summary.qtyAdditiveCreated.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">
+                        Qty Additive Pending
+                      </div>
+                      <div className="font-bold">
+                        {summary.qtyAdditivePending.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">
+                        Additive Percent Achievement
+                      </div>
+                      <div
+                        className={`font-bold ${
+                          summary.achievement >= 100
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {summary.achievement.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    
+    </div>
   );
 };
 
