@@ -5,6 +5,7 @@ import { fetchDstOilRecords } from "./components/fetchOilDstRecords";
 import { toZonedTime, format } from "date-fns-tz";
 import { DstOliWithLocation } from "./components/DstOliWithLocation";
 import { supabase } from "../../../db/SupabaseClient";
+import { getMakassarDateObject } from "../../../Utils/TimeUtility";
 
 // mapping warna indikator
 const indicatorColors = {
@@ -22,6 +23,14 @@ const DstOilReport: React.FC = () => {
   const [materialFilter, setMaterialFilter] = useState("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
 
+  // Gunakan 0-based month (Date default JS)
+  
+
+ 
+
+  // daysInMonth: bulan +1 untuk dapat jumlah hari bulan berjalan
+  
+
   const [dateSummary, setDateSummary] = useState<Record<string, {
   soh_sap_count: number;
   soh_tactys_count: number;
@@ -31,10 +40,13 @@ const DstOilReport: React.FC = () => {
 
   // Tanggal saat ini dengan timezone Asia/Makassar
   const timeZone = "Asia/Makassar";
-  const now = toZonedTime(new Date(), timeZone);
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const now = getMakassarDateObject();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth());
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1); // untuk selector 1–12
+
   const fetchRecords = async (date: string) => {
     const startDate = format(new Date(date), "yyyy-MM-dd", { timeZone });
     const endDate = format(new Date(date), "yyyy-MM-dd", { timeZone });
@@ -88,6 +100,36 @@ const DstOilReport: React.FC = () => {
         <h2 className="mb-4 font-bold text-black dark:text-white sm:text-title-sm w-full">
           DST Oil Report
         </h2>
+
+
+        {/* Year and Month Selector */}
+        <div className="flex space-x-4 mb-4">
+          <select
+            className="border rounded px-2 py-1"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border rounded px-2 py-1"
+            value={month + 1}
+            onChange={(e) => setMonth(Number(e.target.value) - 1)}
+          >
+            {months.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+
+        </div>
 
         {/* Grid tanggal */}
         <div className="grid grid-cols-7 gap-2 mb-6">

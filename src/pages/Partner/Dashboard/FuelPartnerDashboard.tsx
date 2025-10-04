@@ -8,8 +8,6 @@ import { getMakassarDateObject } from "../../../Utils/TimeUtility";
   import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
-import { formatInTimeZone } from 'date-fns-tz';
-import { id } from 'date-fns/locale';
 
 const FuelPartnerDashboard: React.FC = () => {
   const [records, setRecords] = useState<RitasiFuel[]>([]);
