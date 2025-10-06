@@ -35,7 +35,7 @@ const StockReporting: React.FC = () => {
       const { data, error } = await supabase
         .from("storage")
         .select("id, warehouse_id, unit_id")
-        .eq("status", "RUNNING")
+        .neq("status", "OUT")
         .order("warehouse_id", { ascending: true });
 
       if (error) console.error("Error fetching storage:", error);
