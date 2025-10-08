@@ -29,4 +29,5 @@ export interface RitasiFuel {
   petugas_pencatatan_name?: string;
   rotate_constant?: number; // untuk menyimpan rotasi gambar
   po_allocation?: string; // ✅ tambah ini
+  remark_modification?: string; // ✅ tambah ini
 }

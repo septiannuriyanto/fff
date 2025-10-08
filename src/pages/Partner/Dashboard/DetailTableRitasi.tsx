@@ -8,8 +8,6 @@ import { supabase } from '../../../db/SupabaseClient';
 import * as QRCode from 'qrcode';
 import { ADMIN } from '../../../store/roles';
 import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
-import { ADDITIVE_PORTION } from '../../../common/Constants/constants';
-import AdditiveInput from './AdditiveInput';
 import ImagePreviewModal from './ImagePreviewModal';
 
 interface Props {
@@ -25,12 +23,13 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
 
   const [selectedRecord, setSelectedRecord] = useState<RitasiFuel | null>(null);
   const [recordsState, setRecords] = useState<RitasiFuel[]>(records);
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
 
   // Data yang sudah diurutkan
   const sortedRecords = useMemo(() => {
     return [...recordsState].sort((a, b) =>
       (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', 'id', {
-        numeric: true,
+        numeric: false,
         sensitivity: 'base',
       }),
     );
@@ -74,12 +73,26 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
   }, [tanggal]);
 
   useEffect(() => {
-  setRecords(records);
-  setCurrentPage(1); // kalau perlu reset ke page pertama
-}, [records, tanggal]);
+    setRecords(records);
+    setCurrentPage(1);
+  }, [records, tanggal]);
 
+  // Kalau record dihapus atau berubah urutan, tapi modal masih terbuka
+  useEffect(() => {
+    if (selectedRecord) {
+      const idx = sortedRecords.findIndex((r) => r.id === selectedRecord.id);
+      if (idx === -1) {
+        // record udah gak ada, tutup modal
+        setSelectedRecord(null);
+        setCurrentIndex(null);
+      } else {
+        // sync index biar tetap pas
+        setCurrentIndex(idx);
+      }
+    }
+  }, [sortedRecords, selectedRecord]);
 
-  // Export ke Excel (semua shift)
+  // Export ke Excel
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Ritasi Fuel');
@@ -117,19 +130,11 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       };
     }
 
-    let totalFlowBefore = 0;
-    let totalFlowAfter = 0;
     let totalSJ = 0;
-    let totalSondingBefore = 0;
-    let totalSondingAfter = 0;
 
     for (let i = 0; i < sortedRecords.length; i++) {
       const row = sortedRecords[i];
-      totalFlowBefore += Number(row.qty_flowmeter_before) || 0;
-      totalFlowAfter += Number(row.qty_flowmeter_after) || 0;
       totalSJ += Number(row.qty_sj) || 0;
-      totalSondingBefore += Number(row.qty_sonding_before) || 0;
-      totalSondingAfter += Number(row.qty_sonding_after) || 0;
 
       const dataRow = sheet.addRow([
         i + 1,
@@ -164,22 +169,7 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       }
     }
 
-    const totalRow = sheet.addRow([
-      'TOTAL',
-      '',
-      '',
-      '',
-      '',
-      '',
-      totalSJ,
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-    ]);
+    const totalRow = sheet.addRow(['TOTAL', '', '', '', '', '', totalSJ]);
     totalRow.font = { bold: true };
 
     sheet.eachRow((row) => {
@@ -208,7 +198,6 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     saveAs(new Blob([buffer]), `Ritasi_Fuel_${tanggal}.xlsx`);
   };
 
-  // Share laporan by shift
   const shareShift = (shift: 1 | 2) => {
     const totalQty =
       shift === 1 ? summaryData?.shift1_qty : summaryData?.shift2_qty;
@@ -233,7 +222,6 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     window.open(url, '_blank');
   };
 
-  // Share laporan semua shift
   const shareAll = () => {
     const totalQty = summaryData?.daily_qty;
     let message = `LAPORAN RITASI FUEL GMO\nTANGGAL : ${tanggal}\nShift 1 & 2\n\n`;
@@ -280,7 +268,7 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
           {paginatedRecords.map((r, idx) => (
             <tr
               key={r.id}
-              className={r.isValidated ? 'bg-green-50' : ''} // baris jadi hijau muda kalau valid
+              className={r.isValidated ? 'bg-green-50' : ''}
             >
               <td className="px-2 py-1 border">
                 {(currentPage - 1) * pageSize + idx + 1}
@@ -313,10 +301,11 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                             : 'none',
                         }}
                         onClick={() => {
+                          const idxSorted = sortedRecords.findIndex(
+                            (rec) => rec.id === r.id,
+                          );
                           setSelectedRecord(r);
-                          // setSelectedImage(r.photo_url ?? null);
-                          // setSelectedNoSuratJalan(r.no_surat_jalan ?? null);
-                          // setCurrentRotation(r.rotate_constant ?? 0); // Set initial rotation
+                          setCurrentIndex(idxSorted);
                         }}
                         loading="lazy"
                         srcSet={`${r.photo_url}?w=32&h=32&q=60 1x, ${r.photo_url}?w=64&h=64&q=60 2x`}
@@ -346,14 +335,20 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
       </table>
 
       {/* Modal Preview Gambar */}
-      {selectedRecord && (
+      {selectedRecord && currentIndex !== null && (
         <ImagePreviewModal
-          records={recordsState}
-          currentIndex={recordsState.findIndex(
-            (r) => r.id === selectedRecord.id,
-          )}
-          onChangeIndex={(index) => setSelectedRecord(recordsState[index])}
-          onClose={() => setSelectedRecord(null)}
+          records={sortedRecords}
+          currentIndex={currentIndex}
+          onChangeIndex={(index) => {
+            if (index >= 0 && index < sortedRecords.length) {
+              setSelectedRecord(sortedRecords[index]);
+              setCurrentIndex(index);
+            }
+          }}
+          onClose={() => {
+            setSelectedRecord(null);
+            setCurrentIndex(null);
+          }}
           onUpdate={(newRotation) => {
             setRecords((prev) =>
               prev.map((r) =>
@@ -472,93 +467,38 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
                 </tr>
                 <tr>
                   <td className="px-2 py-1 border font-semibold">
-                    Total Ritasi Daily
+                    TOTAL HARIAN
                   </td>
                   <td className="px-2 py-1 border text-right font-semibold">
                     {formatIDNumber(summaryData?.daily_qty || 0)}
                   </td>
-                  <td className="px-2 py-1 border text-center">
+                  <td className="px-2 py-1 border text-center font-semibold">
                     {summaryData?.daily_freq || 0}
                   </td>
                   <td className="px-2 py-1 border text-center">
                     <button
-                      onClick={() =>
-                        shareSummary(
-                          'Total Ritasi Daily',
-                          summaryData?.daily_qty || 0,
-                        )
-                      }
+                      onClick={shareAll}
                       className="p-1 rounded hover:bg-slate-100"
                     >
                       <Share2 size={16} />
                     </button>
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-2 py-1 border font-semibold">
-                    Total Ritasi MTD
-                  </td>
-                  <td className="px-2 py-1 border text-right font-semibold">
-                    {formatIDNumber(summaryData?.mtd_qty || 0)}
-                  </td>
-                  <td className="px-2 py-1 border text-center">
-                    {summaryData?.mtd_freq || 0}
-                  </td>
-                  <td className="px-2 py-1 border text-center">
-                    <button
-                      onClick={() =>
-                        shareSummary(
-                          'Total Ritasi MTD',
-                          summaryData?.mtd_qty || 0,
-                        )
-                      }
-                      className="p-1 rounded hover:bg-slate-100"
-                    >
-                      <Share2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-                <ExclusiveWidget allowedRoles={ADMIN}>
-                  <tr>
-                    <td className="px-2 py-1 border font-semibold">
-                      Total Additive Daily
-                    </td>
-                    <td className="px-2 py-1 border text-right font-semibold">
-                      {formatIDNumber(
-                        summaryData?.daily_qty / ADDITIVE_PORTION || 0,
-                      )}
-                    </td>
-                    <td className="px-2 py-1 border text-center">
-                      {summaryData?.daily_freq || 0}
-                    </td>
-                    <td className="px-2 py-1 border text-center">
-                      <AdditiveInput
-                        tanggal={tanggal}
-                        summaryData={summaryData}
-                      ></AdditiveInput>
-                    </td>
-                  </tr>
-                </ExclusiveWidget>
               </tbody>
             </table>
           </div>
         )}
+      </div>
 
-        {/* tombol bawah */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 mt-3">
-          <button
-            onClick={shareAll}
-            className="flex items-center justify-center sm:justify-start gap-1 px-3 py-1 border rounded hover:bg-slate-100 bg-blue-600 text-white w-full sm:w-auto"
-          >
-            <Share2 size={16} /> Share All
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="flex items-center justify-center sm:justify-start gap-1 px-3 py-1 border rounded hover:bg-slate-100 border-blue-600 text-blue-600 w-full sm:w-auto"
-          >
-            <Download size={16} /> Export All
-          </button>
-        </div>
+      {/* Tombol Export */}
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={exportToExcel}
+          className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          <Download size={16} />
+          Export Excel
+        </button>
       </div>
     </div>
   );

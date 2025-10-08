@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   RotateCw,
   RotateCcw,
   Clipboard,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react';
-import { supabase } from '../../../db/SupabaseClient';
-import { RitasiFuel } from '../component/ritasiFuel';
-import toast from 'react-hot-toast';
+} from "lucide-react";
+import { supabase } from "../../../db/SupabaseClient";
+import { RitasiFuel } from "../component/ritasiFuel";
+import toast from "react-hot-toast";
 
 interface Props {
   records: RitasiFuel[];
@@ -30,47 +30,63 @@ const ImagePreviewModal: React.FC<Props> = ({
   onUpdateRecord,
 }) => {
   const [localRecords, setLocalRecords] = useState<RitasiFuel[]>(records);
-  useEffect(() => setLocalRecords(records), [records]);
+  const [localIndex, setLocalIndex] = useState(currentIndex);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
-  const selectedRecord = localRecords[currentIndex];
+  const selectedRecord = localRecords[localIndex];
 
-  const [rotation, setRotation] = useState<number>(selectedRecord?.rotate_constant ?? 0);
-  const [isValidated, setIsValidated] = useState<boolean>(selectedRecord?.isValidated ?? false);
+  const [rotation, setRotation] = useState<number>(
+    selectedRecord?.rotate_constant ?? 0
+  );
+  const [isValidated, setIsValidated] = useState<boolean>(
+    selectedRecord?.isValidated ?? false
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [editValues, setEditValues] = useState<Partial<RitasiFuel>>({});
 
   useEffect(() => {
-    setRotation(selectedRecord?.rotate_constant ?? 0);
-    setIsValidated(selectedRecord?.isValidated ?? false);
-  }, [currentIndex, selectedRecord]);
+    setLocalRecords(records);
+  }, [records]);
+
+  useEffect(() => {
+    if (selectedRecord) {
+      setRotation(selectedRecord.rotate_constant ?? 0);
+      setIsValidated(selectedRecord.isValidated ?? false);
+      setEditValues(selectedRecord);
+    }
+  }, [localIndex, selectedRecord]);
 
   const updateRecordLocally = (patch: Partial<RitasiFuel>) => {
     setLocalRecords((prev) =>
-      prev.map((r, i) => (i === currentIndex ? { ...r, ...patch } : r))
+      prev.map((r, i) => (i === localIndex ? { ...r, ...patch } : r))
     );
     if (onUpdateRecord && selectedRecord) {
-      onUpdateRecord(currentIndex, { ...selectedRecord, ...patch });
+      onUpdateRecord(localIndex, { ...selectedRecord, ...patch });
     }
   };
 
   const handleRotateCW = () => setRotation((prev) => ((prev ?? 0) + 90) % 360);
-  const handleRotateCCW = () => setRotation((prev) => ((prev ?? 0) - 90 + 360) % 360);
+  const handleRotateCCW = () =>
+    setRotation((prev) => ((prev ?? 0) - 90 + 360) % 360);
 
-  const handleSave = async () => {
+  const handleSaveRotation = async () => {
     if (!selectedRecord) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
-        .from('ritasi_fuel')
+        .from("ritasi_fuel")
         .update({ rotate_constant: rotation })
-        .eq('no_surat_jalan', selectedRecord.no_surat_jalan);
+        .eq("no_surat_jalan", selectedRecord.no_surat_jalan);
       if (error) throw error;
 
       updateRecordLocally({ rotate_constant: rotation });
       onUpdate?.(rotation);
-      toast.success('Rotation saved');
+      toast.success("Rotation saved");
     } catch (e) {
       console.error(e);
-      toast.error('Failed to save rotation');
+      toast.error("Failed to save rotation");
     } finally {
       setIsSaving(false);
     }
@@ -81,91 +97,142 @@ const ImagePreviewModal: React.FC<Props> = ({
     setIsValidated(checked);
     try {
       const { error } = await supabase
-        .from('ritasi_fuel')
+        .from("ritasi_fuel")
         .update({ isValidated: checked })
-        .eq('no_surat_jalan', selectedRecord.no_surat_jalan);
+        .eq("no_surat_jalan", selectedRecord.no_surat_jalan);
       if (error) throw error;
 
       updateRecordLocally({ isValidated: checked });
       onValidationChange?.(checked);
-      toast.success(`Validation ${checked ? 'enabled' : 'disabled'}`);
+      toast.success(`Validation ${checked ? "enabled" : "disabled"}`);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update validation');
+      toast.error("Failed to update validation");
     }
   };
 
-  const handlePoAllocationUpdate = async (newVal: string) => {
-    if (!selectedRecord) return;
-    try {
-      const { error } = await supabase
-        .from('ritasi_fuel')
-        .update({ po_allocation: newVal })
-        .eq('no_surat_jalan', selectedRecord.no_surat_jalan);
-      if (error) throw error;
-
-      updateRecordLocally({ po_allocation: newVal });
-      toast.success('PO Allocation updated');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to update PO Allocation');
-    }
+  const handleEditChange = (key: string, value: any) => {
+    setEditValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handlePoAllocationDelete = async () => {
-    if (!selectedRecord) return;
+  const handleSaveEdit = () => {
+    if (
+      !editValues.remark_modification ||
+      editValues.remark_modification.trim() === ""
+    ) {
+      toast.error("Remark Modification wajib diisi!");
+      return;
+    }
+    setIsConfirmOpen(true);
+  };
+
+  const confirmSave = async () => {
+    setIsConfirmOpen(false);
+    setIsSaving(true);
     try {
+      if (!selectedRecord) return;
+
+      const allowedKeys: (keyof RitasiFuel)[] = [
+        "id",
+        "no_surat_jalan",
+        "queue_num",
+        "ritation_date",
+        "warehouse_id",
+        "qty_sj",
+        "qty_sonding",
+        "sonding_before_front",
+        "sonding_before_rear",
+        "sonding_after_front",
+        "sonding_after_rear",
+        "flowmeter_before_url",
+        "flowmeter_after_url",
+        "qty_sonding_before",
+        "qty_sonding_after",
+        "operator_id",
+        "fuelman_id",
+        "qty_flowmeter_before",
+        "qty_flowmeter_after",
+        "isValidated",
+        "petugas_pencatatan",
+        "shift",
+        "photo_url",
+        "po_allocation",
+        "rotate_constant",
+        "remark_modification",
+      ];
+
+      const cleanValues = Object.fromEntries(
+        Object.entries(editValues)
+          .filter(([key]) => allowedKeys.includes(key as keyof RitasiFuel))
+          .map(([key, value]) => [key, value ?? null])
+      );
+
+      if (!cleanValues.id && selectedRecord.id)
+        cleanValues.id = selectedRecord.id;
+      if (!cleanValues.no_surat_jalan && selectedRecord.no_surat_jalan)
+        cleanValues.no_surat_jalan = selectedRecord.no_surat_jalan;
+
       const { error } = await supabase
-        .from('ritasi_fuel')
-        .update({ po_allocation: null })
-        .eq('no_surat_jalan', selectedRecord.no_surat_jalan);
+        .from("ritasi_fuel")
+        .upsert([cleanValues], { onConflict: "no_surat_jalan" });
+
       if (error) throw error;
 
-      updateRecordLocally({ po_allocation: undefined });
-      toast.success('PO Allocation deleted');
+      updateRecordLocally(editValues);
+      toast.success("Record updated successfully");
+      setIsEditMode(false);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to delete PO Allocation');
+      toast.error("Failed to update record");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const fieldLabels: Partial<Record<keyof RitasiFuel, string>> = {
-    no_surat_jalan: 'No Surat Jalan',
-    ritation_date: 'Tanggal Ritasi',
-    shift: 'Shift',
-    unit_id: 'Unit',
-    qty_sj: 'Qty SJ',
-    qty_sonding: 'Qty Sonding',
-    sonding_before_front: 'Sonding B. Front',
-    sonding_before_rear: 'Sonding B. Rear',
-    sonding_after_front: 'Sonding A. Front',
-    sonding_after_rear: 'Sonding A. Rear',
-    qty_sonding_before: 'Qty Sonding Before',
-    qty_sonding_after: 'Qty Sonding After',
-    qty_flowmeter_before: 'Qty FM Before',
-    qty_flowmeter_after: 'Qty FM After',
-    photo_url: 'Photo URL',
-    fuelman_name: 'Fuelman',
-    operator_name: 'Operator',
-    petugas_pencatatan_name: 'Petugas Pencatatan',
-    rotate_constant: 'Rotate Constant',
-    isValidated: 'Validated',
-    po_allocation: 'PO Allocation',
+    id: "ID",
+    no_surat_jalan: "No Surat Jalan",
+    queue_num: "Queue Num",
+    ritation_date: "Tanggal Ritasi",
+    warehouse_id: "Warehouse ID",
+    qty_sj: "Qty SJ",
+    qty_sonding: "Qty Sonding",
+    sonding_before_front: "Sonding B. Front",
+    sonding_before_rear: "Sonding B. Rear",
+    sonding_after_front: "Sonding A. Front",
+    sonding_after_rear: "Sonding A. Rear",
+    flowmeter_before_url: "Flowmeter Before URL",
+    flowmeter_after_url: "Flowmeter After URL",
+    qty_sonding_before: "Qty Sonding Before",
+    qty_sonding_after: "Qty Sonding After",
+    operator_id: "Operator ID",
+    fuelman_id: "Fuelman ID",
+    qty_flowmeter_before: "Qty FM Before",
+    qty_flowmeter_after: "Qty FM After",
+    isValidated: "Validated",
+    petugas_pencatatan: "Petugas Pencatatan",
+    shift: "Shift",
+    photo_url: "Photo URL",
+    po_allocation: "PO Allocation",
+    rotate_constant: "Rotate Constant",
+    remark_modification: "Remark Modification",
   };
 
   const renderCell = (val: any, lbl: string, key?: string) => {
-    if (key === 'isValidated') {
+    const isUrl = lbl.toLowerCase().includes("url");
+
+    if (key === "isValidated") {
       return (
         <td className="py-2 px-3 w-1/3">
           <div className="flex items-center gap-2">
             <span
               className={`px-2 py-1 text-xs rounded-full ${
                 isValidated
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
               }`}
             >
-              {isValidated ? 'Validated' : 'Not Validated'}
+              {isValidated ? "Validated" : "Not Validated"}
             </span>
             <input
               type="checkbox"
@@ -178,68 +245,35 @@ const ImagePreviewModal: React.FC<Props> = ({
       );
     }
 
-    if (key === 'po_allocation') {
-      const [isEditing, setIsEditing] = useState(false);
-
-      if (val && !isEditing) {
-        return (
-          <td className="py-2 px-3 w-1/3">
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-medium">{val}</span>
-              <button
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() => setIsEditing(true)}
-              >
-                ✏️
-              </button>
-              <button
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={handlePoAllocationDelete}
-              >
-                🗑️
-              </button>
-            </div>
-          </td>
-        );
-      }
-
+    if (isEditMode && key !== "isValidated") {
       return (
         <td className="py-2 px-3 w-1/3">
           <input
             type="text"
-            autoFocus
-            defaultValue={val ?? ''}
-            placeholder="Input PO Allocation"
+            value={String(editValues[key as keyof RitasiFuel] ?? "")}
+            onChange={(e) => handleEditChange(key!, e.target.value)}
             className="w-full border rounded px-2 py-1 text-sm"
-            onKeyDown={async (e) => {
-              if (e.key === 'Enter') {
-                const newVal = (e.target as HTMLInputElement).value;
-                await handlePoAllocationUpdate(newVal);
-                setIsEditing(false);
-              }
-            }}
           />
         </td>
       );
     }
 
-    const isUrl = lbl.toLowerCase().includes('url');
     if (isUrl) {
       return (
         <td className="py-2 px-3 w-1/3">
           <div className="flex items-center gap-1 min-w-0">
             <span
               className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-              title={String(val ?? '')}
+              title={String(val ?? "")}
             >
-              {String(val ?? '')}
+              {String(val ?? "")}
             </span>
             {val && (
               <button
                 className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0"
                 onClick={() => {
                   navigator.clipboard.writeText(String(val));
-                  toast.success('URL copied!');
+                  toast.success("URL copied!");
                 }}
                 title="Copy URL"
               >
@@ -250,31 +284,113 @@ const ImagePreviewModal: React.FC<Props> = ({
         </td>
       );
     }
+// Highlight khusus untuk Qty SJ
+if (key === "qty_sj") {
+  return (
+    <td className="py-2 px-3 w-1/3">
+      <span className="font-bold text-blue-800 underline">
+        {String(val ?? "")}
+      </span>
+    </td>
+  );
+}
 
-    return <td className="py-2 px-3 break-words w-1/3">{String(val ?? '')}</td>;
+    return <td className="py-2 px-3 break-words w-1/3">{String(val ?? "")}</td>;
+  };
+
+  const goPrev = () => {
+    const newIndex = (localIndex - 1 + localRecords.length) % localRecords.length;
+    setLocalIndex(newIndex);
+    onChangeIndex(newIndex);
+  };
+
+  const goNext = () => {
+    const newIndex = (localIndex + 1) % localRecords.length;
+    setLocalIndex(newIndex);
+    onChangeIndex(newIndex);
   };
 
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-[99]"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
       onClick={onClose}
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b">
+          <h3 className="font-semibold text-lg">
+            Detail Ritasi ({localIndex + 1}/{localRecords.length})
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsEditMode((p) => !p)}
+              className="px-3 py-1 rounded bg-yellow-400 hover:bg-yellow-500 text-black"
+            >
+              {isEditMode ? "Cancel Edit" : "Edit"}
+            </button>
+            {isEditMode && (
+              <button
+                onClick={handleSaveEdit}
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          <div className="flex flex-col md:w-1/2 p-4 border-b md:border-b-0 md:border-r">
-            <div className="w-full h-[400px] flex items-center justify-center bg-gray-100 rounded overflow-hidden">
+          {/* Left Image */}
+          <div className="relative flex flex-col md:w-1/2 p-4 border-b md:border-b-0 md:border-r">
+            <div className="relative w-full h-[70vh] bg-gray-100 rounded overflow-hidden flex items-center justify-center">
               <img
-                src={selectedRecord?.photo_url ?? ''}
+                src={selectedRecord?.photo_url ?? ""}
                 alt="preview"
-                className="max-h-full max-w-full object-contain rounded shadow"
+                className={`transition-transform duration-300 rounded shadow ${
+                  isZoomed
+                    ? "w-full h-auto object-contain"
+                    : "max-h-full object-contain"
+                }`}
                 style={{ transform: `rotate(${rotation}deg)` }}
               />
+
+              {/* Chevron Left */}
+              <button
+                onClick={goPrev}
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-700 bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-2"
+                title="Previous"
+              >
+                <div className="bg-black/40 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-black/60 transition">
+  <ChevronLeft className="w-6 h-6 text-white" />
+</div>
+
+              </button>
+
+              {/* Chevron Right */}
+              <button
+                onClick={goNext}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-700 bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-2"
+                title="Next"
+              >
+                <div className="bg-black/40 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-black/60 transition">
+  <ChevronRight className="w-6 h-6 text-white" />
+</div>
+
+              </button>
             </div>
-            <div className="mt-2 flex gap-2 flex-wrap justify-center">
+
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
               <button
                 className="p-2 bg-slate-200 rounded hover:bg-white"
                 onClick={handleRotateCCW}
@@ -288,83 +404,76 @@ const ImagePreviewModal: React.FC<Props> = ({
                 <RotateCw size={20} />
               </button>
               <button
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                onClick={handleSave}
-                disabled={isSaving}
+                className="p-2 bg-slate-200 rounded hover:bg-white"
+                onClick={() => setIsZoomed((prev) => !prev)}
               >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isZoomed ? "Actual Size" : "Fit Width"}
               </button>
               <button
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                onClick={onClose}
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                onClick={handleSaveRotation}
+                disabled={isSaving}
               >
-                Close
+                {isSaving ? "Saving..." : "Save Rotation"}
               </button>
             </div>
           </div>
 
+          {/* Right Table */}
           <div className="md:w-1/2 p-4 overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Detail Ritasi</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onChangeIndex(currentIndex - 1)}
-                  disabled={currentIndex === 0}
-                  className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 ${
-                    currentIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={() => onChangeIndex(currentIndex + 1)}
-                  disabled={currentIndex === records.length - 1}
-                  className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 ${
-                    currentIndex === records.length - 1
-                      ? 'opacity-50 cursor-not-allowed'
-                      : ''
-                  }`}
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-
             <table className="w-full text-sm border border-gray-300 dark:border-gray-600 table-fixed">
               <tbody>
-                {Object.entries(fieldLabels).reduce<JSX.Element[]>((acc, [key, label], idx, arr) => {
-                  if (idx % 2 === 0) {
-                    const [k1, l1] = [key, label];
-                    const v1 = selectedRecord ? selectedRecord[k1 as keyof RitasiFuel] : null;
-
-                    const next = arr[idx + 1];
-                    const [k2, l2] = next ?? [];
-                    const v2 = selectedRecord && k2 ? selectedRecord[k2 as keyof RitasiFuel] : null;
-
-                    acc.push(
-                      <tr key={k1 + (k2 ?? '')} className="border-b border-gray-200 dark:border-gray-700">
-                        <td className="py-2 px-3 font-medium w-1/4">{l1}</td>
-                        {renderCell(v1, l1, k1)}
-                        {k2 ? (
-                          <>
-                            <td className="py-2 px-3 font-medium w-1/4">{l2}</td>
-                            {renderCell(v2, l2, k2)}
-                          </>
-                        ) : (
-                          <>
-                            <td></td>
-                            <td></td>
-                          </>
-                        )}
-                      </tr>
-                    );
-                  }
-                  return acc;
-                }, [])}
+                {Object.entries(fieldLabels).map(([key, label]) => (
+                  <tr
+                    key={key}
+                    className="border-b border-gray-200 dark:border-gray-700"
+                  >
+                    <td className="py-2 px-3 font-medium w-1/4">{label}</td>
+                    {renderCell(
+                      isEditMode
+                        ? editValues[key as keyof RitasiFuel]
+                        : selectedRecord?.[key as keyof RitasiFuel],
+                      label,
+                      key
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Confirmation Modal */}
+        {isConfirmOpen && (
+          <div
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-[100]"
+            onClick={() => setIsConfirmOpen(false)}
+          >
+            <div
+              className="bg-white rounded-lg shadow-lg p-6 w-96"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-3">Confirm Update</h3>
+              <p className="mb-5">
+                Apakah Anda yakin ingin menyimpan perubahan ini?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
+                  onClick={() => setIsConfirmOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  onClick={confirmSave}
+                >
+                  Yes, Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -69,10 +69,12 @@ const FuelPartnerDashboard: React.FC = () => {
         ),
         petugas:petugas_pencatatan (
           nama
-        )
+        ),
+        remark_modification
       `)
       .gte("ritation_date", startDate)
-      .lte("ritation_date", endDate);
+      .lte("ritation_date", endDate)
+      .order('no_surat_jalan', { ascending: true });
 
     if (error) {
       console.error(error);
@@ -113,25 +115,27 @@ const handleReportToExcelMonthly = async () => {
 
   const headers = [
     'No',
-    'Tanggal',
     'No Surat Jalan',
+    'Tanggal',
+    'Shift',
     'Unit',
+    'Warehouse',
+    'Fuelman',
+    'Operator',
     'Qty Flowmeter Before',
     'Qty Flowmeter After',
     'Qty SJ',
     'Qty Sonding Before',
     'Qty Sonding After',
-    'Fuelman',
-    'Operator',
-    'Warehouse',
-    'Shift',
     'Evidence',
+    'Remark',
   ];
 
   const headerRow = sheet.addRow(headers);
   for (let i = 1; i <= headers.length; i++) {
     const cell = headerRow.getCell(i);
     cell.font = { bold: true };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' }; // ✅ center header
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
@@ -162,19 +166,20 @@ const sortedRecords = [...records].sort((a, b) => {
 
     const dataRow = sheet.addRow([
       i + 1,
-      row.ritation_date,
       row.no_surat_jalan,
+      row.ritation_date,
+      row.shift,
       row.unit_id,
+      row.warehouse_id,
+      row.fuelman_name,
+      row.operator_name,
       row.qty_flowmeter_before,
       row.qty_flowmeter_after,
       row.qty_sj,
       row.qty_sonding_before,
       row.qty_sonding_after,
-      row.fuelman_name,
-      row.operator_name,
-      row.warehouse_id,
-      row.shift,
       '',
+      row.remark_modification,
     ]);
 
     if (row.photo_url) {
@@ -186,8 +191,8 @@ const sortedRecords = [...records].sort((a, b) => {
       });
       const rowNum = dataRow.number;
       sheet.addImage(imageId, {
-        tl: { col: 13.3, row: rowNum - 0.3 },
-        ext: { width: 50, height: 50 },
+        tl: { col: 13.3, row: rowNum - 0.8 },
+        ext: { width: 48, height: 48 },
       });
       sheet.getRow(rowNum).height = 40;
     }
@@ -200,11 +205,11 @@ const sortedRecords = [...records].sort((a, b) => {
     '',
     '',
     '',
-    totalSJ,
     '',
     '',
     '',
     '',
+     totalSJ,
     '',
     '',
     '',
@@ -212,14 +217,18 @@ const sortedRecords = [...records].sort((a, b) => {
   totalRow.font = { bold: true };
 
   sheet.eachRow((row) => {
-    row.eachCell({ includeEmpty: false }, (cell) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
       cell.border = {
         top: { style: 'thin' },
         left: { style: 'thin' },
         bottom: { style: 'thin' },
         right: { style: 'thin' },
       };
-       cell.alignment = { vertical: 'middle' };
+       cell.alignment = {
+      vertical: 'middle',
+      horizontal: 'center', // ✅ tambahkan ini
+      wrapText: true, // opsional, biar teks panjang auto-wrap
+    };
     });
   });
 
