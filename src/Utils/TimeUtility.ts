@@ -95,6 +95,11 @@ const getMakassarDateObject = () => {
   return zonedDate; // hasilnya Date object sesuai waktu Makassar
 };
 
+const convertMakassarDateObject = (date: Date) => {
+  const timeZone = 'Asia/Makassar';
+  return toZonedTime(date, timeZone);
+};
+
 // ✅ 2️⃣ Tentukan shift berdasarkan jam Makassar
 // Shift 1 = 06:00–17:59, Shift 2 = 18:00–05:59
  const getShift = (): 1 | 2 => {
@@ -159,7 +164,7 @@ const getMakassarShiftlyDate = (): string => {
   return makassarDate;
 };
 
-
+const timeZone = "Asia/Makassar";
 
 export { getWeekNumber, 
   getWeekStartAndEndDate, 
@@ -172,4 +177,6 @@ export { getWeekNumber,
   getShiftString,
   getMakassarShiftlyDateObject,
   getMakassarShiftlyDate,
+  convertMakassarDateObject,
+  timeZone,
 }
