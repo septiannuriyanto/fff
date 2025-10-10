@@ -69,6 +69,20 @@ const ImagePreviewModal: React.FC<Props> = ({
     }
   }, [localIndex, selectedRecord]);
 
+  useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onClose();
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [onClose]);
+
+
   const updateRecordLocally = (patch: Partial<RitasiFuel>) => {
     setLocalRecords((prev) =>
       prev.map((r, i) => (i === localIndex ? { ...r, ...patch } : r))
