@@ -78,7 +78,7 @@ const ImagePreviewModal: React.FC<Props> = ({
       const { error } = await supabase
         .from("ritasi_fuel")
         .update({ rotate_constant: rotation })
-        .eq("no_surat_jalan", selectedRecord.no_surat_jalan);
+        .eq("id", selectedRecord.id);
       if (error) throw error;
 
       updateRecordLocally({ rotate_constant: rotation });
@@ -127,67 +127,69 @@ const ImagePreviewModal: React.FC<Props> = ({
   };
 
   const confirmSave = async () => {
-    setIsConfirmOpen(false);
-    setIsSaving(true);
-    try {
-      if (!selectedRecord) return;
+  setIsConfirmOpen(false);
+  setIsSaving(true);
+  try {
+    if (!selectedRecord) return;
 
-      const allowedKeys: (keyof RitasiFuel)[] = [
-        "id",
-        "no_surat_jalan",
-        "queue_num",
-        "ritation_date",
-        "warehouse_id",
-        "qty_sj",
-        "qty_sonding",
-        "sonding_before_front",
-        "sonding_before_rear",
-        "sonding_after_front",
-        "sonding_after_rear",
-        "flowmeter_before_url",
-        "flowmeter_after_url",
-        "qty_sonding_before",
-        "qty_sonding_after",
-        "operator_id",
-        "fuelman_id",
-        "qty_flowmeter_before",
-        "qty_flowmeter_after",
-        "isValidated",
-        "petugas_pencatatan",
-        "shift",
-        "photo_url",
-        "po_allocation",
-        "rotate_constant",
-        "remark_modification",
-      ];
+    const allowedKeys: (keyof RitasiFuel)[] = [
+      "id",
+      "no_surat_jalan",
+      "queue_num",
+      "ritation_date",
+      "warehouse_id",
+      "qty_sj",
+      "qty_sonding",
+      "sonding_before_front",
+      "sonding_before_rear",
+      "sonding_after_front",
+      "sonding_after_rear",
+      "flowmeter_before_url",
+      "flowmeter_after_url",
+      "qty_sonding_before",
+      "qty_sonding_after",
+      "operator_id",
+      "fuelman_id",
+      "qty_flowmeter_before",
+      "qty_flowmeter_after",
+      "isValidated",
+      "petugas_pencatatan",
+      "shift",
+      "photo_url",
+      "po_allocation",
+      "rotate_constant",
+      "remark_modification",
+    ];
 
-      const cleanValues = Object.fromEntries(
-        Object.entries(editValues)
-          .filter(([key]) => allowedKeys.includes(key as keyof RitasiFuel))
-          .map(([key, value]) => [key, value ?? null])
-      );
+    const cleanValues = Object.fromEntries(
+      Object.entries(editValues)
+        .filter(([key]) => allowedKeys.includes(key as keyof RitasiFuel))
+        .map(([key, value]) => [key, value ?? null])
+    );
 
-      if (!cleanValues.id && selectedRecord.id)
-        cleanValues.id = selectedRecord.id;
-      if (!cleanValues.no_surat_jalan && selectedRecord.no_surat_jalan)
-        cleanValues.no_surat_jalan = selectedRecord.no_surat_jalan;
+    // pastikan id-nya ikut
+    if (!cleanValues.id && selectedRecord.id)
+      cleanValues.id = selectedRecord.id;
 
-      const { error } = await supabase
-        .from("ritasi_fuel")
-        .upsert([cleanValues], { onConflict: "no_surat_jalan" });
+    // ✅ gunakan update by id (bukan upsert by no_surat_jalan)
+    const { error } = await supabase
+      .from("ritasi_fuel")
+      .update(cleanValues)
+      .eq("id", selectedRecord.id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      updateRecordLocally(editValues);
-      toast.success("Record updated successfully");
-      setIsEditMode(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update record");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    updateRecordLocally({ ...selectedRecord, ...editValues });
+    toast.success("Record updated successfully");
+    setIsEditMode(false);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to update record");
+  } finally {
+    setIsSaving(false);
+  }
+};
+
 
   const fieldLabels: Partial<Record<keyof RitasiFuel, string>> = {
     id: "ID",
@@ -197,16 +199,14 @@ const ImagePreviewModal: React.FC<Props> = ({
     warehouse_id: "Warehouse ID",
     qty_sj: "Qty SJ",
     qty_sonding: "Qty Sonding",
-    sonding_before_front: "Sonding B. Front",
-    sonding_before_rear: "Sonding B. Rear",
-    sonding_after_front: "Sonding A. Front",
-    sonding_after_rear: "Sonding A. Rear",
-    flowmeter_before_url: "Flowmeter Before URL",
-    flowmeter_after_url: "Flowmeter After URL",
+    sonding_before_front: "Sonding Before Front",
+    sonding_before_rear: "Sonding Before Rear",
+    sonding_after_front: "Sonding After Front",
+    sonding_after_rear: "Sonding After Rear",
     qty_sonding_before: "Qty Sonding Before",
     qty_sonding_after: "Qty Sonding After",
-    operator_id: "Operator ID",
-    fuelman_id: "Fuelman ID",
+    operator_name: "Operator",
+    fuelman_name: "Fuelman",
     qty_flowmeter_before: "Qty FM Before",
     qty_flowmeter_after: "Qty FM After",
     isValidated: "Validated",
