@@ -24,7 +24,7 @@ import { TeraPoint } from './types/teraPoint';
 import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
 import formatIDNumber from './functions/formatIdNumber';
-import { getMakassarDate, getMakassarDateObject, getMakassarShiftlyDate, getMakassarShiftlyDateObject, getShift, getShiftString } from '../../../Utils/TimeUtility';
+import { getMakassarDateObject, getMakassarShiftlyDate, getMakassarShiftlyDateObject, getShiftString } from '../../../Utils/TimeUtility';
 
 const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(getMakassarShiftlyDate());
@@ -899,7 +899,7 @@ const FuelPartnerRitation: React.FC = () => {
 
     setSelectedDate(getMakassarShiftlyDateObject().toISOString().slice(0, 10));
     setShift(
-      getMakassarDateObject().getHours() >= 6 && getMakassarDateObject().getHours() < 18 ? '1' : '2',
+      getShiftString(),
     );
     setManualNN('');
     setQueueNum(null);
