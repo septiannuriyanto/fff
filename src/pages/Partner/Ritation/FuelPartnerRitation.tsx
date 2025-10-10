@@ -7,19 +7,27 @@ import ViewTeraModal from './components/ViewTeraModal';
 import SummaryPanel from './components/SummaryPanel';
 import { useAuth } from '../../Authentication/AuthContext';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
-import { validateRitasiForm, validateRitasiLocal } from './functions/validateRitasi';
-import { Camera, ImageIcon, RotateCcw } from 'lucide-react';
+import {
+  validateRitasiForm,
+  validateRitasiLocal,
+} from './functions/validateRitasi';
+import {
+  Calendar,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
+  RotateCcw,
+} from 'lucide-react';
 import { DraftRitasi } from './types/drafts';
 import { TeraPoint } from './types/teraPoint';
 import { StorageItem } from './types/storageItem';
 import { ManpowerItem } from './types/manpowerItem';
 import formatIDNumber from './functions/formatIdNumber';
-import { getMakassarDate } from '../../../Utils/TimeUtility';
+import { getMakassarDate, getMakassarDateObject, getMakassarShiftlyDate, getMakassarShiftlyDateObject, getShift, getShiftString } from '../../../Utils/TimeUtility';
 
 const FuelPartnerRitation: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState(
-    getMakassarDate(),
-  );
+  const [selectedDate, setSelectedDate] = useState(getMakassarShiftlyDate());
   const { currentUser } = useAuth();
   const [shift, setShift] = useState<'1' | '2'>('1');
   const [manualNN, setManualNN] = useState('');
@@ -70,10 +78,36 @@ const FuelPartnerRitation: React.FC = () => {
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+  const [usedQueues, setUsedQueues] = useState<number[]>([]);
+
+
+  const todayStr = getMakassarShiftlyDateObject().toISOString().split("T")[0];
+  useEffect(() => {
+    const fetchUsedQueues = async () => {
+      if (!selectedDate) return;
+
+      const { data, error } = await supabase
+        .from('ritasi_fuel')
+        .select('queue_num')
+        .eq('ritation_date', selectedDate);
+
+      if (error) {
+        console.error('Error fetching used queues:', error);
+        return;
+      }
+
+      const taken = (data ?? [])
+        .map((r) => r.queue_num)
+        .filter((n) => n !== null);
+
+      setUsedQueues(taken);
+    };
+
+    fetchUsedQueues();
+  }, [selectedDate]);
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    setShift(hour >= 6 && hour < 18 ? '1' : '2');
+    setShift(getShiftString());
   }, []);
 
   useEffect(() => {
@@ -212,11 +246,12 @@ const FuelPartnerRitation: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       // Validasi file
-      if (file.size > 10 * 1024 * 1024) { // 10MB max
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB max
         alert('File terlalu besar. Maksimal 10MB.');
         return;
       }
-      
+
       if (!file.type.startsWith('image/')) {
         alert('File harus berupa gambar.');
         return;
@@ -237,22 +272,24 @@ const FuelPartnerRitation: React.FC = () => {
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (e.target.files && e.target.files[0]) {
-    const file = e.target.files[0];
-    const blobUrl = URL.createObjectURL(file); // preview lokal
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const blobUrl = URL.createObjectURL(file); // preview lokal
 
-    setPhotoUrl(blobUrl);
-    setPhotoFile(file);
-  }
-};
-
+      setPhotoUrl(blobUrl);
+      setPhotoFile(file);
+    }
+  };
 
   const handleRotate = () => {
     setRotationAngle((prevAngle) => (prevAngle + 90) % 360);
   };
 
   // Fungsi untuk kompresi gambar dengan target maksimal 100KB
-  const compressImage = async (canvas: HTMLCanvasElement, targetSizeKB: number = 100): Promise<Blob> => {
+  const compressImage = async (
+    canvas: HTMLCanvasElement,
+    targetSizeKB: number = 100,
+  ): Promise<Blob> => {
     const targetSize = targetSizeKB * 1024; // Convert to bytes
     let quality = 0.9;
     let blob: Blob | null = null;
@@ -260,10 +297,10 @@ const FuelPartnerRitation: React.FC = () => {
     // Binary search untuk menemukan quality yang tepat
     let minQuality = 0.1;
     let maxQuality = 0.9;
-    
+
     while (minQuality <= maxQuality) {
       quality = (minQuality + maxQuality) / 2;
-      
+
       blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, 'image/jpeg', quality);
       });
@@ -298,24 +335,33 @@ const FuelPartnerRitation: React.FC = () => {
     // Jika masih terlalu besar, resize canvas dan coba lagi
     if (blob.size > targetSize) {
       const maxDimension = 1280; // Reduce max dimension
-      const ratio = Math.min(maxDimension / canvas.width, maxDimension / canvas.height);
-      
+      const ratio = Math.min(
+        maxDimension / canvas.width,
+        maxDimension / canvas.height,
+      );
+
       if (ratio < 1) {
         const resizeCanvas = document.createElement('canvas');
         const resizeCtx = resizeCanvas.getContext('2d')!;
-        
+
         resizeCanvas.width = canvas.width * ratio;
         resizeCanvas.height = canvas.height * ratio;
-        
+
         // Set background putih
         resizeCtx.fillStyle = 'white';
         resizeCtx.fillRect(0, 0, resizeCanvas.width, resizeCanvas.height);
-        
+
         // Resize dengan smoothing
         resizeCtx.imageSmoothingEnabled = true;
         resizeCtx.imageSmoothingQuality = 'high';
-        resizeCtx.drawImage(canvas, 0, 0, resizeCanvas.width, resizeCanvas.height);
-        
+        resizeCtx.drawImage(
+          canvas,
+          0,
+          0,
+          resizeCanvas.width,
+          resizeCanvas.height,
+        );
+
         // Recursive call dengan canvas yang lebih kecil
         return compressImage(resizeCanvas, targetSizeKB);
       }
@@ -326,11 +372,11 @@ const FuelPartnerRitation: React.FC = () => {
 
   const handleSaveAndUpload = async () => {
     if (!photoFile) {
-      alert("Tidak ada foto untuk diunggah.");
+      alert('Tidak ada foto untuk diunggah.');
       return;
     }
     if (!noSuratJalan) {
-      alert("Mohon isi data Tanggal, Shift, dan Nomor SJ terlebih dahulu.");
+      alert('Mohon isi data Tanggal, Shift, dan Nomor SJ terlebih dahulu.');
       return;
     }
 
@@ -338,14 +384,18 @@ const FuelPartnerRitation: React.FC = () => {
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
         img.src = photoPreview;
       });
 
-      console.log('Original image size:', (photoFile.size / 1024).toFixed(2), 'KB');
+      console.log(
+        'Original image size:',
+        (photoFile.size / 1024).toFixed(2),
+        'KB',
+      );
       console.log('Original dimensions:', img.width, 'x', img.height);
 
       const canvas = document.createElement('canvas');
@@ -355,9 +405,12 @@ const FuelPartnerRitation: React.FC = () => {
       const maxDimension = 1920;
       let drawWidth = img.width;
       let drawHeight = img.height;
-      
+
       if (img.width > maxDimension || img.height > maxDimension) {
-        const ratio = Math.min(maxDimension / img.width, maxDimension / img.height);
+        const ratio = Math.min(
+          maxDimension / img.width,
+          maxDimension / img.height,
+        );
         drawWidth = img.width * ratio;
         drawHeight = img.height * ratio;
       }
@@ -385,26 +438,42 @@ const FuelPartnerRitation: React.FC = () => {
       // Move to center, rotate, then draw
       ctx.translate(canvasWidth / 2, canvasHeight / 2);
       ctx.rotate((rotationAngle * Math.PI) / 180);
-      
+
       // Draw image centered at origin with proper sizing
-      ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      
+      ctx.drawImage(
+        img,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight,
+      );
+
       // Restore the context
       ctx.restore();
 
-      console.log('Canvas dimensions after rotation:', canvasWidth, 'x', canvasHeight);
+      console.log(
+        'Canvas dimensions after rotation:',
+        canvasWidth,
+        'x',
+        canvasHeight,
+      );
 
       // Compress image to maximum 100KB
       const compressedBlob = await compressImage(canvas, 100);
-      
-      console.log('Compressed image size:', (compressedBlob.size / 1024).toFixed(2), 'KB');
 
-      if (compressedBlob.size > 102400) { // 100KB + small buffer
+      console.log(
+        'Compressed image size:',
+        (compressedBlob.size / 1024).toFixed(2),
+        'KB',
+      );
+
+      if (compressedBlob.size > 102400) {
+        // 100KB + small buffer
         console.warn('Warning: Compressed image still larger than 100KB');
       }
 
       const filename = `${noSuratJalan}.jpg`;
-      const date = new Date(selectedDate);
+      const date = getMakassarDateObject();
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
@@ -415,7 +484,7 @@ const FuelPartnerRitation: React.FC = () => {
         .upload(path, compressedBlob, {
           upsert: true,
           contentType: 'image/jpeg',
-          cacheControl: '3600'
+          cacheControl: '3600',
         });
 
       if (uploadError) {
@@ -431,15 +500,18 @@ const FuelPartnerRitation: React.FC = () => {
         if (photoPreview && photoPreview.startsWith('blob:')) {
           URL.revokeObjectURL(photoPreview);
         }
-        
+
         // Set new preview with cache busting
         setPhotoUrl(publicUrlData.publicUrl);
         setPhotoPreview(publicUrlData.publicUrl + '?t=' + Date.now());
         setIsPhotoUploaded(true);
         setPhotoFile(null);
-        alert(`Foto berhasil diunggah! (${(compressedBlob.size / 1024).toFixed(2)} KB)`);
+        alert(
+          `Foto berhasil diunggah! (${(compressedBlob.size / 1024).toFixed(
+            2,
+          )} KB)`,
+        );
       }
-
     } catch (err: any) {
       console.error('Upload foto gagal:', err);
       alert('Gagal mengunggah foto: ' + err.message);
@@ -519,131 +591,139 @@ const FuelPartnerRitation: React.FC = () => {
   };
 
   const handleSaveLocal = async () => {
-  const before = parseFloat(flowmeterBefore || '0');
-  const after = parseFloat(flowmeterAfter || '0');
-  const multiplier = useDekaliter ? 10 : 1;
-  const diff = (after - before) * multiplier;
+    const before = parseFloat(flowmeterBefore || '0');
+    const after = parseFloat(flowmeterAfter || '0');
+    const multiplier = useDekaliter ? 10 : 1;
+    const diff = (after - before) * multiplier;
 
-  // validasi lokal: kirim file juga
-  const errorMsg = validateRitasiLocal({
-    selectedPetugas,
-    unit,
-    diff,
-    noSuratJalan,
-    operator,
-    fuelman,
-    sondingBeforeRear,
-    sondingBeforeFront,
-    sondingAfterRear,
-    sondingAfterFront,
-    volumeBefore,
-    volumeAfter,
-    photoFile, // kirim file yang dipilih
-  });
+    // validasi lokal: kirim file juga
+    const errorMsg = validateRitasiLocal({
+      selectedPetugas,
+      unit,
+      diff,
+      noSuratJalan,
+      operator,
+      fuelman,
+      sondingBeforeRear,
+      sondingBeforeFront,
+      sondingAfterRear,
+      sondingAfterFront,
+      volumeBefore,
+      volumeAfter,
+      photoFile, // kirim file yang dipilih
+    });
 
-  if (errorMsg) {
-    return alert(errorMsg);
-  }
+    if (errorMsg) {
+      return alert(errorMsg);
+    }
 
-  const selectedWarehouse =
-    units.find((u) => u.unit_id === unit)?.warehouse_id || null;
+    const selectedWarehouse =
+      units.find((u) => u.unit_id === unit)?.warehouse_id || null;
 
-  // Ambil draft yang sedang diedit (jika ada)
-  const editingDraft = editingDraftIndex !== null ? localDrafts[editingDraftIndex] : null;
+    // Ambil draft yang sedang diedit (jika ada)
+    const editingDraft =
+      editingDraftIndex !== null ? localDrafts[editingDraftIndex] : null;
 
-  // Tentukan assignedQueue:
-  // - kalau edit: pakai queue dari draft yang diedit (jangan ubah)
-  // - kalau tambah baru: gunakan queueNum kalau ada, kalau tidak fallback ke max local + 1
-  let assignedQueue: number;
-  if (editingDraft) {
-    assignedQueue = (editingDraft.queue_num as number) ?? (queueNum ?? 1);
-  } else {
-    const maxLocal = localDrafts.length > 0 ? Math.max(...localDrafts.map(d => d.queue_num ?? 0)) : 0;
-    assignedQueue = (typeof queueNum === 'number' && queueNum > 0) ? queueNum : maxLocal + 1;
-  }
+    // Tentukan assignedQueue:
+    // - kalau edit: pakai queue dari draft yang diedit (jangan ubah)
+    // - kalau tambah baru: gunakan queueNum kalau ada, kalau tidak fallback ke max local + 1
+    let assignedQueue: number;
+    if (editingDraft) {
+      assignedQueue = (editingDraft.queue_num as number) ?? queueNum ?? 1;
+    } else {
+      const maxLocal =
+        localDrafts.length > 0
+          ? Math.max(...localDrafts.map((d) => d.queue_num ?? 0))
+          : 0;
+      assignedQueue =
+        typeof queueNum === 'number' && queueNum > 0 ? queueNum : maxLocal + 1;
+    }
 
-  // buat no surat jalan berdasarkan assignedQueue
-  const assignedSJ = generateSuratJalanNumber(assignedQueue, selectedDate, shift);
+    // buat no surat jalan berdasarkan assignedQueue
+    const assignedSJ = generateSuratJalanNumber(
+      assignedQueue,
+      selectedDate,
+      shift,
+    );
 
-  // previewUrl: jika ada file baru gunakan blob, kalau edit dan tidak mengganti file pakai existing preview
-  const previewUrl =
-    photoFile ? URL.createObjectURL(photoFile) : (editingDraft?.photo_url ?? undefined);
+    // previewUrl: jika ada file baru gunakan blob, kalau edit dan tidak mengganti file pakai existing preview
+    const previewUrl = photoFile
+      ? URL.createObjectURL(photoFile)
+      : editingDraft?.photo_url ?? undefined;
 
-  // simpan file asli di draft (untuk upload nanti saat Submit All)
-  const payload: DraftRitasi = {
-    no_surat_jalan: assignedSJ,
-    queue_num: assignedQueue,
-    ritation_date: selectedDate,
-    warehouse_id: selectedWarehouse,
-    qty_sj: diff,
-    qty_sonding_before: volumeBefore,
-    qty_sonding_after: volumeAfter,
-    qty_sonding: volumeAfter - volumeBefore,
-    sonding_before_front: parseFloat(sondingBeforeFront || '0'),
-    sonding_before_rear: parseFloat(sondingBeforeRear || '0'),
-    sonding_after_front: parseFloat(sondingAfterFront || '0'),
-    sonding_after_rear: parseFloat(sondingAfterRear || '0'),
-    operator_id: operator,
-    fuelman_id: fuelman,
-    qty_flowmeter_before: before,
-    qty_flowmeter_after: after,
-    isValidated: false,
-    petugas_pencatatan: selectedPetugas,
-    shift: shift,
-    // simpan file & preview url di draft (File disimpan di memory, tidak ke localStorage)
-    photo_file: photoFile ?? editingDraft?.photo_file ?? undefined,
-    photo_url: previewUrl,
+    // simpan file asli di draft (untuk upload nanti saat Submit All)
+    const payload: DraftRitasi = {
+      no_surat_jalan: assignedSJ,
+      queue_num: assignedQueue,
+      ritation_date: selectedDate,
+      warehouse_id: selectedWarehouse,
+      qty_sj: diff,
+      qty_sonding_before: volumeBefore,
+      qty_sonding_after: volumeAfter,
+      qty_sonding: volumeAfter - volumeBefore,
+      sonding_before_front: parseFloat(sondingBeforeFront || '0'),
+      sonding_before_rear: parseFloat(sondingBeforeRear || '0'),
+      sonding_after_front: parseFloat(sondingAfterFront || '0'),
+      sonding_after_rear: parseFloat(sondingAfterRear || '0'),
+      operator_id: operator,
+      fuelman_id: fuelman,
+      qty_flowmeter_before: before,
+      qty_flowmeter_after: after,
+      isValidated: false,
+      petugas_pencatatan: selectedPetugas,
+      shift: shift,
+      // simpan file & preview url di draft (File disimpan di memory, tidak ke localStorage)
+      photo_file: photoFile ?? editingDraft?.photo_file ?? undefined,
+      photo_url: previewUrl,
+    };
+
+    // update array drafts
+    let updatedDrafts: DraftRitasi[];
+    if (editingDraftIndex !== null) {
+      updatedDrafts = [...localDrafts];
+      updatedDrafts[editingDraftIndex] = payload;
+      setEditingDraftIndex(null);
+    } else {
+      updatedDrafts = [...localDrafts, payload];
+    }
+
+    // simpan ke state
+    setLocalDrafts(updatedDrafts);
+
+    // simpan ke localStorage tanpa property photo_file (File tidak serializable)
+    const draftsToSave = updatedDrafts.map((d) => {
+      const { photo_file, ...rest } = d;
+      return rest;
+    });
+    localStorage.setItem('ritasi_draft', JSON.stringify(draftsToSave));
+
+    // Setelah sukses simpan lokal, baru increment queueNum (hanya untuk penambahan baru)
+    if (editingDraftIndex === null) {
+      const nextQueue = assignedQueue + 1;
+      setQueueNum(nextQueue);
+      setManualNN(String(nextQueue));
+    }
+
+    // Reset fields form (manual) — JANGAN reset queueNum
+    setNoSuratJalan('');
+    setUnit('');
+    setOperator('');
+    setFuelman('');
+    setSondingBeforeRear('');
+    setSondingBeforeFront('');
+    setSondingAfterRear('');
+    setSondingAfterFront('');
+    setVolumeBefore(0);
+    setVolumeAfter(0);
+    setFlowmeterBefore('');
+    setFlowmeterAfter('');
+    setUseDekaliter(true);
+    setPhotoPreview('');
+    setPhotoFile(null);
+
+    alert('Data tersimpan ke lokal!');
+    // optional: kalau mau sinkronisasi penuh dengan DB, panggil fetchNextQueue() di tempat terpisah
   };
-
-  // update array drafts
-  let updatedDrafts: DraftRitasi[];
-  if (editingDraftIndex !== null) {
-    updatedDrafts = [...localDrafts];
-    updatedDrafts[editingDraftIndex] = payload;
-    setEditingDraftIndex(null);
-  } else {
-    updatedDrafts = [...localDrafts, payload];
-  }
-
-  // simpan ke state
-  setLocalDrafts(updatedDrafts);
-
-  // simpan ke localStorage tanpa property photo_file (File tidak serializable)
-  const draftsToSave = updatedDrafts.map(d => {
-    const { photo_file, ...rest } = d;
-    return rest;
-  });
-  localStorage.setItem('ritasi_draft', JSON.stringify(draftsToSave));
-
-  // Setelah sukses simpan lokal, baru increment queueNum (hanya untuk penambahan baru)
-  if (editingDraftIndex === null) {
-    const nextQueue = assignedQueue + 1;
-    setQueueNum(nextQueue);
-    setManualNN(String(nextQueue));
-  }
-
-  // Reset fields form (manual) — JANGAN reset queueNum
-  setNoSuratJalan('');
-  setUnit('');
-  setOperator('');
-  setFuelman('');
-  setSondingBeforeRear('');
-  setSondingBeforeFront('');
-  setSondingAfterRear('');
-  setSondingAfterFront('');
-  setVolumeBefore(0);
-  setVolumeAfter(0);
-  setFlowmeterBefore('');
-  setFlowmeterAfter('');
-  setUseDekaliter(true);
-  setPhotoPreview('');
-  setPhotoFile(null);
-
-  alert('Data tersimpan ke lokal!');
-  // optional: kalau mau sinkronisasi penuh dengan DB, panggil fetchNextQueue() di tempat terpisah
-};
-
-
 
   const handleDeleteDraft = (index: number) => {
     const updated = [...localDrafts];
@@ -693,67 +773,72 @@ const FuelPartnerRitation: React.FC = () => {
   };
 
   const handleSubmitAllLocal = async () => {
-  if (localDrafts.length === 0) {
-    return;
-  }
-  try {
-    setLoadingSubmit(true);
+    if (localDrafts.length === 0) {
+      return;
+    }
+    try {
+      setLoadingSubmit(true);
 
-    // upload foto + update photo_url dulu
-    const draftsWithPhotoUrl = await Promise.all(
-      localDrafts.map(async (draft) => {
-        // kalau ada file foto dan photo_url belum berupa publicUrl
-        if (draft.photo_file && !(draft.photo_url && draft.photo_url.startsWith('http'))) {
-          // format tanggal jadi yyyy/mm/dd
-          const date = new Date(draft.ritation_date);
-          const yyyy = date.getFullYear();
-          const mm = String(date.getMonth() + 1).padStart(2, '0');
-          const dd = String(date.getDate()).padStart(2, '0');
+      // upload foto + update photo_url dulu
+      const draftsWithPhotoUrl = await Promise.all(
+        localDrafts.map(async (draft) => {
+          // kalau ada file foto dan photo_url belum berupa publicUrl
+          if (
+            draft.photo_file &&
+            !(draft.photo_url && draft.photo_url.startsWith('http'))
+          ) {
+            // format tanggal jadi yyyy/mm/dd
+            const date = new Date(draft.ritation_date);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
 
-          // path file sesuai permintaan: yyyy/mm/dd/<no_surat_jalan>.jpg
-          const filePath = `${yyyy}/${mm}/${dd}/${draft.no_surat_jalan}.jpg`;
+            // path file sesuai permintaan: yyyy/mm/dd/<no_surat_jalan>.jpg
+            const filePath = `${yyyy}/${mm}/${dd}/${draft.no_surat_jalan}.jpg`;
 
-          // upload file
-          const { error: uploadError } = await supabase.storage
-            .from('ritasi')
-            .upload(filePath, draft.photo_file, { upsert: true });
-          if (uploadError) throw uploadError;
+            // upload file
+            const { error: uploadError } = await supabase.storage
+              .from('ritasi')
+              .upload(filePath, draft.photo_file, { upsert: true });
+            if (uploadError) throw uploadError;
 
-          // ambil public url
-          const { data: publicData } = supabase.storage
-            .from('ritasi')
-            .getPublicUrl(filePath);
+            // ambil public url
+            const { data: publicData } = supabase.storage
+              .from('ritasi')
+              .getPublicUrl(filePath);
 
-          // update photo_url di draft
-          return { ...draft, photo_url: publicData.publicUrl };
-        }
+            // update photo_url di draft
+            return { ...draft, photo_url: publicData.publicUrl };
+          }
 
-        // kalau tidak ada file baru, pakai draft apa adanya
-        console.log('No new photo to upload for draft:', draft.no_surat_jalan);
-        return draft;
-      })
-    );
+          // kalau tidak ada file baru, pakai draft apa adanya
+          console.log(
+            'No new photo to upload for draft:',
+            draft.no_surat_jalan,
+          );
+          return draft;
+        }),
+      );
 
-    // setelah semua foto terupload, insert ke table ritasi_fuel
+      // setelah semua foto terupload, insert ke table ritasi_fuel
 
-    console.log('Drafts to insert:', draftsWithPhotoUrl);
-    return;
+      console.log('Drafts to insert:', draftsWithPhotoUrl);
+      return;
 
-    const { error } = await supabase.from('ritasi_fuel').insert(draftsWithPhotoUrl);
-    if (error) throw error;
+      const { error } = await supabase
+        .from('ritasi_fuel')
+        .insert(draftsWithPhotoUrl);
+      if (error) throw error;
 
-    alert('Semua draft berhasil dikirim!');
-    setShowDraftModal(false);
-    fetchNextQueue();
-  } catch (err: any) {
-    alert('Gagal submit draft: ' + err.message);
-  } finally {
-    setLoadingSubmit(false);
-  }
-};
-
-
-
+      alert('Semua draft berhasil dikirim!');
+      setShowDraftModal(false);
+      fetchNextQueue();
+    } catch (err: any) {
+      alert('Gagal submit draft: ' + err.message);
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
 
   const fetchNextQueue = async () => {
     if (!selectedDate) {
@@ -811,10 +896,10 @@ const FuelPartnerRitation: React.FC = () => {
     if (photoPreview && photoPreview.startsWith('blob:')) {
       URL.revokeObjectURL(photoPreview);
     }
-    
-    setSelectedDate(new Date().toISOString().slice(0, 10));
+
+    setSelectedDate(getMakassarShiftlyDateObject().toISOString().slice(0, 10));
     setShift(
-      new Date().getHours() >= 6 && new Date().getHours() < 18 ? '1' : '2',
+      getMakassarDateObject().getHours() >= 6 && getMakassarDateObject().getHours() < 18 ? '1' : '2',
     );
     setManualNN('');
     setQueueNum(null);
@@ -837,13 +922,13 @@ const FuelPartnerRitation: React.FC = () => {
     setIsPhotoUploaded(false);
     setEditingDraftIndex(null);
     setPhotoUrl('');
-    
+
     // Clear file input values
     const fileInputs = document.querySelectorAll('input[type="file"]');
     fileInputs.forEach((input: any) => {
       input.value = '';
     });
-    
+
     fetchNextQueue();
   };
 
@@ -880,29 +965,152 @@ const FuelPartnerRitation: React.FC = () => {
           )}
         </div>
 
-        <div className="mb-4">
-          <label className="block mb-1">Tanggal</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border rounded p-2 w-full"
-          />
+        {/* Queue Number Thumbnails */}
+        <div className="flex flex-wrap gap-2 mb-4 justify-center">
+          {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => {
+            const isUsed = usedQueues.includes(num);
+            const isSelected = queueNum === num;
+
+            let baseStyle =
+              'w-10 h-10 rounded-full text-sm font-semibold flex items-center justify-center border transition-all duration-200 shadow-sm';
+
+            if (isUsed) {
+              baseStyle +=
+                ' bg-green-500 text-white border-green-600 cursor-not-allowed';
+            } else if (isSelected) {
+              baseStyle +=
+                ' bg-blue-500 text-white border-blue-600 scale-110 shadow-md';
+            } else {
+              baseStyle +=
+                ' bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-blue-300 hover:text-white';
+            }
+
+            return (
+              <button
+                key={num}
+                disabled={isUsed}
+                onClick={() => {
+                  if (!isUsed) {
+                    setQueueNum(num);
+                    setManualNN(num.toString());
+                  }
+                }}
+                className={baseStyle}
+              >
+                <span>{num}</span>
+                {isUsed && (
+                  <span className="absolute text-white text-xs font-bold top-1 right-1">
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mb-4">
-          <label className="block mb-1">Shift</label>
-          <select
-            value={shift}
-            onChange={(e) => setShift(e.target.value as '1' | '2')}
-            className="border rounded p-2 w-full"
-          >
-            <option value="1">Shift 1 (06.00 - 18.00)</option>
-            <option value="2">Shift 2 (18.00 - 06.00)</option>
-          </select>
-        </div>
+        
+<div className="mb-4">
+  <label className="block mb-1 font-medium text-gray-700">Tanggal</label>
+  <div className="flex items-center gap-2">
+    {/* Tombol kiri */}
+    <button
+      type="button"
+      onClick={() => {
+        const prevDate = new Date(selectedDate);
+        prevDate.setDate(prevDate.getDate() - 1);
+        setSelectedDate(prevDate.toISOString().split("T")[0]);
+      }}
+      className="p-2 rounded-md hover:bg-gray-100 border border-gray-300 transition"
+    >
+      <ChevronLeft size={18} />
+    </button>
+
+    {/* Input tanggal */}
+    <input
+      type="date"
+      value={selectedDate}
+      onChange={(e) => setSelectedDate(e.target.value)}
+      className={`border rounded-md p-2 w-full text-center transition 
+        ${
+          selectedDate === todayStr
+            ? "bg-blue-100 border-blue-400 text-blue-800 font-semibold"
+            : "border-gray-300 text-gray-700 bg-white"
+        }`}
+    />
+
+    {/* Tombol kanan */}
+    <button
+      type="button"
+      onClick={() => {
+        const nextDate = new Date(selectedDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        setSelectedDate(nextDate.toISOString().split("T")[0]);
+      }}
+      className="p-2 rounded-md hover:bg-gray-100 border border-gray-300 transition"
+    >
+      <ChevronRight size={18} />
+    </button>
+
+    {/* Tombol buka kalender */}
+    <button
+      type="button"
+      onClick={() => {
+        const input = document.querySelector('input[type="date"]') as HTMLInputElement;
+        if (input?.showPicker) input.showPicker();
+        else input?.focus();
+      }}
+      className="p-2 rounded-md border border-gray-300 hover:bg-gray-100 transition"
+    >
+      <Calendar size={18} />
+    </button>
+
+    {/* Tombol Today */}
+    <button
+      type="button"
+      onClick={() => setSelectedDate(todayStr)}
+      className={`py-2 px-3 rounded-md border text-sm font-medium transition
+        ${
+          selectedDate === todayStr
+            ? "bg-blue-100 border-blue-400 text-blue-800"
+            : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+        }`}
+    >
+      Today
+    </button>
+  </div>
+</div>
 
         <div className="mb-4">
+          <label className="block mb-1 font-medium text-gray-700">Shift</label>
+          <div className="flex gap-2">
+            {[
+              { label: 'Shift 1 (06.00 – 18.00)', value: '1' },
+              { label: 'Shift 2 (18.00 – 06.00)', value: '2' },
+            ].map((item) => {
+              const isActive = shift === item.value;
+              const isShift1 = item.value === '1';
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setShift(item.value as '1' | '2')}
+                  className={`flex-1 py-2 px-4 rounded-md border text-sm transition-all duration-200
+            ${
+              isActive
+                ? isShift1
+                  ? 'bg-amber-100 border-amber-400 text-amber-800 font-semibold shadow-sm'
+                  : 'bg-slate-200 border-slate-400 text-gray-800 font-semibold shadow-sm'
+                : 'bg-slate-50 border-gray-300 text-slate-700 hover:bg-slate-100'
+            }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+                <div className="mb-4">
           <label className="block mb-1">Nama Petugas</label>
           <select
             value={selectedPetugas}
@@ -1077,25 +1285,38 @@ const FuelPartnerRitation: React.FC = () => {
         </div>
 
         {photoPreview && (
-          <div className={`mt-4 border-2 border-dashed border-gray-400 rounded-md p-2 flex flex-col items-center ${isLoadingPhoto ? 'opacity-30' : ''}`}>
+          <div
+            className={`mt-4 border-2 border-dashed border-gray-400 rounded-md p-2 flex flex-col items-center ${
+              isLoadingPhoto ? 'opacity-30' : ''
+            }`}
+          >
             <h4 className="font-semibold mb-2">Pratinjau Foto:</h4>
-            
+
             {/* Container dengan aspect ratio yang konsisten */}
             <div className="w-full max-w-md mx-auto bg-gray-50 rounded overflow-hidden">
-              <div className="relative" style={{ paddingBottom: '75%' }}> {/* 4:3 aspect ratio */}
+              <div className="relative" style={{ paddingBottom: '75%' }}>
+                {' '}
+                {/* 4:3 aspect ratio */}
                 <img
                   src={photoPreview}
                   alt="Surat Jalan Preview"
                   className="absolute inset-0 w-full h-full object-contain"
-                  style={{ 
+                  style={{
                     // Jika sudah diupload, tidak perlu rotasi lagi karena gambar server sudah dalam orientasi yang benar
                     // Jika belum diupload, terapkan rotasi untuk preview
-                    transform: isPhotoUploaded ? 'none' : `rotate(${rotationAngle}deg)`,
+                    transform: isPhotoUploaded
+                      ? 'none'
+                      : `rotate(${rotationAngle}deg)`,
                     transformOrigin: 'center center',
-                    transition: 'transform 0.3s ease-in-out'
+                    transition: 'transform 0.3s ease-in-out',
                   }}
                   onLoad={(e) => {
-                    console.log('Preview image loaded:', (e.target as HTMLImageElement).naturalWidth, 'x', (e.target as HTMLImageElement).naturalHeight);
+                    console.log(
+                      'Preview image loaded:',
+                      (e.target as HTMLImageElement).naturalWidth,
+                      'x',
+                      (e.target as HTMLImageElement).naturalHeight,
+                    );
                   }}
                   onError={(e) => {
                     console.error('Preview image failed to load');
@@ -1103,11 +1324,13 @@ const FuelPartnerRitation: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             {/* Status info dengan size indicator */}
             <div className="text-sm text-gray-600 mt-2">
               {isPhotoUploaded ? (
-                <span className="text-green-600 font-medium">✓ Foto telah diunggah dan disimpan</span>
+                <span className="text-green-600 font-medium">
+                  ✓ Foto telah diunggah dan disimpan
+                </span>
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <span>Preview dengan rotasi: {rotationAngle}°</span>
@@ -1124,7 +1347,7 @@ const FuelPartnerRitation: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             {/* Controls - hanya tampil jika belum diupload */}
             {!isPhotoUploaded && (
               <div className="flex gap-2 mt-4">
@@ -1139,8 +1362,8 @@ const FuelPartnerRitation: React.FC = () => {
                   onClick={handleSaveAndUpload}
                   disabled={isLoadingPhoto || !photoFile}
                   className={`px-4 py-2 rounded-full text-white flex items-center gap-1 ${
-                    isLoadingPhoto || !photoFile 
-                      ? 'bg-blue-300 cursor-not-allowed' 
+                    isLoadingPhoto || !photoFile
+                      ? 'bg-blue-300 cursor-not-allowed'
                       : 'bg-blue-500 hover:bg-blue-600'
                   }`}
                 >
@@ -1155,7 +1378,7 @@ const FuelPartnerRitation: React.FC = () => {
                 </button>
               </div>
             )}
-            
+
             {/* Button untuk ganti foto jika sudah diupload */}
             {isPhotoUploaded && (
               <button
@@ -1169,7 +1392,8 @@ const FuelPartnerRitation: React.FC = () => {
                   setRotationAngle(0);
                   setIsPhotoUploaded(false);
                   // Clear file inputs
-                  const fileInputs = document.querySelectorAll('input[type="file"]');
+                  const fileInputs =
+                    document.querySelectorAll('input[type="file"]');
                   fileInputs.forEach((input: any) => {
                     input.value = '';
                   });
@@ -1195,7 +1419,9 @@ const FuelPartnerRitation: React.FC = () => {
             onClick={handleSubmit}
             disabled={loadingSubmit || isLoadingPhoto}
             className={`text-white px-4 py-2 rounded w-full sm:w-auto ${
-              loadingSubmit || isLoadingPhoto ? 'bg-slate-400' : 'bg-blue-500 hover:bg-blue-600'
+              loadingSubmit || isLoadingPhoto
+                ? 'bg-slate-400'
+                : 'bg-blue-500 hover:bg-blue-600'
             }`}
           >
             {loadingSubmit ? 'Mengirim...' : 'Submit'}
@@ -1221,115 +1447,127 @@ const FuelPartnerRitation: React.FC = () => {
       )}
 
       {showDraftModal && (
-  <>
-    {/* Modal daftar draft */}
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-        <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
-        <div className="overflow-auto max-h-64 mb-4">
-          <table className="min-w-full border">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-800">
-                <th className="p-2 border">No SJ</th>
-                <th className="p-2 border">Tanggal</th>
-                <th className="p-2 border">Unit</th>
-                <th className="p-2 border">Qty SJ</th>
-                <th className="p-2 border">Foto</th>
-                <th className="p-2 border">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {localDrafts.map((d, i) => (
-                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="p-2 border">{d.no_surat_jalan}</td>
-                  <td className="p-2 border">{d.ritation_date}</td>
-                  <td className="p-2 border">{d.warehouse_id}</td>
-                  <td className="p-2 border">{formatIDNumber(d.qty_sj)} L</td>
-                  <td className="p-2 border text-center">
-                    {d.photo_url && (
-                      <img
-                        src={d.photo_url}
-                        alt="thumb"
-                        className="h-12 w-12 object-cover rounded cursor-zoom-in"
-                        onClick={() => setZoomUrl(d.photo_url!)}
-                      />
-                    )}
-                  </td>
-                  <td className="p-2 border text-center">
-                    <div className="flex justify-center gap-1">
-                      <button
-                        onClick={() => handleEditDraft(i)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
-                        title="Edit draft"
+        <>
+          {/* Modal daftar draft */}
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-boxdark p-6 rounded shadow max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+              <h3 className="text-lg font-bold mb-4">Draft Ritasi Lokal</h3>
+              <div className="overflow-auto max-h-64 mb-4">
+                <table className="min-w-full border">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-800">
+                      <th className="p-2 border">No SJ</th>
+                      <th className="p-2 border">Tanggal</th>
+                      <th className="p-2 border">Unit</th>
+                      <th className="p-2 border">Qty SJ</th>
+                      <th className="p-2 border">Foto</th>
+                      <th className="p-2 border">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {localDrafts.map((d, i) => (
+                      <tr
+                        key={i}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Yakin ingin menghapus draft ini?')) {
-                            handleDeleteDraft(i);
-                          }
-                        }}
-                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
-                        title="Hapus draft"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">
-            Total: {localDrafts.length} draft tersimpan
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowDraftModal(false)}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
-            >
-              Tutup
-            </button>
-            <button
-              onClick={() => {
-                if (confirm(`Yakin ingin mengirim semua ${localDrafts.length} draft?`)) {
-                  handleSubmitAllLocal();
-                }
-              }}
-              disabled={loadingSubmit}
-              className={`px-4 py-2 rounded text-white ${
-                loadingSubmit
-                  ? 'bg-blue-300 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600'
-              }`}
-            >
-              {loadingSubmit ? 'Mengirim...' : `Submit All (${localDrafts.length})`}
-            </button>
+                        <td className="p-2 border">{d.no_surat_jalan}</td>
+                        <td className="p-2 border">{d.ritation_date}</td>
+                        <td className="p-2 border">{d.warehouse_id}</td>
+                        <td className="p-2 border">
+                          {formatIDNumber(d.qty_sj)} L
+                        </td>
+                        <td className="p-2 border text-center">
+                          {d.photo_url && (
+                            <img
+                              src={d.photo_url}
+                              alt="thumb"
+                              className="h-12 w-12 object-cover rounded cursor-zoom-in"
+                              onClick={() => setZoomUrl(d.photo_url!)}
+                            />
+                          )}
+                        </td>
+                        <td className="p-2 border text-center">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              onClick={() => handleEditDraft(i)}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-sm"
+                              title="Edit draft"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (
+                                  confirm('Yakin ingin menghapus draft ini?')
+                                ) {
+                                  handleDeleteDraft(i);
+                                }
+                              }}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                              title="Hapus draft"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">
+                  Total: {localDrafts.length} draft tersimpan
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDraftModal(false)}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded"
+                  >
+                    Tutup
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Yakin ingin mengirim semua ${localDrafts.length} draft?`,
+                        )
+                      ) {
+                        handleSubmitAllLocal();
+                      }
+                    }}
+                    disabled={loadingSubmit}
+                    className={`px-4 py-2 rounded text-white ${
+                      loadingSubmit
+                        ? 'bg-blue-300 cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
+                  >
+                    {loadingSubmit
+                      ? 'Mengirim...'
+                      : `Submit All (${localDrafts.length})`}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    {/* Modal zoom foto */}
-    {zoomUrl && (
-      <div
-        className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center"
-        onClick={() => setZoomUrl(null)}
-      >
-        <img
-          src={zoomUrl}
-          alt="zoom"
-          className="max-h-[90vh] max-w-[90vw] object-contain rounded"
-          onClick={(e) => e.stopPropagation()} // supaya klik fotonya tidak close
-        />
-      </div>
-    )}
-  </>
-)}
-
+          {/* Modal zoom foto */}
+          {zoomUrl && (
+            <div
+              className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center"
+              onClick={() => setZoomUrl(null)}
+            >
+              <img
+                src={zoomUrl}
+                alt="zoom"
+                className="max-h-[90vh] max-w-[90vw] object-contain rounded"
+                onClick={(e) => e.stopPropagation()} // supaya klik fotonya tidak close
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

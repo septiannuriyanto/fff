@@ -5,9 +5,9 @@ import { supabase } from "../../../db/SupabaseClient";
 import DetailTableRitasi from "./DetailTableRitasi";
 import { RitasiFuel } from "../component/ritasiFuel";
 import { getMakassarDateObject } from "../../../Utils/TimeUtility";
-  import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
-import QRCode from 'qrcode';
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import QRCode from "qrcode";
 
 const FuelPartnerDashboard: React.FC = () => {
   const [records, setRecords] = useState<RitasiFuel[]>([]);
@@ -16,14 +16,11 @@ const FuelPartnerDashboard: React.FC = () => {
   const timeZone = "Asia/Makassar";
   const now = getMakassarDateObject();
 
-  // Gunakan 0-based month (Date default JS)
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth());
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1); // untuk selector 1–12
-
-  // daysInMonth: bulan +1 untuk dapat jumlah hari bulan berjalan
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const fetchRecords = async () => {
@@ -58,23 +55,15 @@ const FuelPartnerDashboard: React.FC = () => {
         photo_url,
         po_allocation,
         rotate_constant,
-        storage:warehouse_id (
-          unit_id
-        ),
-        fuelman:fuelman_id (
-          nama
-        ),
-        operator:operator_id (
-          nama
-        ),
-        petugas:petugas_pencatatan (
-          nama
-        ),
+        storage:warehouse_id ( unit_id ),
+        fuelman:fuelman_id ( nama ),
+        operator:operator_id ( nama ),
+        petugas:petugas_pencatatan ( nama ),
         remark_modification
       `)
       .gte("ritation_date", startDate)
       .lte("ritation_date", endDate)
-      .order('no_surat_jalan', { ascending: true });
+      .order("no_surat_jalan", { ascending: true });
 
     if (error) {
       console.error(error);
@@ -107,62 +96,63 @@ const FuelPartnerDashboard: React.FC = () => {
     ? records.filter((r) => r.ritation_date === selectedDate)
     : [];
 
-
-
-const handleReportToExcelMonthly = async () => {
+  /** 🟢 Fungsi Export Excel (Mingguan atau Bulanan) */
+  const handleReportToExcel = async (startDay: number, endDay: number, label: string) => {
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Ritasi Fuel');
+  const sheet = workbook.addWorksheet("Ritasi Fuel");
 
   const headers = [
-    'No',
-    'No Surat Jalan',
-    'Tanggal',
-    'Shift',
-    'Unit',
-    'Warehouse',
-    'Fuelman',
-    'Operator',
-    'Qty Flowmeter Before',
-    'Qty Flowmeter After',
-    'Qty SJ',
-    'Qty Sonding Before',
-    'Qty Sonding After',
-    'Evidence',
-    'Remark',
+    "No",
+    "No Surat Jalan",
+    "Tanggal",
+    "Shift",
+    "Unit",
+    "Warehouse",
+    "Fuelman",
+    "Operator",
+    "Qty Flowmeter Before",
+    "Qty Flowmeter After",
+    "Qty SJ",
+    "Qty Sonding Before",
+    "Qty Sonding After",
+    "Evidence",
+    "Remark",
   ];
 
+  // 🔹 Header style
   const headerRow = sheet.addRow(headers);
   for (let i = 1; i <= headers.length; i++) {
     const cell = headerRow.getCell(i);
     cell.font = { bold: true };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }; // ✅ center header
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'D3D3D3' },
-    };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D3D3D3" } };
     cell.border = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
     };
   }
 
-  let totalSJ = 0;
+  const startDate = format(new Date(year, month, startDay), "yyyy-MM-dd", { timeZone });
+  const endDate = format(new Date(year, month, endDay), "yyyy-MM-dd", { timeZone });
 
-const sortedRecords = [...records].sort((a, b) => {
-  return (a.no_surat_jalan || '').localeCompare(b.no_surat_jalan || '', undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  });
-});
+  const filteredRecords = records.filter(
+    (r) => r.ritation_date >= startDate && r.ritation_date <= endDate
+  );
 
+  const sortedRecords = [...filteredRecords].sort((a, b) =>
+    (a.no_surat_jalan || "").localeCompare(b.no_surat_jalan || "", undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
+  );
 
+  // 🔹 Tambahkan data baris
+  const firstDataRow = headerRow.number + 1;
 
   for (let i = 0; i < sortedRecords.length; i++) {
     const row = sortedRecords[i];
-    totalSJ += Number(row.qty_sj) || 0;
 
     const dataRow = sheet.addRow([
       i + 1,
@@ -178,16 +168,17 @@ const sortedRecords = [...records].sort((a, b) => {
       row.qty_sj,
       row.qty_sonding_before,
       row.qty_sonding_after,
-      '',
+      "",
       row.remark_modification,
     ]);
 
+    // 📸 QR code
     if (row.photo_url) {
       const qrBase64 = await QRCode.toDataURL(row.photo_url);
-      const base64Data = qrBase64.replace(/^data:image\/png;base64,/, '');
+      const base64Data = qrBase64.replace(/^data:image\/png;base64,/, "");
       const imageId = workbook.addImage({
         base64: base64Data,
-        extension: 'png',
+        extension: "png",
       });
       const rowNum = dataRow.number;
       sheet.addImage(imageId, {
@@ -198,43 +189,52 @@ const sortedRecords = [...records].sort((a, b) => {
     }
   }
 
+  const lastDataRow = sheet.lastRow!.number;
+
+  // 🔹 Tambahkan baris TOTAL (pakai rumus SUM di kolom K)
   const totalRow = sheet.addRow([
-    'TOTAL',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-     totalSJ,
-    '',
-    '',
-    '',
+    "TOTAL",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    { formula: `SUM(K${firstDataRow}:K${lastDataRow})` },
+    "",
+    "",
+    "",
   ]);
+
   totalRow.font = { bold: true };
 
+  // 🔹 Format kolom K (Qty SJ) jadi comma style
+  sheet.getColumn(11).numFmt = "#,##0";
+
+  // 🔹 Rapiin border + alignment
   sheet.eachRow((row) => {
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
       };
-       cell.alignment = {
-      vertical: 'middle',
-      horizontal: 'center', // ✅ tambahkan ini
-      wrapText: true, // opsional, biar teks panjang auto-wrap
-    };
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
     });
   });
 
+  // 🔹 Lebar kolom otomatis
   sheet.columns.forEach((column, i) => {
     let maxLength = headers[i] ? headers[i].length : 10;
-    if (column && typeof column.eachCell === 'function') {
+    if (column && typeof column.eachCell === "function") {
       column.eachCell({ includeEmpty: true }, (cell) => {
         const cellLength = cell.value ? cell.value.toString().length : 10;
         maxLength = Math.max(maxLength, cellLength);
@@ -243,13 +243,19 @@ const sortedRecords = [...records].sort((a, b) => {
     column.width = maxLength + 2;
   });
 
-  // ✅ Format nama file pakai date-fns-tz (Makassar timezone)
-  const fileName = `Ritasi_Fuel_${month + 1}-${year}.xlsx`;
-
+  // 🔹 Simpan file
+  const fileName = `Ritasi_Fuel_${label}_${month + 1}-${year}.xlsx`;
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName);
 };
 
+
+  /** 🟢 Tombol Export Mingguan Cluster */
+  const handleExportW1 = () => handleReportToExcel(1, 7, "W1");
+  const handleExportW2 = () => handleReportToExcel(8, 14, "W2");
+  const handleExportW3 = () => handleReportToExcel(15, 21, "W3");
+  const handleExportW4 = () => handleReportToExcel(22, daysInMonth, "W4");
+  const handleExportAll = () => handleReportToExcel(1, daysInMonth, "ALL");
 
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
@@ -258,8 +264,8 @@ const sortedRecords = [...records].sort((a, b) => {
           Fuel Partner Dashboard
         </h2>
 
-        {/* Year and Month Selector */}
-        <div className="flex space-x-4 mb-4">
+        {/* Year, Month, and Export Cluster */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <select
             className="border rounded px-2 py-1"
             value={year}
@@ -284,12 +290,45 @@ const sortedRecords = [...records].sort((a, b) => {
             ))}
           </select>
 
-          <button
-            onClick={handleReportToExcelMonthly}
-            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-          >
-            Export to Excel
-          </button>
+          {/* ✅ Cluster Tombol Export dengan Label */}
+<div className="flex flex-col sm:flex-row sm:items-center gap-2 border rounded px-3 py-2 bg-green-50">
+  <span className="font-semibold text-green-700 text-sm sm:text-base">
+    Export Range:
+  </span>
+  <div className="flex flex-wrap gap-1">
+    <button
+      onClick={handleExportW1}
+      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+    >
+      W1
+    </button>
+    <button
+      onClick={handleExportW2}
+      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+    >
+      W2
+    </button>
+    <button
+      onClick={handleExportW3}
+      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+    >
+      W3
+    </button>
+    <button
+      onClick={handleExportW4}
+      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+    >
+      W4
+    </button>
+    <button
+      onClick={handleExportAll}
+      className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
+    >
+      All
+    </button>
+  </div>
+</div>
+
         </div>
 
         {/* Grid tanggal */}
@@ -319,7 +358,6 @@ const sortedRecords = [...records].sort((a, b) => {
           })}
         </div>
 
-        {/* Detail Table */}
         {selectedDate && <DetailTableRitasi records={selectedRecords} tanggal={selectedDate} />}
       </div>
     </div>
