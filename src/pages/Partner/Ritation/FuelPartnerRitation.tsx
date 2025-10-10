@@ -1019,8 +1019,7 @@ const FuelPartnerRitation: React.FC = () => {
             const record = records.find(
               (r) =>
                 r.queue_num === num &&
-                r.ritation_date === selectedDate &&
-                String(r.shift) === shift
+                r.ritation_date === selectedDate 
             );
 
             const isUsed = !!record;
@@ -1046,8 +1045,7 @@ const FuelPartnerRitation: React.FC = () => {
                 const index = records.findIndex(
                   (r) =>
                     r.queue_num === num &&
-                    r.ritation_date === selectedDate &&
-                    String(r.shift) === shift
+                    r.ritation_date === selectedDate 
                 );
 
                 if (index !== -1) {
