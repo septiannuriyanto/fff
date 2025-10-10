@@ -1099,8 +1099,8 @@ const FuelPartnerRitation: React.FC = () => {
               isActive
                 ? isShift1
                   ? 'bg-amber-100 border-amber-400 text-amber-800 font-semibold shadow-sm'
-                  : 'bg-slate-200 border-slate-400 text-gray-800 font-semibold shadow-sm'
-                : 'bg-slate-50 border-gray-300 text-slate-700 hover:bg-slate-100'
+                  : 'bg-slate-400 border-slate-400 text-slate-800 font-semibold shadow-sm'
+                : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
             }`}
                 >
                   {item.label}
