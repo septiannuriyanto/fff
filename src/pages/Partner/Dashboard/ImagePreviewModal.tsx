@@ -5,10 +5,18 @@ import {
   Clipboard,
   ChevronLeft,
   ChevronRight,
+  Trash2,
+  Cross,
+  CrossIcon,
+  X,
+  Edit,
+  Undo,
+  Save,
 } from "lucide-react";
 import { supabase } from "../../../db/SupabaseClient";
 import { RitasiFuel } from "../component/ritasiFuel";
 import toast from "react-hot-toast";
+import { TbEdit } from "react-icons/tb";
 
 interface Props {
   records: RitasiFuel[];
@@ -18,6 +26,7 @@ interface Props {
   onUpdate?: (newRotation: number) => void;
   onValidationChange?: (validated: boolean) => void;
   onUpdateRecord?: (index: number, newRecord: RitasiFuel) => void;
+  onDeleteRecord?: (index: number) => void;
 }
 
 const ImagePreviewModal: React.FC<Props> = ({
@@ -28,6 +37,7 @@ const ImagePreviewModal: React.FC<Props> = ({
   onUpdate,
   onValidationChange,
   onUpdateRecord,
+  onDeleteRecord,
 }) => {
   const [localRecords, setLocalRecords] = useState<RitasiFuel[]>(records);
   const [localIndex, setLocalIndex] = useState(currentIndex);
@@ -45,6 +55,7 @@ const ImagePreviewModal: React.FC<Props> = ({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [editValues, setEditValues] = useState<Partial<RitasiFuel>>({});
+   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -111,9 +122,35 @@ const ImagePreviewModal: React.FC<Props> = ({
     }
   };
 
+    const handleDelete = async () => {
+    if (!selectedRecord) return;
+    try {
+      const { error } = await supabase
+        .from("ritasi_fuel")
+        .delete()
+        .eq("id", selectedRecord.id);
+      if (error) throw error;
+
+      toast.success("Record deleted successfully");
+      onDeleteRecord?.(localIndex);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete record");
+    } finally {
+      setIsDeleteConfirmOpen(false);
+    }
+  };
+
+
   const handleEditChange = (key: string, value: any) => {
     setEditValues((prev) => ({ ...prev, [key]: value }));
   };
+
+  const handleToggleValidate = () => {
+  handleValidationToggle(!isValidated);
+};
+
 
   const handleSaveEdit = () => {
     if (
@@ -326,25 +363,33 @@ if (key === "qty_sj") {
             Detail Ritasi ({localIndex + 1}/{localRecords.length})
           </h3>
           <div className="flex gap-2">
+             {!isEditMode && (
+              <button
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                className="px-3 py-1 rounded bg-red-500 hover:bg-red-600 text-white flex items-center gap-1"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button
               onClick={() => setIsEditMode((p) => !p)}
               className="px-3 py-1 rounded bg-yellow-400 hover:bg-yellow-500 text-black"
             >
-              {isEditMode ? "Cancel Edit" : "Edit"}
+              {isEditMode ? <Undo size={16} /> : <Edit size={16} />}
             </button>
             {isEditMode && (
               <button
                 onClick={handleSaveEdit}
                 className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
-                Save Changes
+                <Save size={16} />
               </button>
             )}
             <button
               onClick={onClose}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+              className="px-3 py-1  text-red-500 rounded hover:bg-red-600 hover:text-white"
             >
-              Close
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -357,6 +402,7 @@ if (key === "qty_sj") {
               <img
                 src={selectedRecord?.photo_url ?? ""}
                 alt="preview"
+                onDoubleClick={() => setIsZoomed((prev) => !prev)} 
                 className={`transition-transform duration-300 rounded shadow ${
                   isZoomed
                     ? "w-full h-auto object-contain"
@@ -416,6 +462,16 @@ if (key === "qty_sj") {
               >
                 {isSaving ? "Saving..." : "Save Rotation"}
               </button>
+               <button
+    className={`px-3 py-1 rounded text-white ${
+      isValidated
+        ? "bg-red-600 hover:bg-red-700"
+        : "bg-green-600 hover:bg-green-700"
+    }`}
+    onClick={handleToggleValidate}
+  >
+    {isValidated ? "Invalidate" : "Validate"}
+  </button>
             </div>
           </div>
 
@@ -474,6 +530,40 @@ if (key === "qty_sj") {
             </div>
           </div>
         )}
+        {/* Delete Confirmation Modal */}
+         {isDeleteConfirmOpen && (
+          <div
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-[100]"
+            onClick={() => setIsDeleteConfirmOpen(false)}
+          >
+            <div
+              className="bg-white rounded-lg shadow-lg p-6 w-96"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-3 text-red-600">
+                Confirm Delete
+              </h3>
+              <p className="mb-5 text-gray-700">
+                Apakah Anda yakin ingin menghapus record ini?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
+                  onClick={() => setIsDeleteConfirmOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                  onClick={handleDelete}
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
       </div>
     </div>
   );

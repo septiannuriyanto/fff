@@ -9,6 +9,7 @@ import * as QRCode from 'qrcode';
 import { ADMIN } from '../../../store/roles';
 import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
 import ImagePreviewModal from './ImagePreviewModal';
+import toast from 'react-hot-toast';
 
 interface Props {
   records: RitasiFuel[];
@@ -244,6 +245,33 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
     window.open(url, '_blank');
   };
 
+
+  const onDeleteRecord = async (recordId: string) => {
+  if (!recordId) return;
+
+  const confirmDelete = window.confirm("Yakin ingin menghapus record ini?");
+  if (!confirmDelete) return;
+
+  try {
+    const { error } = await supabase
+      .from("ritasi_fuel")
+      .delete()
+      .eq("id", recordId);
+
+    if (error) throw error;
+
+    setRecords((prev) => prev.filter((r) => String(r.id) !== recordId));
+    setSelectedRecord(null);
+    setCurrentIndex(null);
+
+    toast.success("Record berhasil dihapus");
+  } catch (err) {
+    console.error(err);
+    toast.error("Gagal menghapus record");
+  }
+};
+
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm border border-slate-200">
@@ -372,6 +400,7 @@ const DetailTableRitasi: React.FC<Props> = ({ records, tanggal }) => {
               prev.map((r, i) => (i === index ? updatedRecord : r)),
             );
           }}
+          onDeleteRecord={(recordId) => onDeleteRecord(recordId.toString())}
         />
       )}
 
