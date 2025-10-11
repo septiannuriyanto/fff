@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   DndContext,
@@ -9,7 +9,8 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
-  TouchSensor,
+  TouchSensor, // Wajib untuk mobile
+  Active,
 } from '@dnd-kit/core';
 import { supabase } from '../../../../db/SupabaseClient';
 
@@ -48,26 +49,27 @@ interface ConsumerUnit {
   id: string;
   unit_id: string | null;
   description: string | null;
-  grease_cluster_id: string | null; // Kolom dari DB (Cluster Parent)
-  
+  grease_cluster_id: string | null;
   current_grease_type: 'ALBIDA' | 'ALVANIA' | 'EMPTY';
   current_tank_id: string | null;
   current_tank_qty: number;
 }
 
-// Cluster yang diperkaya dengan data Consumer
 interface ClusterWithConsumers extends GreaseCluster {
     associatedConsumers: ConsumerUnit[];
 }
 
 
 // --- DRAGGABLE COMPONENT (Tank) ---
-const DraggableTank: React.FC<{ tank: TankWithLocation; fromClusterId: string }> = ({ 
+const DraggableTank: React.FC<{ tank: TankWithLocation; fromClusterId: string }> = React.memo(({ 
     tank, 
     fromClusterId 
   }) => {
+    // ID unik untuk drag
+    const draggableId = `${tank.id}-${fromClusterId}`; 
+
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-      id: tank.id,
+      id: draggableId,
       data: { tank, fromClusterId },
     });
   
@@ -78,6 +80,8 @@ const DraggableTank: React.FC<{ tank: TankWithLocation; fromClusterId: string }>
         ref={setNodeRef}
         {...listeners}
         {...attributes}
+        // SOLUSI MOBILE: Mencegah default action browser saat disentuh
+        style={{ touchAction: 'none' }} 
         className={`cursor-move text-center w-16 ${isDragging ? 'opacity-30' : ''}`}
       >
         <img
@@ -102,11 +106,12 @@ const DraggableTank: React.FC<{ tank: TankWithLocation; fromClusterId: string }>
         )}
       </div>
     );
-};
+});
+DraggableTank.displayName = 'DraggableTank';
 
 
 // --- DROPPABLE CONSUMER UNIT ---
-const DroppableConsumer: React.FC<{ consumer: ConsumerUnit; parentClusterId: string }> = ({ consumer, parentClusterId }) => {
+const DroppableConsumer: React.FC<{ consumer: ConsumerUnit; parentClusterId: string }> = React.memo(({ consumer, parentClusterId }) => {
     const { isOver, setNodeRef } = useDroppable({
         id: consumer.id, // ID Droppable adalah UUID Consumer
         data: { isConsumerUnit: true, parentClusterId: parentClusterId } 
@@ -141,15 +146,17 @@ const DroppableConsumer: React.FC<{ consumer: ConsumerUnit; parentClusterId: str
             </div>
         </div>
     );
-}
+});
+DroppableConsumer.displayName = 'DroppableConsumer';
 
 
 // --- DROPPABLE CLUSTER (TANK + CONSUMER) ---
 const DroppableCluster: React.FC<{
   cluster: ClusterWithConsumers;
   tanks: TankWithLocation[];
-}> = ({ cluster, tanks }) => {
-  const { isOver, setNodeRef } = useDroppable({ id: cluster.id });
+}> = React.memo(({ cluster, tanks }) => {
+  // Hanya Cluster ID yang berfungsi sebagai droppable target, BUKAN consumer ID
+  const { isOver, setNodeRef } = useDroppable({ id: cluster.id }); 
   const isRegister = cluster.name.toLowerCase() === 'register';
   const consumers = cluster.associatedConsumers || [];
   const isConsumerDroppoint = consumers.length > 0;
@@ -221,15 +228,15 @@ const DroppableCluster: React.FC<{
       )}
     </div>
   );
-};
+});
+DroppableCluster.displayName = 'DroppableCluster';
 
 
 // --- MAIN COMPONENT ---
 
 const GreaseClusterMonitoring: React.FC = () => {
-  // FIX: Menggunakan ClusterWithConsumers[]
   const [clusterGroups, setClusterGroups] = useState<ClusterWithConsumers[]>([]);
-  const [consumers, setConsumers] = useState<ConsumerUnit[]>([]); // Untuk referensi Modal
+  const [consumers, setConsumers] = useState<ConsumerUnit[]>([]); 
   const [tanks, setTanks] = useState<TankWithLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTank, setActiveTank] = useState<TankWithLocation | null>(null);
@@ -238,23 +245,25 @@ const GreaseClusterMonitoring: React.FC = () => {
   const [pendingMovement, setPendingMovement] = useState<{
     tank: TankWithLocation;
     fromClusterId: string;
-    toId: string; // Cluster ID, Consumer Unit ID, atau '' (untuk manual selection)
+    toId: string; // Consumer Unit ID, atau '' (untuk manual selection)
     isToConsumer: boolean;
     isDroppedOnUnit: boolean; 
     fromCluster: GreaseCluster | undefined;
     toCluster: GreaseCluster;
   } | null>(null);
 
+  // SOLUSI MOBILE: Konfigurasi Sensors yang lebih baik
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+    // TouchSensor: Mengaktifkan drag setelah pergerakan 5px (lebih baik dari delay)
+    useSensor(TouchSensor, { activationConstraint: { distance: 5 } }) 
   );
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
 
     // 1. Fetch Clusters
@@ -266,11 +275,19 @@ const GreaseClusterMonitoring: React.FC = () => {
     if (clustersError) console.error('Error fetching clusters:', clustersError);
 
     // 2. Fetch Tanks & Movements
+    // FIX: Ambil movement terakhir
     const { data: tanksData, error: tanksError } = await supabase
-      .from('grease_tanks')
-      .select('*, grease_tank_movements(to_grease_cluster_id, to_consumer_id, movement_date)')
-      .order('tipe')
-      .order('movement_date', { foreignTable: 'grease_tank_movements', ascending: false });
+        .from('grease_tanks')
+        .select(`
+            *, 
+            grease_tank_movements(
+                to_grease_cluster_id, 
+                to_consumer_id, 
+                movement_date
+            )
+        `)
+        .order('tipe')
+        .order('movement_date', { foreignTable: 'grease_tank_movements', ascending: false});
 
     if (tanksError) {
       console.error('Error fetching tanks:', tanksError);
@@ -282,7 +299,8 @@ const GreaseClusterMonitoring: React.FC = () => {
     const tanksInConsumers: Record<string, { tank_id: string, grease_type: 'ALBIDA' | 'ALVANIA' | null, qty: number }> = {};
     
     (tanksData || []).forEach((tank: any) => {
-        const latestMovement = tank.grease_tank_movements[0];
+        // FIX: Hanya ambil movement pertama (terakhir) dari array
+        const latestMovement = tank.grease_tank_movements?.[0]; 
         
         let current_cluster_id = latestMovement?.to_grease_cluster_id || null;
         const current_consumer_id = latestMovement?.to_consumer_id || null;
@@ -293,7 +311,7 @@ const GreaseClusterMonitoring: React.FC = () => {
                 grease_type: tank.tipe,
                 qty: tank.qty,
             };
-            current_cluster_id = null; // Tank is at a consumer, not a cluster
+            current_cluster_id = null; // Tank ada di Consumer, bukan di Cluster (parent cluster hanya referensi)
         }
 
         tanksWithLocation.push({
@@ -305,7 +323,6 @@ const GreaseClusterMonitoring: React.FC = () => {
     setTanks(tanksWithLocation);
 
     // 3. Fetch Consumers
-    // FIX: Mengambil kolom grease_cluster_id
     const { data: consumersData, error: consumersError } = await supabase
         .from('grease_consumers')
         .select('id, unit_id, description, grease_cluster_id') 
@@ -329,35 +346,41 @@ const GreaseClusterMonitoring: React.FC = () => {
 
     // 4. Process Clusters to include associated consumers
     const clusteredConsumers = consumersWithStatus.filter(c => c.grease_cluster_id);
-    const consumersUnassigned = consumersWithStatus.filter(c => !c.grease_cluster_id);
     
     const tempClusterGroups: ClusterWithConsumers[] = (clustersData || []).map(cluster => ({
         ...cluster,
+        // FIX: Hanya asosiasikan consumer yang parent cluster ID nya match
         associatedConsumers: clusteredConsumers.filter(c => c.grease_cluster_id === cluster.id)
     }));
 
-    // Tangani Register Cluster
-    const registerCluster = tempClusterGroups.find(c => c.name.toLowerCase() === 'register');
-    if (registerCluster) {
-        registerCluster.associatedConsumers.push(...consumersUnassigned);
+    // Tank yang current_cluster_id nya NULL dianggap ada di 'Register' Cluster
+    // Jika 'Register' Cluster tidak ada, buat dummy
+    let registerCluster = tempClusterGroups.find(c => c.name.toLowerCase() === 'register');
+    if (!registerCluster && clustersData?.length) {
+        // Asumsi cluster pertama sebagai fallback jika tidak ada 'Register'
+        registerCluster = tempClusterGroups[0]; 
     }
     
+    // Consumers yang grease_cluster_id nya NULL/Unassigned: tidak dimasukkan ke Cluster manapun
+    // Karena mereka tidak bisa menjadi droppoint.
+
     setClusterGroups(tempClusterGroups);
     setConsumers(consumersWithStatus); 
     setLoading(false);
-  };
-  
-  const getTanksInCluster = (clusterId: string, clusterName: string): TankWithLocation[] => {
+  }, []); // Tambahkan dependensi jika diperlukan
+
+  const getTanksInCluster = useCallback((clusterId: string, clusterName: string): TankWithLocation[] => {
+    // Tank yang current_cluster_id nya NULL diasosiasikan dengan 'Register'
     if (clusterName.toLowerCase() === 'register') {
       return tanks.filter((tank) => tank.current_cluster_id === null);
     }
     return tanks.filter((tank) => tank.current_cluster_id === clusterId);
-  };
+  }, [tanks]);
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: { active: Active }) => {
     const dragData = event.active.data.current;
-    if (dragData?.tank) {
-      setActiveTank(dragData.tank);
+    if (dragData && 'tank' in dragData) {
+      setActiveTank(dragData.tank as TankWithLocation);
     }
   };
 
@@ -370,22 +393,19 @@ const GreaseClusterMonitoring: React.FC = () => {
     const dragData = active.data.current as { tank: TankWithLocation; fromClusterId: string };
     const tank = dragData?.tank;
     const fromClusterId = dragData?.fromClusterId;
-    const destinationId = over.id as string;
     
-    if (!tank || fromClusterId === destinationId) return;
+    if (!tank || fromClusterId === (over.id as string)) return;
 
-    // FIX: Menggunakan 'clusterGroups'
     const fromCluster = clusterGroups.find((c) => c.id === fromClusterId);
-    
     const overData = over.data.current as { isConsumerUnit?: boolean, parentClusterId?: string };
 
     let toCluster: GreaseCluster | undefined = undefined;
     let isToConsumer = overData?.isConsumerUnit || false;
     let isDroppedOnUnit = overData?.isConsumerUnit || false;
-    let toId = destinationId;
+    let toId = over.id as string;
     
     if (isToConsumer) {
-        const consumerTargetId = destinationId;
+        const consumerTargetId = over.id as string;
         const targetConsumer = consumers.find(c => c.id === consumerTargetId);
 
         if (!targetConsumer) return;
@@ -396,27 +416,27 @@ const GreaseClusterMonitoring: React.FC = () => {
             return;
         }
         
-        // Target Cluster adalah Cluster Parent dari Unit Consumer (grease_cluster_id)
-        // FIX: Menggunakan 'clusterGroups'
+        // Target Cluster adalah Cluster Parent dari Unit Consumer
         const parentCluster = clusterGroups.find(c => c.id === targetConsumer.grease_cluster_id);
-        if (!parentCluster) return; 
+        if (!parentCluster) {
+            toast.error(`Consumer ${targetConsumer.unit_id} has no assigned parent cluster.`);
+            return;
+        }
         
         toCluster = parentCluster;
         toId = consumerTargetId; // Destination ID adalah Consumer UUID
         
     } else {
         // Dropping on a Cluster ID
-        // FIX: Menggunakan 'clusterGroups'
-        toCluster = clusterGroups.find((c) => c.id === destinationId);
+        toCluster = clusterGroups.find((c) => c.id === (over.id as string));
 
         if (!toCluster) return;
 
-        // FIX: Menggunakan 'clusterGroups'
-        const clusterDestination = clusterGroups.find(c => c.id === destinationId);
+        const clusterDestination = clusterGroups.find(c => c.id === (over.id as string));
         const hasConsumers = clusterDestination?.associatedConsumers.length;
         
-        // Jika cluster memiliki Consumer, anggap ini adalah "Manual Droppoint" ke Consumer
         if (hasConsumers) {
+            // Jika cluster memiliki Consumer, anggap ini adalah "Manual Droppoint" ke Consumer
             isToConsumer = true;
             isDroppedOnUnit = false;
             toId = ''; // Kosongkan ID, paksa pilih manual di Modal
@@ -455,24 +475,22 @@ const GreaseClusterMonitoring: React.FC = () => {
   }) => {
     if (!pendingMovement) return;
 
-    const { tank, fromClusterId, toId, fromCluster, isToConsumer } = pendingMovement;
-
-    // ... (Logika fetch current tank data dan penentuan toStatus - UNCHANGED) ...
+    const { tank, fromClusterId, fromCluster, isToConsumer } = pendingMovement;
+    
     const { data: currentTankData } = await supabase.from('grease_tanks').select('qty, status').eq('id', tank.id).single();
     const currentQty = currentTankData?.qty || tank.qty;
     const currentStatus = currentTankData?.status || tank.status;
 
     let toStatus = currentStatus;
+    // Status berubah menjadi DC jika keluar dari Issuing Cluster, atau jika bergerak ke Consumer Unit
     if (fromCluster?.is_issuing || isToConsumer) {
       toStatus = 'DC'; 
     }
     
-    // Penentuan Destination IDs dan Quantity
     const to_consumer_id = isToConsumer ? formData.consumer_id : null;
-    
-    // final_to_cluster_id adalah ID cluster destinasi (baik itu cluster murni atau parent cluster consumer)
     const final_to_cluster_id = pendingMovement.toCluster.id; 
 
+    // Quantity menjadi 0 jika pindah ke Consumer, atau gunakan input jika ke Receiving Cluster
     const final_to_qty = isToConsumer ? 0 : (formData.to_qty ?? currentQty);
 
     // Insert movement record
@@ -502,14 +520,19 @@ const GreaseClusterMonitoring: React.FC = () => {
     }
 
     // Update tank qty and status in grease_tanks table
+    // Catatan: Jika update ini gagal, fetchData() akan memperbaiki state
     await supabase
         .from('grease_tanks')
         .update({ qty: final_to_qty, status: toStatus })
         .eq('id', tank.id);
     
+    // Refresh data untuk update tampilan
     fetchData();
 
-    const destinationName = to_consumer_id ? `Consumer ID ${to_consumer_id}` : pendingMovement.toCluster.name;
+    const destinationName = to_consumer_id 
+        ? `Unit: ${consumers.find(c => c.id === to_consumer_id)?.unit_id || to_consumer_id}` 
+        : pendingMovement.toCluster.name;
+        
     toast.success(`Tank ${tank.nomor_gt} moved to ${destinationName}`);
     setShowMovementModal(false);
     setPendingMovement(null);
@@ -578,7 +601,11 @@ const GreaseClusterMonitoring: React.FC = () => {
       {/* Drag Overlay */}
       <DragOverlay>
         {activeTank ? (
-          <div className="cursor-grabbing text-center w-16 opacity-80">
+          <div 
+            className="cursor-grabbing text-center w-16 opacity-80"
+            // SOLUSI MOBILE: Wajib untuk overlay
+            style={{ touchAction: 'none' }} 
+          >
             <img
               src={activeTank.tipe === 'ALVANIA' ? GreaseTankIconYellow : GreaseTankIcon}
               className={`h-10 mx-auto ${
@@ -596,7 +623,7 @@ const GreaseClusterMonitoring: React.FC = () => {
   );
 };
 
-// --- MOVEMENT MODAL COMPONENT ---
+// --- MOVEMENT MODAL COMPONENT (Revisi Minor) ---
 
 const MovementModal: React.FC<{
     tank: TankWithLocation;
@@ -618,42 +645,50 @@ const MovementModal: React.FC<{
     const [picMovement, setPicMovement] = useState('');
     
     const [toQty, setToQty] = useState<number | null>(null); 
-    const [showQtyInput, setShowQtyInput] = useState(false);
     
-    const initialConsumerId = (isToConsumer && isDroppedOnUnit) ? consumerTargetId : null; 
+    // Inisiasi selectedConsumerId dari drop point atau null
+    const initialConsumerId = useMemo(() => {
+      // Jika di-drop langsung ke unit, gunakan ID unit tsb
+      if (isToConsumer && isDroppedOnUnit) {
+        return consumerTargetId;
+      } 
+      // Jika di-drop di cluster yang punya consumer (manual select), atau bukan consumer, null
+      return null;
+    }, [isToConsumer, isDroppedOnUnit, consumerTargetId]);
+    
     const [selectedConsumerId, setSelectedConsumerId] = useState<string | null>(initialConsumerId);
-    const [showConsumerInput, setShowConsumerInput] = useState(false);
   
     const isIssuingFrom = fromCluster?.is_issuing || false; 
     const isToReceivingCluster = !isToConsumer && (toCluster?.is_receiving || false); 
   
-    const isReferenceNoMandatory = !isToConsumer; 
+    // Reference No wajib untuk Cluster-to-Cluster, tidak wajib saat mengisi Unit Consumer (karena tank DC)
+    const isReferenceNoMandatory = isToReceivingCluster || (toCluster.name.toLowerCase() === 'register'); 
   
     React.useEffect(() => {
+      // Set default value atau required state berdasarkan tujuan
       if (isToReceivingCluster) {
-        setShowQtyInput(true);
+        // Jika ke Receiving Cluster, input QTY diperlukan
+        setToQty(tank.qty); // Set default ke Qty saat ini
+      } else if (isToConsumer) {
+        // Jika ke Consumer, QTY harus 0 (DC), tidak perlu input
+        setToQty(0);
       } else {
-        setShowQtyInput(false);
-        setToQty(null);
+        // Cluster lain, QTY tetap (tidak perlu input)
+        setToQty(tank.qty);
       }
       
-      if (isToConsumer || isIssuingFrom) {
-        setShowConsumerInput(true);
-        
-        if (isToConsumer && !isDroppedOnUnit) {
-          setSelectedConsumerId(null);
-        }
-      } else {
-        setShowConsumerInput(false);
-        setSelectedConsumerId(null);
+      // Update selectedConsumerId jika ada perubahan pada consumerTargetId (walaupun seharusnya tidak)
+      if (isToConsumer && isDroppedOnUnit && consumerTargetId !== selectedConsumerId) {
+          setSelectedConsumerId(consumerTargetId);
       }
-    }, [isToReceivingCluster, isToConsumer, isIssuingFrom, isDroppedOnUnit]);
+      
+    }, [isToReceivingCluster, isToConsumer, isDroppedOnUnit, tank.qty, consumerTargetId, selectedConsumerId]);
   
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       
       if (isReferenceNoMandatory && !referenceNo.trim()) {
-        toast.error('Reference number is required for this destination.');
+        toast.error('Reference number is required for this destination (Receiving/Register).');
         return;
       }
       
@@ -662,30 +697,38 @@ const MovementModal: React.FC<{
         return;
       }
   
-      if (showQtyInput && (toQty === null || toQty < 0)) {
+      if (isToReceivingCluster && (toQty === null || toQty < 0)) {
         toast.error('Please enter a valid quantity');
         return;
       }
       
-      if (showConsumerInput && !selectedConsumerId) {
+      if (isToConsumer && !selectedConsumerId) {
         toast.error('Unit Destination/Consumer selection is required.');
         return;
+      }
+
+      // Validasi tambahan: Tidak boleh memilih consumer yang sudah berisi
+      const targetConsumer = consumersList.find(c => c.id === selectedConsumerId);
+      if (targetConsumer && targetConsumer.current_grease_type !== 'EMPTY' && targetConsumer.id !== tank.id) {
+          toast.error(`Cannot fill ${targetConsumer.unit_id}. It already contains ${targetConsumer.current_grease_type}.`);
+          return;
       }
   
       onConfirm({
         reference_no: referenceNo,
         pic_movement: picMovement,
-        to_qty: toQty,
+        // Kirim toQty hanya jika ke receiving cluster. Jika ke consumer, kirim 0.
+        to_qty: isToConsumer ? 0 : toQty, 
         consumer_id: selectedConsumerId, 
       });
     };
   
     const getConsumerLabel = (consumer: ConsumerUnit) => {
       const desc = consumer.description ? ` (${consumer.description})` : '';
-      return `${consumer.unit_id || consumer.id}${desc}`;
+      const type = consumer.current_grease_type === 'EMPTY' ? '' : ` [${consumer.current_grease_type}]`;
+      return `${consumer.unit_id || consumer.id}${desc}${type}`;
     }
     
-    const destinationName = toCluster.name;
     const consumerDetail = consumersList.find(c => c.id === consumerTargetId)?.unit_id || 'N/A';
     
     const destinationDetail = isToConsumer
@@ -700,7 +743,7 @@ const MovementModal: React.FC<{
           <p className="text-sm text-gray-600 mt-1">
             Moving <span className="font-semibold">{tank.nomor_gt}</span> from{' '}
             <span className="font-semibold">{fromCluster?.name || 'Register'}</span> to{' '}
-            <span className="font-semibold">{destinationName}</span>
+            <span className="font-semibold">{toCluster.name}</span>
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
             Destinasi: {destinationDetail}
@@ -708,7 +751,7 @@ const MovementModal: React.FC<{
           {(isIssuingFrom || isToConsumer) && (
             <div className="mt-2 bg-orange-50 border border-orange-200 rounded px-3 py-2">
               <p className="text-xs text-orange-800">
-                ⚠️ **Tank status will change to DC** (Discarded/Consumed) after this movement.
+                ⚠️ **Tank status will change to DC** (Discarded/Consumed) and **QTY will be set to 0** after filling a unit.
               </p>
             </div>
           )}
@@ -727,10 +770,8 @@ const MovementModal: React.FC<{
               onChange={(e) => setReferenceNo(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder={isReferenceNoMandatory ? 'e.g., DOC-2024-001' : 'Optional reference number'}
+              required={isReferenceNoMandatory}
             />
-             {!isReferenceNoMandatory && (
-                <p className="text-xs text-gray-500 mt-1">Reference number is optional for this destination.</p>
-             )}
           </div>
 
           {/* PIC Movement (unchanged) */}
@@ -748,8 +789,8 @@ const MovementModal: React.FC<{
             />
           </div>
           
-          {/* Consumer Selection */}
-          {showConsumerInput && (
+          {/* Consumer Selection (Hanya tampil jika ke Consumer) */}
+          {isToConsumer && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Unit Destination/Consumer <span className="text-red-500">*</span>
@@ -772,14 +813,14 @@ const MovementModal: React.FC<{
                 ))}
               </select>
               {isDroppedOnUnit && (
-                <p className="text-xs text-gray-500 mt-1">Destination pre-selected dari droppoint.</p>
+                <p className="text-xs text-gray-500 mt-1">Destinasi telah dipilih sebelumnya. Ubah jika salah.</p>
              )}
             </div>
           )}
 
 
-          {/* Quantity (conditional) */}
-          {showQtyInput && (
+          {/* Quantity (Hanya tampil jika ke Receiving Cluster) */}
+          {isToReceivingCluster && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quantity After Movement <span className="text-red-500">*</span>
@@ -789,21 +830,10 @@ const MovementModal: React.FC<{
                 value={toQty ?? ''}
                 onChange={(e) => setToQty(e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter quantity"
+                placeholder={`Current: ${tank.qty}`}
                 min="0"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Current quantity: {tank.qty}
-              </p>
-            </div>
-          )}
-
-          {!isToConsumer && toCluster.is_receiving && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <p className="text-sm text-blue-800">
-                ℹ️ This is a **receiving cluster** - please update the quantity
-              </p>
             </div>
           )}
 
