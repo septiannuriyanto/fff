@@ -6,8 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Cross,
-  CrossIcon,
   X,
   Edit,
   Undo,
@@ -16,7 +14,6 @@ import {
 import { supabase } from '../../../db/SupabaseClient';
 import { RitasiFuel } from '../component/ritasiFuel';
 import toast from 'react-hot-toast';
-import { TbEdit } from 'react-icons/tb';
 import ExclusiveWidget from '../../../common/TrialWrapper/ExclusiveWidget';
 import { ADMIN } from '../../../store/roles';
 

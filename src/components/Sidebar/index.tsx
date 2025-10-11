@@ -276,7 +276,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/master/addmaterial" label="Add Material" />
                 <SidebarLink to="/master/manpower" label="Manpower" />
                 <SidebarLink to="/master/equipment" label="Equipment" />
-                <SidebarLink to="/master/fueltruck" label="Fuel Truck" />
+                <SidebarLink to="/master/storage/fuel" label="Storage Fuel" />
                 <SidebarLink to="/master/library" label="Component Library" />
                 <SidebarLink to="/master/schedule/refueling" label="Refueling Schedule" />
                 <SidebarLink to="/master/mrp" label="MRP Database" />

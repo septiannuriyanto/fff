@@ -51,6 +51,7 @@ import { RefuelingSchedule } from './pages/MasterData/MasterSchedule/RefuelingSc
 import ComponentLibrary from './pages/MasterData/ComponentLibrary/ComponentLibrary';
 import MaterialRequirementPlanning from './pages/MasterData/MaterialRequirementPlanning.tsx/MaterialRequirementPlanning';
 import GreaseMonitoring from './pages/Dashboard/Infrastructure/Grease/GreaseMonitoring';
+import MasterStorageFuel from './pages/MasterData/Storage/Fuel/MasterStorageFuel';
 
 
 const routes = [
@@ -316,6 +317,12 @@ const routes = [
     path: '/master/manpower',
     component: <MasterManpower />,
     title: 'FFF | Master Manpower',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/master/storage/fuel',
+    component: <MasterStorageFuel />,
+    title: 'FFF | Master Storage Fuel',
     allowedRoles: SUPERVISOR
   },
   {
