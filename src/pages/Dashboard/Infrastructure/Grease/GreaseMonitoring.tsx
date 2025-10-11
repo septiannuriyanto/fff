@@ -133,7 +133,7 @@ const DroppableConsumer: React.FC<{ consumer: ConsumerUnit; parentClusterId: str
             <img 
                 src={iconSrc} 
                 alt={`${consumer.unit_id} status`} 
-                className="h-12 w-12 mx-auto"
+                className="h-12 w-12 mx-auto object-contain"
             />
             <div className="text-xs font-semibold mt-1 truncate w-full">
                 {consumer.unit_id || 'N/A'}
