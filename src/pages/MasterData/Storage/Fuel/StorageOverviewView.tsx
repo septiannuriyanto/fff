@@ -196,7 +196,7 @@ const OverviewCard: React.FC<{
                           const skoExpired = license.expired_date ? new Date(license.expired_date) < new Date() : false;
                           
                           // Deteksi apakah URL dokumen adalah gambar
-                          const isImageUrl = license.document_url && (license.document_url.endsWith('.png') || license.document_url.endsWith('.jpg') || license.document_url.endsWith('.jpeg'));
+                          const isImageUrl = license.sticker_url && (license.sticker_url.endsWith('.png') || license.sticker_url.endsWith('.jpg') || license.sticker_url.endsWith('.jpeg'));
 
                           return (
                             // GRID 2 KOLOM UNTUK SETIAP DETAIL LISENSI
@@ -208,10 +208,10 @@ const OverviewCard: React.FC<{
                                 {/* KOLOM KIRI: Tautan Dokumen/Gambar (Potret) */}
                                 <div className="h-full flex flex-col items-center">
                                     
-                                    {license.document_url ? (
+                                    {license.sticker_url ? (
                                         // Wrapper tautan untuk dokumen/gambar
                                         <a 
-                                            href={license.document_url} 
+                                            href={license.sticker_url} 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
                                             // REVISI: Kelas CSS untuk Potret (seperti ID Card)
@@ -221,12 +221,12 @@ const OverviewCard: React.FC<{
                                                 // Jika gambar, cegah default dan tampilkan modal zoom
                                                 if (isImageUrl) {
                                                     e.preventDefault();
-                                                    setZoomUrl(license.document_url);
+                                                    setZoomUrl(license.sticker_url);
                                                 }
                                             }}
                                         >
                                             <img 
-                                                src={isImageUrl ? license.document_url : DOC_PLACEHOLDER} 
+                                                src={isImageUrl ? license.sticker_url : DOC_PLACEHOLDER} 
                                                 alt="SKO Document" 
                                                 className={`w-full h-full ${isImageUrl ? 'object-cover' : 'object-contain'}`}
                                             />
@@ -399,7 +399,7 @@ const OverviewCard: React.FC<{
           />
         )}
         
-        {/* Zoom Modal untuk document_url yang berupa Gambar */}
+        {/* Zoom Modal untuk sticker_url yang berupa Gambar */}
         {zoomUrl && (
           <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4" onClick={() => setZoomUrl(null)}>
             <button 

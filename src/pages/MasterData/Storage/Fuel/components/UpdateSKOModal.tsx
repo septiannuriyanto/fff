@@ -67,7 +67,7 @@ const UpdateSKOModal: React.FC<UpdateSKOModalProps> = ({
       const timestamp = Date.now();
       const extension = file.type.includes('pdf') ? 'pdf' : 'jpg';
       const fileName = `${formData.sko_code}_${timestamp}.${extension}`;
-      const filePath = `documents/sko/${unitId}/${fileName}`;
+      const filePath = `sko/${unitId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -108,7 +108,7 @@ const UpdateSKOModal: React.FC<UpdateSKOModalProps> = ({
       setIsUploading(true);
 
       // Upload document to Supabase
-      const documentUrl = await uploadDocumentToSupabase(documentFile);
+      const stickerUrl = await uploadDocumentToSupabase(documentFile);
 
       // Insert SKO record to database
       const { error: insertError } = await supabase
@@ -118,7 +118,7 @@ const UpdateSKOModal: React.FC<UpdateSKOModalProps> = ({
           sko_code: formData.sko_code,
           issued_date: formData.issued_date,
           expired_date: formData.expired_date,
-          document_url: documentUrl,
+          sticker_url: stickerUrl,
           status: formData.status,
           notes: formData.notes,
         });

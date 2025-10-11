@@ -28,6 +28,7 @@ export interface UnitLicense {
   issued_date: string | null;
   expired_date: string | null;
   document_url: string | null;
+  sticker_url: string | null;
   status: string | null;
   notes: string | null;
 }
