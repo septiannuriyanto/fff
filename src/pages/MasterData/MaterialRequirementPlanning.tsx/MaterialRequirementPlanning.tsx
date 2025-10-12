@@ -64,8 +64,12 @@ const MaterialRequirementPlanning: React.FC = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+    <>
+      <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
+        <div className="flex flex-wrap items-center">
+          <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
+            <div className="w-full p-4 sm:p-12.5 xl:p-5">
+                 <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Pengajuan MRP</h2>
         <button
           onClick={() => openModal()}
@@ -74,6 +78,10 @@ const MaterialRequirementPlanning: React.FC = () => {
           <Plus size={18} /> Tambah Record
         </button>
       </div>
+  
+              <div className="main-content  w-full">
+                <div className="p-4">
+
 
       {loading ? (
         <p>Loading...</p>
@@ -257,7 +265,14 @@ const MaterialRequirementPlanning: React.FC = () => {
         </div>
       )}
     </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
+
 };
 
 export default MaterialRequirementPlanning;
