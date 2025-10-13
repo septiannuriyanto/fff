@@ -25,6 +25,7 @@ export interface MovementModalProps {
     consumer_id: string | null;
   }) => void;
   onCancel: () => void;
+  onBack?: () => void; // ✅ NEW: Optional back handler
 }
 
 export interface FlowDetectionResult {
@@ -68,6 +69,7 @@ export interface ModalHeaderProps {
   fromCluster: GreaseCluster | undefined;
   toCluster: GreaseCluster;
   onClose: () => void;
+  onBack?: () => void; // ✅ NEW: Optional back handler
 }
 
 export interface SummarySectionProps {

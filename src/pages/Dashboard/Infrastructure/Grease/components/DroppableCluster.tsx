@@ -10,7 +10,8 @@ export const DroppableCluster: React.FC<{
   tanks: TankWithLocation[];
   clusterGroups: ClusterWithConsumers[];
   consumers: ConsumerUnit[];
-}> = React.memo(({ cluster, tanks, clusterGroups, consumers }) => {
+  onConsumerTap?: (consumer: ConsumerUnit) => void; // ✅ NEW
+}> = React.memo(({ cluster, tanks, clusterGroups, consumers, onConsumerTap }) => {
   const { isOver, setNodeRef } = useDroppable({ id: cluster.id });
   const isRegister = cluster.name.toLowerCase() === 'register';
   const clusterConsumers = cluster.associatedConsumers || [];
@@ -52,51 +53,58 @@ export const DroppableCluster: React.FC<{
       </div>
 
       {/* Tanks Display */}
-      <div className="border-t border-gray-200 pt-3">
-        <div className="flex gap-3 flex-wrap min-h-[80px] bg-gray-50 rounded-lg p-3">
-          {tanks.length === 0 ? (
-            <div className="w-full text-center text-gray-400 text-sm py-4">
-              {isOver ? 'Drop tank here' : 'No tanks in this cluster'}
-            </div>
-          ) : (
-            tanks
-              .sort((a, b) => (b.tipe ?? '').localeCompare(a.tipe ?? ''))
-              .sort((a, b) => (b.status ?? '').localeCompare(a.status ?? ''))
-              .map((tank) => (
-                <DraggableTank
-                  key={tank.id}
-                  tank={tank}
-                  fromClusterId={cluster.id}
-                  clusterGroups={clusterGroups}
-                  consumers={consumers}
-                />
-              ))
-          )}
-        </div>
-      </div>
-
-      {/* Consumer Units Section */}
-      {isConsumerDroppoint && (
-        <div className="border-t border-gray-200 pt-3 mt-3">
-          <h5 className="font-semibold text-sm text-gray-700 mb-2">
-            Unit Konsumen (Droppoint)
-          </h5>
-          <div className="flex flex-wrap gap-3 p-2 bg-gray-50 rounded-lg min-h-[100px]">
-            {clusterConsumers.map((consumer) => (
-              <DroppableConsumer
-                key={consumer.id}
-                consumer={consumer}
-                parentClusterId={cluster.id}
-              />
-            ))}
+      {/* ✅ UPDATED: Only show section if tanks exist OR currently dropping */}
+      {(tanks.length > 0 || isOver) && (
+        <div className="border-t border-gray-200 pt-3">
+          <div className="flex gap-3 flex-wrap min-h-[80px] bg-gray-50 rounded-lg p-3">
+            {tanks.length === 0 ? (
+              <div className="w-full text-center text-gray-400 text-sm py-4">
+                Drop tank here
+              </div>
+            ) : (
+              tanks
+                .sort((a, b) => (b.tipe ?? '').localeCompare(a.tipe ?? ''))
+                .sort((a, b) => (b.status ?? '').localeCompare(a.status ?? ''))
+                .map((tank) => (
+                  <DraggableTank
+                    key={tank.id}
+                    tank={tank}
+                    fromClusterId={cluster.id}
+                    clusterGroups={clusterGroups}
+                    consumers={consumers}
+                  />
+                ))
+            )}
           </div>
-          {isOver && (
-            <div className="text-center text-xs text-indigo-700 mt-2">
-              Drop di area Cluster ini untuk memilih Unit Destinasi secara Manual.
-            </div>
-          )}
         </div>
       )}
+
+      {/* Consumer Units Section */}
+      
+
+{/* Consumer Units Section */}
+{isConsumerDroppoint && (
+  <div className="border-t border-gray-200 pt-3 mt-3">
+    <h5 className="font-semibold text-sm text-gray-700 mb-2">
+      Unit Konsumen (Droppoint)
+    </h5>
+    <div className="flex flex-wrap gap-3 p-2 bg-gray-50 rounded-lg min-h-[100px]">
+      {clusterConsumers.map((consumer) => (
+        <DroppableConsumer
+          key={consumer.id}
+          consumer={consumer}
+          parentClusterId={cluster.id}
+          onTap={onConsumerTap} // ✅ NEW: Pass tap handler dari parent
+        />
+      ))}
+    </div>
+    {isOver && (
+      <div className="text-center text-xs text-indigo-700 mt-2">
+        Drop di area Cluster ini untuk memilih Unit Destinasi secara Manual.
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
 });

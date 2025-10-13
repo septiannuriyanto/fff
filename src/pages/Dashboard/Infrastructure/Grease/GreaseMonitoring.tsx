@@ -15,10 +15,8 @@ import {
   Active,
 } from '@dnd-kit/core';
 
-// ✅ UPDATED: Import SUPPLIER_NAME
 import { MAIN_WAREHOUSE_STORAGE_CLUSTER, SUPPLIER_NAME } from './types/grease.constants';
 
-// Import images
 import GreaseTankIcon from '../../../../images/icon/grease-tank.png';
 import GreaseTankIconYellow from '../../../../images/icon/grease-tank-alt.png';
 import { useGreaseData } from './hooks/useGreaseData';
@@ -26,17 +24,27 @@ import { useTankMovement } from './hooks/useTankMovement';
 import { ConsumerUnit, GreaseCluster, PendingMovement, TankWithLocation } from './types/grease.types';
 import { DroppableCluster } from './components/DroppableCluster';
 import { MovementModal } from './components/MovementModal/MovementModal';
+import { ConsumerConfirmationModal } from './components/modals/ConsumerConfirmationModal';
+import { TankSelectionModal } from './components/modals/TankSelectionModal';
 
 const GreaseClusterMonitoring: React.FC = () => {
   // ========== DATA HOOKS ==========
   const { clusterGroups, consumers, tanks, loading, fetchData } = useGreaseData();
   const { handleConfirmMovement } = useTankMovement(fetchData);
 
-  // ========== LOCAL STATE ==========
+  // ========== ALL STATE DECLARATIONS (GROUPED) ==========
   const [activeTank, setActiveTank] = useState<TankWithLocation | null>(null);
   const [activeLubcar, setActiveLubcar] = useState<ConsumerUnit | null>(null);
   const [showMovementModal, setShowMovementModal] = useState(false);
   const [pendingMovement, setPendingMovement] = useState<PendingMovement | null>(null);
+  
+  // ✅ Modal states
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showTankSelectionModal, setShowTankSelectionModal] = useState(false);
+  const [selectedConsumerForTap, setSelectedConsumerForTap] = useState<ConsumerUnit | null>(null);
+
+  // ✅ NEW: Track if movement came from tap selection
+  const [isFromTapSelection, setIsFromTapSelection] = useState(false);
 
   // ========== DRAG & DROP SENSORS ==========
   const sensors = useSensors(
@@ -92,7 +100,7 @@ const GreaseClusterMonitoring: React.FC = () => {
 
     const dragData = active.data.current as any;
 
-    // ========== HANDLE LUBCAR RELEASE (Return tank to Main Warehouse) ==========
+    // ========== HANDLE LUBCAR RELEASE ==========
     if (dragData?.isLubcarRelease) {
       const consumer = dragData.consumer as ConsumerUnit;
 
@@ -101,12 +109,10 @@ const GreaseClusterMonitoring: React.FC = () => {
         return;
       }
 
-      // Find main warehouse cluster
       const mainWarehouseCluster = clusterGroups.find(
         (c) => c.id === (over.id as string)
       );
 
-      // Verify it's actually the main warehouse
       if (
         !mainWarehouseCluster ||
         mainWarehouseCluster.name.toUpperCase() !== MAIN_WAREHOUSE_STORAGE_CLUSTER
@@ -158,14 +164,12 @@ const GreaseClusterMonitoring: React.FC = () => {
     let isDroppedOnUnit = overData?.isConsumerUnit || false;
     let toId = over.id as string;
 
-    // ========== PROCESS DROP TARGET ==========
     if (isToConsumer) {
       const consumerTargetId = over.id as string;
       const targetConsumer = consumers.find((c) => c.id === consumerTargetId);
 
       if (!targetConsumer) return;
 
-      // Validate: DC tanks cannot go to consumer
       if (tank.status === 'DC') {
         toast.error(
           `Tank ${tank.nomor_gt} is DC (Discarded). Consumer cluster can only receive NEW tanks.`
@@ -173,7 +177,6 @@ const GreaseClusterMonitoring: React.FC = () => {
         return;
       }
 
-      // Info if will replace
       if (
         targetConsumer.current_grease_type !== 'EMPTY' &&
         targetConsumer.current_tank_id
@@ -206,13 +209,11 @@ const GreaseClusterMonitoring: React.FC = () => {
       );
       const hasConsumers = clusterDestination?.associatedConsumers.length;
 
-      // If cluster has consumers, treat as consumer destination
       if (hasConsumers) {
         isToConsumer = true;
         isDroppedOnUnit = false;
         toId = '';
       } else {
-        // Cluster-to-cluster transfer
         const canReceive = toCluster.receives || [];
         const isRegister = toCluster.name.toLowerCase() === 'register';
 
@@ -231,7 +232,6 @@ const GreaseClusterMonitoring: React.FC = () => {
 
     if (!toCluster) return;
 
-    // ✅ UPDATED: Use SUPPLIER_NAME constant
     const isFromRegister = !fromCluster || fromCluster.name.toLowerCase() === 'register';
     const isToSupplier = toCluster.name.toUpperCase() === SUPPLIER_NAME;
 
@@ -246,7 +246,6 @@ const GreaseClusterMonitoring: React.FC = () => {
       return;
     }
 
-    // ========== SET PENDING MOVEMENT & SHOW MODAL ==========
     setPendingMovement({
       tank,
       fromClusterId,
@@ -258,6 +257,81 @@ const GreaseClusterMonitoring: React.FC = () => {
     });
     setShowMovementModal(true);
   };
+
+  // ========== CONSUMER & TANK SELECTION HANDLERS ==========
+
+  const handleConsumerTap = useCallback((consumer: ConsumerUnit) => {
+    console.log('🔵 Consumer tapped:', consumer.unit_id);
+    setSelectedConsumerForTap(consumer);
+    setShowConfirmModal(true);
+  }, []);
+
+  const handleConfirmInstallation = useCallback(() => {
+    console.log('✅ Confirmed installation');
+    setShowConfirmModal(false);
+    setShowTankSelectionModal(true);
+  }, []);
+
+  // ✅ UPDATE: handleTankSelected - mark as from tap
+  const handleTankSelected = useCallback((tank: TankWithLocation) => {
+    console.log('🎯 Tank selected:', tank.nomor_gt);
+    
+    if (!selectedConsumerForTap) return;
+
+    const mainWarehouse = clusterGroups.find(
+      (c) => c.name.trim().toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER.trim().toUpperCase()
+    );
+    
+    const consumerCluster = clusterGroups.find(
+      (c) => c.id === selectedConsumerForTap.grease_cluster_id
+    );
+
+    if (!mainWarehouse || !consumerCluster) {
+      toast.error('Cluster not found');
+      return;
+    }
+
+    setPendingMovement({
+      tank: tank,
+      fromClusterId: mainWarehouse.id,
+      toId: selectedConsumerForTap.id,
+      isToConsumer: true,
+      isDroppedOnUnit: true,
+      fromCluster: mainWarehouse,
+      toCluster: consumerCluster,
+    });
+
+    setIsFromTapSelection(true); // ✅ NEW: Mark as from tap
+    setShowTankSelectionModal(false);
+    setShowMovementModal(true);
+  }, [selectedConsumerForTap, clusterGroups]);
+
+  // ✅ NEW: Handle back from movement modal to tank selection
+  const handleBackFromMovement = useCallback(() => {
+    console.log('⬅️ Back from movement to tank selection');
+    setShowMovementModal(false);
+    setPendingMovement(null);
+    setShowTankSelectionModal(true);
+    // Keep selectedConsumerForTap intact
+  }, []);
+
+  // ✅ NEW: Handle back from tank selection to confirmation
+  const handleBackToConfirmation = useCallback(() => {
+    console.log('⬅️ Back from tank selection to confirmation');
+    setShowTankSelectionModal(false);
+    setShowConfirmModal(true);
+  }, []);
+
+  // ✅ UPDATE: handleCancelSelection - reset tap flag
+  const handleCancelSelection = useCallback(() => {
+    console.log('❌ Cancelled selection');
+    setShowConfirmModal(false);
+    setShowTankSelectionModal(false);
+    setShowMovementModal(false); // ✅ Also close movement modal
+    setSelectedConsumerForTap(null);
+    setPendingMovement(null);
+    setIsFromTapSelection(false); // ✅ Reset flag
+  }, []);
 
   // ========== RENDER ==========
 
@@ -273,7 +347,7 @@ const GreaseClusterMonitoring: React.FC = () => {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Toaster position="top-center" />
 
-      {/* Movement Modal */}
+      {/* ✅ UPDATED: Movement Modal with conditional onBack */}
       {showMovementModal && pendingMovement && (
         <MovementModal
           tank={pendingMovement.tank}
@@ -293,11 +367,34 @@ const GreaseClusterMonitoring: React.FC = () => {
             );
             setShowMovementModal(false);
             setPendingMovement(null);
+            setIsFromTapSelection(false); // ✅ Reset flag
           }}
           onCancel={() => {
             setShowMovementModal(false);
             setPendingMovement(null);
+            setIsFromTapSelection(false); // ✅ Reset flag
           }}
+          onBack={isFromTapSelection ? handleBackFromMovement : undefined} // ✅ Conditional back
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && selectedConsumerForTap && (
+        <ConsumerConfirmationModal
+          consumer={selectedConsumerForTap}
+          onConfirm={handleConfirmInstallation}
+          onCancel={handleCancelSelection}
+        />
+      )}
+
+      {/* Tank Selection Modal */}
+      {showTankSelectionModal && selectedConsumerForTap && (
+        <TankSelectionModal
+          tanks={tanks}
+          consumer={selectedConsumerForTap}
+          clusterGroups={clusterGroups}
+          onSelectTank={handleTankSelected}
+          onCancel={handleCancelSelection}
         />
       )}
 
@@ -324,6 +421,7 @@ const GreaseClusterMonitoring: React.FC = () => {
                   tanks={clusterTanks}
                   clusterGroups={clusterGroups}
                   consumers={consumers}
+                  onConsumerTap={handleConsumerTap}
                 />
               );
             })
@@ -331,10 +429,9 @@ const GreaseClusterMonitoring: React.FC = () => {
         </div>
       </div>
 
-      {/* Drag Overlay - Visual feedback during drag */}
+      {/* Drag Overlay */}
       <DragOverlay>
         {activeTank ? (
-          // Regular tank drag
           <div
             className="cursor-grabbing text-center w-16 opacity-80"
             style={{ touchAction: 'none' }}
@@ -355,29 +452,25 @@ const GreaseClusterMonitoring: React.FC = () => {
             </div>
           </div>
         ) : activeLubcar ? (
-          // ✅ FIXED: Consumer release - Show TANK being returned, not consumer icon
           <div
             className="cursor-grabbing text-center w-20 opacity-80"
             style={{ touchAction: 'none' }}
           >
-            {/* Show GREASE TANK DC icon */}
             <img
               src={
                 activeLubcar.current_grease_type === 'ALVANIA'
                   ? GreaseTankIconYellow
                   : GreaseTankIcon
               }
-              className="h-12 mx-auto object-contain opacity-60 hue-rotate-180" // DC style
+              className="h-12 mx-auto object-contain opacity-60 hue-rotate-180"
               alt={`Returning tank ${activeLubcar.current_tank_nomor_gt}`}
             />
-            {/* Show TANK number, not unit ID */}
             <div className="text-xs bg-red-100 border border-red-300 text-red-700 rounded-full px-2 py-0.5 mt-1 font-semibold">
               {activeLubcar.current_tank_nomor_gt || 'N/A'}
             </div>
             <div className="text-[9px] text-red-600 font-bold mt-0.5">
               DC - Returning
             </div>
-            {/* Optional: Show from which unit */}
             <div className="text-[8px] text-gray-500 mt-0.5">
               from {activeLubcar.unit_id}
             </div>

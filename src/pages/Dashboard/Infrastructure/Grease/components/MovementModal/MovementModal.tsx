@@ -37,6 +37,7 @@ export const MovementModal: React.FC<MovementModalProps> = ({
   clusterGroups,
   onConfirm,
   onCancel,
+  onBack, // ✅ NEW: Destructure onBack
 }) => {
   const [referenceNo, setReferenceNo] = useState('');
   const [picMovement, setPicMovement] = useState('');
@@ -235,7 +236,7 @@ export const MovementModal: React.FC<MovementModalProps> = ({
         ref={contentRef}
         className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <ModalHeader tank={tank} fromCluster={fromCluster} toCluster={toCluster} onClose={onCancel} />
+        <ModalHeader tank={tank} fromCluster={fromCluster} toCluster={toCluster} onClose={onCancel}  onBack={onBack}  />
 
         {renderHeroSection()}
 
