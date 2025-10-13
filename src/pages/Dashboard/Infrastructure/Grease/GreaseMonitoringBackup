@@ -1,401 +1,1382 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import GreaseTankIcon from '../../../../images/icon/grease-tank.png';
-import LubecarIcon from '../../../../images/icon/lubcar.png';
-import LubcarMountedIcon from '../../../../images/icon/lubcar-mounted.png';
-import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
-import { SUPERVISOR } from '../../../../store/roles';
-import ControlButtons from './components/ControlButtons';
-import { AddTankModal } from './components/AddTankModal';
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  DragEndEvent,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+  Active,
+} from '@dnd-kit/core';
 import { supabase } from '../../../../db/SupabaseClient';
-import { GreaseTankDB, GreaseTankUI } from './types/greaseTank';
-import { AddClusterModal } from './components/AddClusterModal';
-import { AddConsumerModal } from './components/AddConsumerModal';
-import { GreaseCluster } from './types/greaseCluster';
-import { StorageUnit } from './types/storageUnit';
+
+// --- ICON IMPORTS ---
+import GreaseTankIcon from '../../../../images/icon/grease-tank.png';
+import GreaseTankIconYellow from '../../../../images/icon/grease-tank-alt.png';
+import LubcarEmpty from '../../../../images/icon/lubcar.png';
+import LubcarAlbida from '../../../../images/icon/lubcar-mounted.png';
+import LubcarAlvania from '../../../../images/icon/lubcar-mounted-alt.png';
+
+// --- CONSTANTS ---
+const MAIN_WAREHOUSE_STORAGE_CLUSTER = 'OM1';
+interface GreaseCluster {
+  id: string;
+  name: string;
+  description: string | null;
+  sends: string[] | null;
+  receives: string[] | null;
+  view_queue: number | null;
+  is_issuing: boolean | null;
+  is_receiving: boolean | null;
+}
 
 interface GreaseTank {
   id: string;
-  type: 'ALBIDA' | 'ALVANIA';
-  status: 'NEW' | 'DC';
-  number: string;
+  nomor_gt: string;
+  tipe: 'ALBIDA' | 'ALVANIA' | null;
+  status: 'NEW' | 'DC' | null;
+  qty: number;
 }
 
-const initialTanks: GreaseTank[] = [
-];
+interface TankWithLocation extends GreaseTank {
+  current_cluster_id: string | null;
+  current_consumer_id: string | null;
+}
 
-const lubcars = [
-  { id: 'LT01', name: 'LO148' },
-  { id: 'LT02', name: 'LO158' },
-  { id: 'LT03', name: 'LO160' },
-  { id: 'LT04', name: 'LO185' },
-  { id: 'LT05', name: 'LO206' },
-  { id: 'LT06', name: 'LO211' },
-  { id: 'LT07', name: 'LO218' },
-];
+interface ConsumerUnit {
+  id: string;
+  unit_id: string | null;
+  description: string | null;
+  grease_cluster_id: string | null;
+  current_grease_type: 'ALBIDA' | 'ALVANIA' | 'EMPTY';
+  current_tank_id: string | null;
+  current_tank_qty: number;
+  current_tank_nomor_gt: string | null;
+}
 
-const GreaseMonitoring: React.FC = () => {
-  const [om1Tanks, setOm1Tanks] = useState<GreaseTank[]>(initialTanks);
-  const [supplierTanks, setSupplierTanks] = useState<GreaseTank[]>([]);
-  const [lubcarTanks, setLubcarTanks] = useState<
-    Record<string, GreaseTank | null>
-  >(() =>
-    lubcars.reduce(
-      (acc, l) => {
-        acc[l.id] = null;
-        return acc;
-      },
-      {} as Record<string, GreaseTank | null>,
-    ),
-  );
+interface ClusterWithConsumers extends GreaseCluster {
+  associatedConsumers: ConsumerUnit[];
+}
 
-  const [hoverTarget, setHoverTarget] = useState<string | null>(null);
+interface TankMovement {
+  id: string;
+  reference_no: string | null;
+  from_qty: number;
+  to_qty: number | null;
+  from_status: string | null;
+  to_status: string | null;
+  movement_date: string;
+}
 
-  //Buttons Action
-  const [showAddTankModal, setShowAddTankModal] = useState(false);
-  const [showAddClusterModal, setShowAddClusterModal] = useState(false);
-  const [showAddConsumerModal, setShowAddConsumerModal] = useState(false);
+// --- HELPER: Get current location name ---
+const getCurrentLocationName = (
+  tank: TankWithLocation,
+  clusterGroups: ClusterWithConsumers[],
+  consumers: ConsumerUnit[]
+): string => {
+  if (tank.current_consumer_id) {
+    const consumer = consumers.find((c) => c.id === tank.current_consumer_id);
+    if (consumer) return consumer.unit_id || 'N/A';
+  }
 
-  const handleDrop = (
-    target: string,
-    tank: GreaseTank | null,
-    fromLubcar?: string,
-  ) => {
-    if (!tank) return;
+  if (tank.current_cluster_id) {
+    const cluster = clusterGroups.find((c) => c.id === tank.current_cluster_id);
+    if (cluster) return cluster.name.toUpperCase();
+  }
 
-    // hapus dari semua cluster
-    setOm1Tanks((prev) => prev.filter((t) => t.id !== tank.id));
-    setSupplierTanks((prev) => prev.filter((t) => t.id !== tank.id));
-    if (fromLubcar) {
-      setLubcarTanks((prev) => ({ ...prev, [fromLubcar]: null }));
-    }
+  return 'REGISTER';
+};
 
-    if (target === 'OM01') {
-      // kalau dari lubcar → DC, kalau dari supplier → NEW
-      let newStatus = tank.status;
-      if (fromLubcar) {
-        newStatus = 'DC';
-      } else if (
-        supplierTanks.find((t) => t.id === tank.id) ||
-        tank.status === 'DC'
-      ) {
-        // asal supplier otomatis NEW
-        newStatus = 'NEW';
-      }
-      setOm1Tanks((prev) => [...prev, { ...tank, status: newStatus }]);
-      toast.success(
-        `GreaseTank ${tank.number} diterima di OM01 (status ${newStatus})`,
-      );
-    } else if (target === 'SUPPLIER') {
-      // lubcar tidak boleh langsung ke supplier
-      if (fromLubcar) {
-        toast.error('Tidak boleh langsung dari Lubcar ke Supplier');
-        setLubcarTanks((prev) => ({ ...prev, [fromLubcar]: tank }));
-      } else if (tank.status !== 'DC') {
-        toast.error('Supplier hanya menerima DC');
-        setOm1Tanks((prev) => [...prev, tank]);
-      } else {
-        setSupplierTanks((prev) => [...prev, tank]);
-        toast.success(`GreaseTank ${tank.number} dikirim ke Supplier`);
-      }
-    } else if (target.startsWith('LT')) {
-      // dilarang Supplier langsung ke Lubcar
-      if (supplierTanks.find((t) => t.id === tank.id)) {
-        toast.error('Tidak boleh langsung dari Supplier ke Lubcar');
-        setSupplierTanks((prev) => [...prev, tank]);
-      } else {
-        // hanya boleh NEW
-        if (tank.status !== 'NEW') {
-          toast.error('OM01 hanya boleh menyuplai NEW ke Lubcar');
-          setOm1Tanks((prev) => [...prev, tank]);
-        } else {
-          setLubcarTanks((prev) => ({ ...prev, [target]: tank }));
-          toast.success(`GreaseTank ${tank.number} dipasang ke ${target}`);
-        }
-      }
-    }
-  };
+// --- DRAGGABLE COMPONENT (Tank) ---
+const DraggableTank: React.FC<{
+  tank: TankWithLocation;
+  fromClusterId: string;
+  clusterGroups: ClusterWithConsumers[];
+  consumers: ConsumerUnit[];
+}> = React.memo(({ tank, fromClusterId, clusterGroups, consumers }) => {
+  const draggableId = `${tank.id}-${fromClusterId}`;
 
-  const renderTank = (tank: GreaseTank) => (
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: draggableId,
+    data: { tank, fromClusterId },
+  });
+
+  const tankIcon =
+    tank.tipe === 'ALVANIA' ? GreaseTankIconYellow : GreaseTankIcon;
+  const locationName = getCurrentLocationName(tank, clusterGroups, consumers);
+
+  return (
     <div
-      key={tank.id}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('tank', JSON.stringify(tank));
-        e.dataTransfer.setData('fromLubcar', '');
-      }}
-      className="cursor-move text-center w-16"
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{ touchAction: 'none' }}
+      className={`cursor-move text-center w-16 ${isDragging ? 'opacity-30' : ''}`}
     >
       <img
-        src={GreaseTankIcon}
+        src={tankIcon}
         className={`h-10 mx-auto ${
           tank.status === 'DC' ? 'opacity-50 hue-rotate-180' : ''
         }`}
+        alt={`Tank ${tank.nomor_gt}`}
       />
       <div className="text-xs bg-gray-200 rounded-full px-1 mt-1">
-        {tank.number}
+        {tank.nomor_gt}
       </div>
+      <div
+        className={`text-[10px] font-semibold mt-0.5 ${
+          tank.status === 'NEW' ? 'text-green-600' : 'text-orange-600'
+        }`}
+      >
+        {tank.status}
+      </div>
+      <div className="text-[10px] text-gray-600 mt-0.5">{locationName}</div>
+      {tank.qty > 1 && (
+        <div className="text-[10px] text-gray-500">Qty: {tank.qty}</div>
+      )}
     </div>
   );
+});
+DraggableTank.displayName = 'DraggableTank';
 
-  //Control Buttons Handler
-  const handleAddTank = async (newTankData: {
-    tipe: 'ALBIDA' | 'ALVANIA';
-    nomor_gt: string;
-    qty: number;
-  }) => {
-    const { data, error } = await supabase
+// --- DRAGGABLE LUBCAR (For releasing/returning tank) ---
+const DraggableLubcar: React.FC<{
+  consumer: ConsumerUnit;
+  parentClusterId: string;
+  onDragStart?: () => void;
+}> = React.memo(({ consumer, parentClusterId, onDragStart }) => {
+  const draggableId = `lubcar-${consumer.id}`;
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: draggableId,
+    data: { 
+      isLubcarRelease: true,
+      consumer,
+      parentClusterId,
+    },
+  });
+
+  let iconSrc = LubcarEmpty;
+  if (consumer.current_grease_type === 'ALBIDA') iconSrc = LubcarAlbida;
+  else if (consumer.current_grease_type === 'ALVANIA')
+    iconSrc = LubcarAlvania;
+
+  const hasFilledTank = consumer.current_grease_type !== 'EMPTY';
+
+  if (!hasFilledTank) {
+    return null;
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{ touchAction: 'none' }}
+      className={`cursor-grab active:cursor-grabbing p-2 transition-all w-full h-full flex flex-col items-center justify-center mb-9 ${
+        isDragging ? 'opacity-40' : ''
+      }`}
+    >
+      <img
+        src={iconSrc}
+        alt={`${consumer.unit_id} - Drag to release`}
+        className="h-12 w-12 object-contain hover:opacity-80 transition-opacity"
+        title="Drag to release grease tank"
+      />
+    </div>
+  );
+});
+DraggableLubcar.displayName = 'DraggableLubcar';
+
+// --- DROPPABLE CONSUMER UNIT ---
+const DroppableConsumer: React.FC<{
+  consumer: ConsumerUnit;
+  parentClusterId: string;
+  onLubcarDragStart?: (consumerId: string) => void;
+}> = React.memo(({ consumer, parentClusterId, onLubcarDragStart }) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: consumer.id,
+    data: { isConsumerUnit: true, parentClusterId: parentClusterId },
+  });
+
+  let iconSrc = LubcarEmpty;
+  if (consumer.current_grease_type === 'ALBIDA') iconSrc = LubcarAlbida;
+  else if (consumer.current_grease_type === 'ALVANIA')
+    iconSrc = LubcarAlvania;
+
+  const qtyText =
+    consumer.current_tank_qty > 0 ? `(${consumer.current_tank_qty})` : '';
+  const hasFilledTank = consumer.current_grease_type !== 'EMPTY';
+
+  return (
+      <div
+        ref={setNodeRef}
+        className={`p-2 border rounded-lg text-center cursor-default transition-all duration-200 w-28 h-32 flex flex-col justify-between items-center relative overflow-hidden ${
+          isOver
+            ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500'
+            : 'border-gray-200 bg-white hover:shadow-sm'
+        }`}
+      >
+        {/* Ribbon LO Number - Top Left */}
+        {hasFilledTank && (
+          <div className="absolute -top-0.5 -left-7 transform -rotate-45 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-[10px] font-bold px-7 py-1 shadow-md z-10 pointer-events-none">
+            {consumer.current_tank_nomor_gt || 'N/A'}
+          </div>
+        )}
+
+        {/* Draggable Lubcar Image - Only if filled */}
+        {hasFilledTank ? (
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg z-0">
+            <DraggableLubcar consumer={consumer} parentClusterId={parentClusterId} />
+          </div>
+        ) : null}
+
+        {/* Background info - visible when not dragging filled tank */}
+        <div className={hasFilledTank ? 'opacity-0 pointer-events-none' : ''}>
+          <img
+            src={iconSrc}
+            alt={`${consumer.unit_id} status`}
+            className="h-12 w-12 mx-auto object-contain"
+          />
+        </div>
+        <div className="text-xs font-semibold mt-1 truncate w-full">
+          {consumer.unit_id || 'N/A'}
+        </div>
+        <div
+          className={`text-[10px] ${
+            consumer.current_grease_type === 'ALBIDA'
+              ? 'text-green-600'
+              : consumer.current_grease_type === 'ALVANIA'
+              ? 'text-yellow-600'
+              : 'text-gray-500'
+          }`}
+        >
+          {consumer.current_grease_type} {qtyText}
+        </div>
+      </div>
+  );
+});
+DroppableConsumer.displayName = 'DroppableConsumer';
+
+// --- DROPPABLE CLUSTER (TANK + CONSUMER) ---
+const DroppableCluster: React.FC<{
+  cluster: ClusterWithConsumers;
+  tanks: TankWithLocation[];
+  clusterGroups: ClusterWithConsumers[];
+  consumers: ConsumerUnit[];
+}> = React.memo(({ cluster, tanks, clusterGroups, consumers }) => {
+  const { isOver, setNodeRef } = useDroppable({ id: cluster.id });
+  const isRegister = cluster.name.toLowerCase() === 'register';
+  const clusterConsumers = cluster.associatedConsumers || [];
+  const isConsumerDroppoint = clusterConsumers.length > 0;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`border-2 rounded-lg p-4 transition-all w-full ${
+        isRegister
+          ? 'border-purple-300 bg-purple-50'
+          : isOver && !isConsumerDroppoint
+          ? 'border-green-400 bg-green-50 shadow-lg'
+          : isOver && isConsumerDroppoint
+          ? 'border-indigo-400 bg-indigo-50 shadow-lg'
+          : 'border-gray-200 bg-white hover:shadow-md'
+      }`}
+    >
+      {/* Cluster Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-bold text-lg text-gray-800">
+              {cluster.name}
+            </h4>
+            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded font-semibold">
+              {tanks.length} tanks
+            </span>
+            {isConsumerDroppoint && (
+              <span className="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded font-semibold">
+                {clusterConsumers.length} Consumers
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tanks Display */}
+      <div className="border-t border-gray-200 pt-3">
+        <div className="flex gap-3 flex-wrap min-h-[80px] bg-gray-50 rounded-lg p-3">
+          {tanks.length === 0 ? (
+            <div className="w-full text-center text-gray-400 text-sm py-4">
+              {isOver ? 'Drop tank here' : 'No tanks in this cluster'}
+            </div>
+          ) : (
+            tanks.map((tank) => (
+              <DraggableTank
+                key={tank.id}
+                tank={tank}
+                fromClusterId={cluster.id}
+                clusterGroups={clusterGroups}
+                consumers={consumers}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* TAMPILAN CONSUMER UNITS (JIKA ADA) */}
+      {isConsumerDroppoint && (
+        <div className="border-t border-gray-200 pt-3 mt-3">
+          <h5 className="font-semibold text-sm text-gray-700 mb-2">
+            Unit Konsumen (Droppoint)
+          </h5>
+          <div className="flex flex-wrap gap-3 p-2 bg-gray-50 rounded-lg min-h-[100px]">
+            {clusterConsumers.map((consumer) => (
+              <DroppableConsumer
+                key={consumer.id}
+                consumer={consumer}
+                parentClusterId={cluster.id}
+              />
+            ))}
+          </div>
+          {isOver && (
+            <div className="text-center text-xs text-indigo-700 mt-2">
+              Drop di area Cluster ini untuk memilih Unit Destinasi secara
+              Manual.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+DroppableCluster.displayName = 'DroppableCluster';
+
+// --- MAIN COMPONENT ---
+const GreaseClusterMonitoring: React.FC = () => {
+  const [clusterGroups, setClusterGroups] = useState<ClusterWithConsumers[]>(
+    []
+  );
+  const [consumers, setConsumers] = useState<ConsumerUnit[]>([]);
+  const [tanks, setTanks] = useState<TankWithLocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTank, setActiveTank] = useState<TankWithLocation | null>(null);
+  const [activeLubcar, setActiveLubcar] = useState<ConsumerUnit | null>(null);
+
+  const [showMovementModal, setShowMovementModal] = useState(false);
+  const [pendingMovement, setPendingMovement] = useState<{
+    tank: TankWithLocation;
+    fromClusterId: string;
+    toId: string;
+    isToConsumer: boolean;
+    isDroppedOnUnit: boolean;
+    fromCluster: GreaseCluster | undefined;
+    toCluster: GreaseCluster;
+  } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 5, delay: 100, tolerance: 5 } })
+  );
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+
+    // 1. Fetch Clusters
+    const { data: clustersData, error: clustersError } = await supabase
+      .from('grease_clusters')
+      .select('*')
+      .order('view_queue', { ascending: true, nullsFirst: false });
+
+    if (clustersError) console.error('Error fetching clusters:', clustersError);
+
+    // 2. Fetch Tanks & Movements
+    const { data: tanksData, error: tanksError } = await supabase
       .from('grease_tanks')
-      .insert([
-        {
-          tipe: newTankData.tipe,
-          nomor_gt: newTankData.nomor_gt,
-          qty: newTankData.qty,
-          status: 'NEW',
-        },
-      ])
-      .select();
+      .select(
+        `
+            *, 
+            grease_tank_movements(
+                to_grease_cluster_id, 
+                to_consumer_id, 
+                movement_date
+            )
+        `
+      )
+      .order('tipe')
+      .order('movement_date', {
+        foreignTable: 'grease_tank_movements',
+        ascending: false,
+      });
 
-    if (error) {
-      toast.error('Gagal tambah tank');
+    if (tanksError) {
+      console.error('Error fetching tanks:', tanksError);
+      setLoading(false);
       return;
     }
 
-    const inserted = data[0];
+    const tanksWithLocation: TankWithLocation[] = [];
+    const tanksInConsumers: Record<
+      string,
+      { 
+        tank_id: string; 
+        tank_nomor_gt: string;
+        grease_type: 'ALBIDA' | 'ALVANIA' | null; 
+        qty: number 
+      }
+    > = {};
 
-    // mapping ke bentuk UI
-    const uiTank: GreaseTankUI = {
-      id: inserted.id,
-      type: inserted.tipe,
-      number: inserted.nomor_gt,
-      status: inserted.status,
-    };
+    (tanksData || []).forEach((tank: any) => {
+      const latestMovement = tank.grease_tank_movements?.[0];
+      const hasAnyMovement = (tank.grease_tank_movements?.length || 0) > 0;
 
-    setOm1Tanks((prev) => [...prev, uiTank]);
-    toast.success('Tank berhasil ditambahkan');
-    setShowAddTankModal(false);
-  };
+      let current_cluster_id = latestMovement?.to_grease_cluster_id || null;
+      const current_consumer_id = latestMovement?.to_consumer_id || null;
 
-  const handleAddCluster = async (clusterData: {
-    name: string;
-    description: string;
-    sends: string[];
-    receives: string[];
-  }) => {
-    const { data, error } = await supabase
-      .from('grease_clusters')
-      .insert([
-        {
-          name: clusterData.name,
-          description: clusterData.description || null,
-          sends: clusterData.sends,
-          receives: clusterData.receives,
-        },
-      ])
-      .select();
+      // Register hanya tampil untuk tank baru (tanpa movement record sama sekali)
+      if (!hasAnyMovement) {
+        current_cluster_id = null; // Tampil di Register
+      }
 
-    if (error) {
-      console.error(error);
-      alert('Gagal menambahkan cluster');
-    } else {
-      alert('Cluster berhasil ditambahkan');
-      // refresh list or close modal
-      setShowAddClusterModal(false);
-    }
-  };
+      if (current_consumer_id) {
+        tanksInConsumers[current_consumer_id] = {
+          tank_id: tank.id,
+          tank_nomor_gt: tank.nomor_gt,
+          grease_type: tank.tipe,
+          qty: tank.qty,
+        };
+        current_cluster_id = null; // Jangan tampil di cluster jika ada di consumer
+      }
 
-  const handleAddConsumer = async (consumerData: {
-    grease_cluster_id: string | null;
-    description: string;
-    unit_id: string | null;
-  }) => {
-    const { error } = await supabase.from('grease_consumers').insert([
-      {
-        grease_cluster_id: consumerData.grease_cluster_id,
-        description: consumerData.description || null,
-        unit_id: consumerData.unit_id,
-      },
-    ]);
-
-    if (error) {
-      toast.error('Gagal menambahkan consumer');
-      console.error(error);
-    } else {
-      toast.success('Consumer berhasil ditambahkan');
-      setShowAddConsumerModal(false);
-    }
-  };
-
-  //===============================DATA RELATED AND API CALLS=================================
-  const [clusters, setClusters] = useState<GreaseCluster[]>([]);
-  const [units, setUnits] = useState<StorageUnit[]>([]);
-
-  useEffect(() => {
-    supabase
-      .from('grease_clusters')
-      .select('id,name, sends, receives')
-      .then(({ data }) => {
-        if (data) setClusters(data);
+      tanksWithLocation.push({
+        ...tank,
+        current_cluster_id: current_cluster_id,
+        current_consumer_id: current_consumer_id,
       });
+    });
 
-    supabase
-      .from('storage_oil')
-      .select('unit_id, type')
-      .then(({ data }) => {
-        if (data) setUnits(data);
-      });
+    setTanks(tanksWithLocation);
+
+    // 3. Fetch Consumers
+    const { data: consumersData, error: consumersError } = await supabase
+      .from('grease_consumers')
+      .select('id, unit_id, description, grease_cluster_id')
+      .order('unit_id');
+
+    if (consumersError)
+      console.error('Error fetching consumers:', consumersError);
+
+    const consumersWithStatus: ConsumerUnit[] = (consumersData || []).map(
+      (consumer: any) => {
+        const tankInfo = tanksInConsumers[consumer.id];
+        let greaseType: 'ALBIDA' | 'ALVANIA' | 'EMPTY' = 'EMPTY';
+        if (tankInfo) greaseType = tankInfo.grease_type || 'EMPTY';
+
+        return {
+          ...consumer,
+          grease_cluster_id: consumer.grease_cluster_id,
+          current_grease_type: greaseType,
+          current_tank_id: tankInfo?.tank_id || null,
+          current_tank_qty: tankInfo?.qty || 0,
+          current_tank_nomor_gt: tankInfo?.tank_nomor_gt || null,
+        };
+      }
+    );
+
+    // 4. Process Clusters
+    const clusteredConsumers = consumersWithStatus.filter(
+      (c) => c.grease_cluster_id
+    );
+
+    const tempClusterGroups: ClusterWithConsumers[] = (clustersData || []).map(
+      (cluster) => ({
+        ...cluster,
+        associatedConsumers: clusteredConsumers.filter(
+          (c) => c.grease_cluster_id === cluster.id
+        ),
+      })
+    );
+
+    setClusterGroups(tempClusterGroups);
+    setConsumers(consumersWithStatus);
+    setLoading(false);
   }, []);
 
-  //=========================================================================================
+  const getTanksInCluster = useCallback(
+    (clusterId: string, clusterName: string): TankWithLocation[] => {
+      if (clusterName.toLowerCase() === 'register') {
+        return tanks.filter(
+          (tank) => 
+            tank.current_cluster_id === null && 
+            !tank.current_consumer_id
+        );
+      }
+      return tanks.filter((tank) => tank.current_cluster_id === clusterId);
+    },
+    [tanks]
+  );
+
+  const handleDragStart = (event: { active: Active }) => {
+    const dragData = event.active.data.current;
+    if (dragData && 'tank' in dragData) {
+      setActiveTank(dragData.tank as TankWithLocation);
+    } else if (dragData && 'isLubcarRelease' in dragData) {
+      setActiveLubcar(dragData.consumer as ConsumerUnit);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTank(null);
+    setActiveLubcar(null);
+
+    if (!over) return;
+
+    const dragData = active.data.current as any;
+
+    // HANDLE LUBCAR RELEASE (Return tank to Main Warehouse)
+    if (dragData?.isLubcarRelease) {
+      const consumer = dragData.consumer as ConsumerUnit;
+      
+      if (!consumer.current_tank_id) {
+        toast.error('No tank to release from this unit');
+        return;
+      }
+
+      // Find the main warehouse cluster by ID (over.id)
+      const mainWarehouseCluster = clusterGroups.find(
+        (c) => c.id === (over.id as string)
+      );
+
+      // Verify it's actually the main warehouse
+      if (!mainWarehouseCluster || mainWarehouseCluster.name.toUpperCase() !== MAIN_WAREHOUSE_STORAGE_CLUSTER) {
+        toast.error(
+          `Tank can only be returned to ${MAIN_WAREHOUSE_STORAGE_CLUSTER}. Please drag lubcar unit to the warehouse cluster.`
+        );
+        return;
+      }
+
+      const consumersCluster = clusterGroups.find(
+        (c) => c.id === consumer.grease_cluster_id
+      );
+
+      const tankToReturn = tanks.find((t) => t.id === consumer.current_tank_id);
+      
+      if (!tankToReturn) {
+        toast.error('Tank not found');
+        return;
+      }
+
+      setPendingMovement({
+        tank: tankToReturn,
+        fromClusterId: consumer.grease_cluster_id || '',
+        toId: '',
+        isToConsumer: false,
+        isDroppedOnUnit: false,
+        fromCluster: consumersCluster,
+        toCluster: mainWarehouseCluster,
+      });
+      setShowMovementModal(true);
+      return;
+    }
+
+    // HANDLE TANK DRAGGING (Existing logic)
+    const tank = dragData?.tank;
+    const fromClusterId = dragData?.fromClusterId;
+
+    if (!tank || fromClusterId === (over.id as string)) return;
+
+    const fromCluster = clusterGroups.find((c) => c.id === fromClusterId);
+    const overData = over.data.current as {
+      isConsumerUnit?: boolean;
+      parentClusterId?: string;
+    };
+
+    let toCluster: GreaseCluster | undefined = undefined;
+    let isToConsumer = overData?.isConsumerUnit || false;
+    let isDroppedOnUnit = overData?.isConsumerUnit || false;
+    let toId = over.id as string;
+
+    if (isToConsumer) {
+      const consumerTargetId = over.id as string;
+      const targetConsumer = consumers.find((c) => c.id === consumerTargetId);
+
+      if (!targetConsumer) return;
+
+      // Validasi: Tank DC tidak bisa ke consumer
+      if (tank.status === 'DC') {
+        toast.error(
+          `Tank ${tank.nomor_gt} is DC (Discarded). Consumer cluster can only receive NEW tanks.`
+        );
+        return;
+      }
+
+      // Info jika akan replace
+      if (
+        targetConsumer.current_grease_type !== 'EMPTY' &&
+        targetConsumer.current_tank_id
+      ) {
+        toast.success(
+          `${targetConsumer.unit_id} already has a tank. It will be replaced and old tank returned to ${MAIN_WAREHOUSE_STORAGE_CLUSTER}.`
+        );
+      }
+
+      const parentCluster = clusterGroups.find(
+        (c) => c.id === targetConsumer.grease_cluster_id
+      );
+      if (!parentCluster) {
+        toast.error(
+          `Consumer ${targetConsumer.unit_id} has no assigned parent cluster.`
+        );
+        return;
+      }
+
+      toCluster = parentCluster;
+      toId = consumerTargetId;
+    } else {
+      toCluster = clusterGroups.find((c) => c.id === (over.id as string));
+
+      if (!toCluster) return;
+
+      const clusterDestination = clusterGroups.find(
+        (c) => c.id === (over.id as string)
+      );
+      const hasConsumers = clusterDestination?.associatedConsumers.length;
+
+      if (hasConsumers) {
+        isToConsumer = true;
+        isDroppedOnUnit = false;
+        toId = '';
+      } else {
+        const canReceive = toCluster.receives || [];
+        const isRegister = toCluster.name.toLowerCase() === 'register';
+
+        if (
+          !isRegister &&
+          canReceive.length > 0 &&
+          !canReceive.includes(tank.status || '')
+        ) {
+          toast.error(
+            `${toCluster.name} can only receive: ${canReceive.join(', ')}`
+          );
+          return;
+        }
+      }
+    }
+
+    if (!toCluster) return;
+
+    setPendingMovement({
+      tank,
+      fromClusterId,
+      toId,
+      isToConsumer,
+      isDroppedOnUnit,
+      fromCluster,
+      toCluster: toCluster as GreaseCluster,
+    });
+    setShowMovementModal(true);
+  };
+
+  const handleConfirmMovement = async (formData: {
+    reference_no: string;
+    pic_movement: string;
+    to_qty: number | null;
+    consumer_id: string | null;
+  }) => {
+    if (!pendingMovement) return;
+
+    const { tank, fromClusterId, fromCluster, toCluster, isToConsumer } =
+      pendingMovement;
+
+    // Fetch current tank data
+    const { data: currentTankData } = await supabase
+      .from('grease_tanks')
+      .select('qty, status')
+      .eq('id', tank.id)
+      .single();
+
+    const currentQty = currentTankData?.qty || tank.qty;
+    const currentStatus = currentTankData?.status || tank.status;
+
+    let toStatus = currentStatus;
+    if (fromCluster?.is_issuing || isToConsumer) {
+      toStatus = 'DC';
+    }
+
+    const to_consumer_id = isToConsumer ? formData.consumer_id : null;
+    const final_to_cluster_id = toCluster.id;
+    const isFromSefas = fromCluster?.name.toUpperCase() === 'SEFAS';
+    const isToSefas = toCluster.name.toUpperCase() === 'SEFAS';
+    const isFromMainWarehouse = fromCluster?.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+    const isToMainWarehouse = toCluster.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+    const isFromRegister = 
+      !fromCluster ||
+      fromCluster.name.toUpperCase() === 'REGISTER' ||
+      fromCluster.name.toLowerCase() === 'register';
+
+    // PERBAIKAN 3: Ubah status untuk SEFAS → OM1 menjadi NEW
+    if (isFromSefas && isToMainWarehouse) {
+      toStatus = 'NEW';
+    }
+
+    // ⭐ DETERMINE from_qty dan to_qty berdasarkan flow
+    let from_qty = 0;
+    let to_qty = 0;
+
+    if (isFromMainWarehouse && isToConsumer) {
+      // OM1 → Consumer: from_qty & to_qty = qty track sebelumnya
+      from_qty = currentQty;
+      to_qty = currentQty;
+    } else if (isToConsumer && isToMainWarehouse) {
+      // Consumer → OM1: from_qty = qty track, to_qty = 0
+      from_qty = currentQty;
+      to_qty = 0;
+    } else if (isFromMainWarehouse && isToSefas) {
+      // OM1 → Sefas: from_qty = 0, to_qty = 0
+      from_qty = 0;
+      to_qty = 0;
+    } else if (isFromSefas && isToMainWarehouse) {
+      // Sefas → OM1: from_qty = 0, to_qty = input user (manual)
+      from_qty = 0;
+      to_qty = formData.to_qty ?? 0;
+    } else if (isFromRegister && isToMainWarehouse) {
+      // Register → OM1: from_qty = 0, to_qty = input user (manual)
+      from_qty = 0;
+      to_qty = formData.to_qty ?? 0;
+    } else {
+      // Default/cluster lain
+      from_qty = currentQty;
+      to_qty = formData.to_qty ?? currentQty;
+    }
+
+    // LOGIC REPLACEMENT: Tank lama di-return ke Main Warehouse
+    let oldTankId: string | null = null;
+    let oldTankQty: number = 0;
+    let MainStorageClusterId: string | null = null;
+
+    if (isToConsumer && to_consumer_id) {
+      const targetConsumer = consumers.find((c) => c.id === to_consumer_id);
+
+      if (targetConsumer?.current_tank_id) {
+        oldTankId = targetConsumer.current_tank_id;
+        oldTankQty = targetConsumer.current_tank_qty;
+
+        const MainStorageCluster = clusterGroups.find(
+          (c) => c.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER
+        );
+        MainStorageClusterId = MainStorageCluster?.id || null;
+
+        if (!MainStorageClusterId) {
+          toast.error(
+            `Cannot find ${MAIN_WAREHOUSE_STORAGE_CLUSTER} cluster for tank return. Operation cancelled.`
+          );
+          return;
+        }
+
+        // Movement tank lama: FROM consumer TO Main Warehouse (return)
+        const { error: returnError } = await supabase
+          .from('grease_tank_movements')
+          .insert([
+            {
+              grease_tank_id: oldTankId,
+              from_consumer_id: to_consumer_id,
+              from_grease_cluster_id: null,
+              to_grease_cluster_id: MainStorageClusterId,
+              to_consumer_id: null,
+
+              from_qty: oldTankQty,
+              to_qty: 0,
+
+              from_status: 'DC',
+              to_status: 'DC',
+              reference_no: formData.reference_no,
+              pic_movement: formData.pic_movement,
+              movement_date: new Date().toISOString(),
+            },
+          ]);
+
+        if (returnError) {
+          console.error('Error creating return movement:', returnError);
+          toast.error('Failed to process tank return. Operation cancelled.');
+          return;
+        }
+
+        // Update tank lama
+        await supabase
+          .from('grease_tanks')
+          .update({ status: 'DC', qty: 0 })
+          .eq('id', oldTankId);
+      }
+    }
+
+    // Movement tank baru
+    const { error } = await supabase
+      .from('grease_tank_movements')
+      .insert([
+        {
+          grease_tank_id: tank.id,
+          from_grease_cluster_id: isToConsumer ? fromClusterId : fromClusterId,
+          from_consumer_id: null,
+          to_grease_cluster_id: isToConsumer ? final_to_cluster_id : final_to_cluster_id,
+          to_consumer_id: to_consumer_id,
+
+          from_qty: from_qty,
+          to_qty: to_qty,
+
+          from_status: currentStatus,
+          to_status: toStatus,
+          reference_no: formData.reference_no,
+          pic_movement: formData.pic_movement,
+          movement_date: new Date().toISOString(),
+        },
+      ]);
+
+    if (error) {
+      console.error('Error creating movement:', error);
+      toast.error('Failed to move tank');
+      return;
+    }
+
+    // Update tank baru qty
+    const final_tank_qty =
+      isToConsumer && isFromMainWarehouse ? to_qty : isToMainWarehouse ? to_qty : to_qty;
+    await supabase
+      .from('grease_tanks')
+      .update({ qty: final_tank_qty, status: toStatus })
+      .eq('id', tank.id);
+
+    fetchData();
+
+    const destinationName = to_consumer_id
+      ? `Unit: ${
+          consumers.find((c) => c.id === to_consumer_id)?.unit_id ||
+          to_consumer_id
+        }`
+      : toCluster.name;
+
+    if (oldTankId) {
+      toast.success(
+        `Tank ${tank.nomor_gt} moved to ${destinationName} (${from_qty}L → ${to_qty}L). Old tank returned to ${MAIN_WAREHOUSE_STORAGE_CLUSTER}.`,
+        { duration: 4000 }
+      );
+    } else {
+      toast.success(
+        `Tank ${tank.nomor_gt} moved to ${destinationName} (${from_qty}L → ${to_qty}L)`
+      );
+    }
+
+    setShowMovementModal(false);
+    setPendingMovement(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6">
+        <div className="text-center text-gray-500">Loading data...</div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className=" rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-        <div className="flex flex-wrap items-center">
-          <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
-            <div className="w-full p-4 sm:p-12.5 xl:p-5">
-              <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full">
-                Grease Monitoring - Pama BRCG
-              </h2>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <Toaster position="top-center" />
 
-              <div className="main-content  w-full">
-                <ExclusiveWidget allowedRoles={SUPERVISOR}>
-                  <ControlButtons
-                    onAddTank={() => setShowAddTankModal(true)}
-                    onAddCluster={() => setShowAddClusterModal(true)}
-                    onAddConsumer={() => setShowAddConsumerModal(true)}
-                  />
-                </ExclusiveWidget>
-                {/* modals */}
-                {showAddTankModal && (
-                  <AddTankModal
-                    onClose={() => setShowAddTankModal(false)}
-                    onSubmit={handleAddTank}
-                  />
-                )}
-                {showAddClusterModal && (
-                  <AddClusterModal
-                    onClose={() => setShowAddClusterModal(false)}
-                    onSubmit={handleAddCluster}
-                  />
-                )}
+      {showMovementModal && pendingMovement && (
+        <MovementModal
+          tank={pendingMovement.tank}
+          fromCluster={pendingMovement.fromCluster}
+          toCluster={pendingMovement.toCluster}
+          isToConsumer={pendingMovement.isToConsumer}
+          isDroppedOnUnit={pendingMovement.isDroppedOnUnit}
+          consumerTargetId={pendingMovement.toId}
+          consumersList={consumers}
+          clusterGroups={clusterGroups}
+          onConfirm={handleConfirmMovement}
+          onCancel={() => {
+            setShowMovementModal(false);
+            setPendingMovement(null);
+          }}
+        />
+      )}
 
-                {showAddConsumerModal && (
-                  <AddConsumerModal
-                    clusters={clusters}
-                    units={units}
-                    onClose={() => setShowAddConsumerModal(false)}
-                    onSubmit={handleAddConsumer}
-                  />
-                )}
-                <div className="p-4">
-                  {/* Supplier */}
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setHoverTarget('SUPPLIER');
-                    }}
-                    onDragLeave={() => setHoverTarget(null)}
-                    onDrop={(e) => {
-                      const t = JSON.parse(e.dataTransfer.getData('tank'));
-                      const fromLubcar = e.dataTransfer.getData('fromLubcar');
-                      handleDrop('SUPPLIER', t, fromLubcar || undefined);
-                      setHoverTarget(null);
-                    }}
-                    className={`border-2 border-dashed rounded-xl p-4 mb-4 transition-colors ${
-                      hoverTarget === 'SUPPLIER' ? 'bg-green-100' : ''
-                    }`}
-                  >
-                    <p className="font-semibold mb-2">Supplier (menerima DC)</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {supplierTanks.map(renderTank)}
-                    </div>
+      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+        <div className="border-b border-stroke py-4 px-6 dark:border-strokedark">
+          <h3 className="font-bold text-black dark:text-white text-xl">
+            Grease Cluster Monitoring
+          </h3>
+        </div>
+
+        <div className="p-6 flex flex-col gap-4">
+          {clusterGroups.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              No clusters found
+            </div>
+          ) : (
+            clusterGroups.map((cluster) => {
+              const clusterTanks = getTanksInCluster(cluster.id, cluster.name);
+              return (
+                <DroppableCluster
+                  key={cluster.id}
+                  cluster={cluster}
+                  tanks={clusterTanks}
+                  clusterGroups={clusterGroups}
+                  consumers={consumers}
+                />
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {activeTank ? (
+          <div
+            className="cursor-grabbing text-center w-16 opacity-80"
+            style={{ touchAction: 'none' }}
+          >
+            <img
+              src={
+                activeTank.tipe === 'ALVANIA'
+                  ? GreaseTankIconYellow
+                  : GreaseTankIcon
+              }
+              className={`h-10 mx-auto ${
+                activeTank.status === 'DC'
+                  ? 'opacity-50 hue-rotate-180'
+                  : ''
+              }`}
+              alt={`Tank ${activeTank.nomor_gt}`}
+            />
+            <div className="text-xs bg-gray-200 rounded-full px-1 mt-1">
+              {activeTank.nomor_gt}
+            </div>
+          </div>
+        ) : activeLubcar ? (
+          <div
+            className="cursor-grabbing text-center w-16 opacity-80"
+            style={{ touchAction: 'none' }}
+          >
+            <img
+              src={
+                activeLubcar.current_grease_type === 'ALVANIA'
+                  ? LubcarAlvania
+                  : activeLubcar.current_grease_type === 'ALBIDA'
+                  ? LubcarAlbida
+                  : LubcarEmpty
+              }
+              className="h-12 mx-auto object-contain"
+              alt={`${activeLubcar.unit_id} - Releasing tank`}
+            />
+            <div className="text-xs bg-gray-200 rounded-full px-1 mt-1">
+              {activeLubcar.current_tank_nomor_gt || 'N/A'}
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+
+      {/* Droppable Area Overlay for Lubcar Release Hints */}
+      <div className="pointer-events-none">
+        {clusterGroups.map((cluster) => {
+          const isMainWarehouse = cluster.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+          return (
+            <div
+              key={`hint-${cluster.id}`}
+              className={`fixed inset-0 pointer-events-none transition-opacity duration-200 ${
+                isMainWarehouse ? 'opacity-0' : 'opacity-0'
+              }`}
+            />
+          );
+        })}
+      </div>
+    </DndContext>
+  );
+};
+
+// --- MOVEMENT MODAL COMPONENT ---
+const MovementModal: React.FC<{
+  tank: TankWithLocation;
+  fromCluster: GreaseCluster | undefined;
+  toCluster: GreaseCluster;
+  isToConsumer: boolean;
+  isDroppedOnUnit: boolean;
+  consumerTargetId: string;
+  consumersList: ConsumerUnit[];
+  clusterGroups: ClusterWithConsumers[];
+  onConfirm: (data: {
+    reference_no: string;
+    pic_movement: string;
+    to_qty: number | null;
+    consumer_id: string | null;
+  }) => void;
+  onCancel: () => void;
+}> = ({
+  tank,
+  fromCluster,
+  toCluster,
+  isToConsumer,
+  isDroppedOnUnit,
+  consumerTargetId,
+  consumersList,
+  clusterGroups,
+  onConfirm,
+  onCancel,
+}) => {
+  const [referenceNo, setReferenceNo] = useState('');
+  const [picMovement, setPicMovement] = useState('');
+  const [toQty, setToQty] = useState<number | null>(null);
+  const [previousMovements, setPreviousMovements] = useState<TankMovement[]>([]);
+
+  const initialConsumerId = useMemo(() => {
+    if (isToConsumer && isDroppedOnUnit) {
+      return consumerTargetId;
+    }
+    return null;
+  }, [isToConsumer, isDroppedOnUnit, consumerTargetId]);
+
+  const [selectedConsumerId, setSelectedConsumerId] = useState<string | null>(
+    initialConsumerId
+  );
+
+  const isIssuingFrom = fromCluster?.is_issuing || false;
+  const isToReceivingCluster =
+    !isToConsumer && (toCluster?.is_receiving || false);
+  const isReferenceNoMandatory =
+    isToReceivingCluster || toCluster.name.toLowerCase() === 'register';
+
+  const isFromSefas = fromCluster?.name.toUpperCase() === 'SEFAS';
+  const isToSefas = toCluster.name.toUpperCase() === 'SEFAS';
+  const isFromMainWarehouse = fromCluster?.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+  const isToMainWarehouse = toCluster.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+  const isFromRegister =
+    !fromCluster ||
+    fromCluster.name.toUpperCase() === 'REGISTER' ||
+    fromCluster.name.toLowerCase() === 'register';
+
+  // Fetch previous movements history
+  React.useEffect(() => {
+    const fetchPreviousMovements = async () => {
+      const { data } = await supabase
+        .from('grease_tank_movements')
+        .select('id, reference_no, from_qty, to_qty, from_status, to_status, movement_date')
+        .eq('grease_tank_id', tank.id)
+        .order('movement_date', { ascending: false })
+        .limit(5);
+      setPreviousMovements(data || []);
+    };
+
+    fetchPreviousMovements();
+  }, [tank.id]);
+
+  // Determine from_qty dan to_qty based on flow
+  React.useEffect(() => {
+    if (isFromMainWarehouse && isToConsumer) {
+      setToQty(tank.qty);
+    } else if (isToConsumer && isToMainWarehouse) {
+      setToQty(0);
+    } else if (isFromMainWarehouse && isToSefas) {
+      setToQty(0);
+    } else if (isFromSefas && isToMainWarehouse) {
+      setToQty(null);
+    } else if (isFromRegister && isToMainWarehouse) {
+      setToQty(null);
+    } else {
+      setToQty(tank.qty);
+    }
+
+    if (isToConsumer && isDroppedOnUnit && consumerTargetId !== selectedConsumerId) {
+      setSelectedConsumerId(consumerTargetId);
+    }
+  }, [isFromSefas, isToSefas, isFromMainWarehouse, isToMainWarehouse, isFromRegister, isToConsumer, isDroppedOnUnit, tank.qty, consumerTargetId, selectedConsumerId]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isReferenceNoMandatory && !referenceNo.trim()) {
+      toast.error(
+        'Reference number is required for this destination (Receiving/Register).'
+      );
+      return;
+    }
+
+    if (!picMovement.trim()) {
+      toast.error('PIC is required');
+      return;
+    }
+
+    if (isFromSefas && isToMainWarehouse && (toQty === null || toQty < 0)) {
+      toast.error('Please enter a valid quantity received from supplier');
+      return;
+    }
+
+    if (isFromRegister && isToMainWarehouse && (toQty === null || toQty < 0)) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    if (isToConsumer && !selectedConsumerId) {
+      toast.error('Unit Destination/Consumer selection is required.');
+      return;
+    }
+
+    onConfirm({
+      reference_no: referenceNo,
+      pic_movement: picMovement,
+      to_qty: toQty,
+      consumer_id: selectedConsumerId,
+    });
+  };
+
+  const getConsumerLabel = (consumer: ConsumerUnit) => {
+    const desc = consumer.description ? ` (${consumer.description})` : '';
+    const type =
+      consumer.current_grease_type === 'EMPTY'
+        ? ''
+        : ` [${consumer.current_grease_type}]`;
+    return `${consumer.unit_id || consumer.id}${desc}${type}`;
+  };
+
+  const consumerDetail =
+    consumersList.find((c) => c.id === consumerTargetId)?.unit_id || 'N/A';
+
+  const destinationDetail = isToConsumer
+    ? isDroppedOnUnit
+      ? `Unit: ${consumerDetail}`
+      : 'Manual Unit Selection'
+    : 'Cluster Destination';
+
+  const getConsumersForCluster = (clusterId: string): ConsumerUnit[] => {
+    return consumersList.filter((c) => c.grease_cluster_id === clusterId);
+  };
+
+  // Check if this is a replacement scenario
+  const isReplacement = isToConsumer && selectedConsumerId;
+  const oldTankInConsumer = selectedConsumerId 
+    ? consumersList.find((c) => c.id === selectedConsumerId)
+    : null;
+  const hasOldTank = oldTankInConsumer?.current_tank_id !== null && oldTankInConsumer?.current_grease_type !== 'EMPTY';
+
+  const getTankIcon = (tipe: string | null) => {
+    return tipe === 'ALVANIA' ? GreaseTankIconYellow : GreaseTankIcon;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="border-b px-6 py-4">
+          <h3 className="text-lg font-bold text-gray-800">
+            Confirm Tank Movement
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Moving <span className="font-semibold">{tank.nomor_gt}</span> from{' '}
+            <span className="font-semibold">
+              {fromCluster?.name || 'REGISTER'}
+            </span>{' '}
+            to <span className="font-semibold">{toCluster.name}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Type: {tank.tipe} | Status: {tank.status} | Current Qty: {tank.qty}L
+          </p>
+        </div>
+
+        {/* HERO SECTION - Replacement Visualization */}
+        {isReplacement && hasOldTank && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-6">
+            <div className="flex items-center justify-between gap-4">
+              {/* NEW TANK (FROM WAREHOUSE) */}
+              <div className="flex-1 flex flex-col items-center">
+                <img
+                  src={getTankIcon(tank.tipe)}
+                  alt={`Tank ${tank.nomor_gt}`}
+                  className="h-20 w-20 object-contain mb-3"
+                />
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-gray-800">
+                    {tank.nomor_gt}
                   </div>
-                  {/* OM01 */}
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setHoverTarget('OM01');
-                    }}
-                    onDragLeave={() => setHoverTarget(null)}
-                    onDrop={(e) => {
-                      const t = JSON.parse(e.dataTransfer.getData('tank'));
-                      const fromLubcar = e.dataTransfer.getData('fromLubcar');
-                      handleDrop('OM01', t, fromLubcar || undefined);
-                      setHoverTarget(null);
-                    }}
-                    className={`border-2 border-dashed rounded-xl p-4 mb-4 transition-colors ${
-                      hoverTarget === 'OM01' ? 'bg-green-100' : ''
-                    }`}
-                  >
-                    <p className="font-semibold mb-2">OM01 (Oil Storage)</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {om1Tanks.map(renderTank)}
-                    </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {fromCluster?.name || 'WAREHOUSE'}
                   </div>
+                  <div className="text-xs font-semibold text-blue-600 mt-1">
+                    {tank.qty}L
+                  </div>
+                </div>
+              </div>
 
-                  {/* Lubcar */}
-                  <div className="grid grid-cols-4 gap-4">
-                    {lubcars.map((lc) => {
-                      const tank = lubcarTanks[lc.id];
-                      const hasTank = !!tank;
-                      const iconSrc = hasTank ? LubcarMountedIcon : LubecarIcon;
+              {/* ARROW & LABEL */}
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">
+                  Replacing
+                </div>
+                <svg
+                  className="w-8 h-8 text-indigo-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
 
-                      return (
-                        <div
-                          key={lc.id}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            setHoverTarget(lc.id);
-                          }}
-                          onDragLeave={() => setHoverTarget(null)}
-                          onDrop={(e) => {
-                            const t = JSON.parse(
-                              e.dataTransfer.getData('tank'),
-                            );
-                            const fromLubcar =
-                              e.dataTransfer.getData('fromLubcar');
-                            handleDrop(lc.id, t, fromLubcar || undefined);
-                            setHoverTarget(null);
-                          }}
-                          className={`border rounded p-3 text-center transition-colors ${
-                            hoverTarget === lc.id ? 'bg-green-100' : ''
-                          }`}
-                        >
-                          <img
-                            src={iconSrc}
-                            className="mx-auto h-10"
-                            draggable={hasTank}
-                            onDragStart={(e) => {
-                              if (tank) {
-                                e.dataTransfer.setData(
-                                  'tank',
-                                  JSON.stringify({ ...tank, status: 'DC' }),
-                                );
-                                e.dataTransfer.setData('fromLubcar', lc.id);
-                              }
-                            }}
-                          />
-                          <div className="text-xs bg-gray-200 rounded-full px-1 mt-1">
-                            {lc.id} / {lc.name}
-                          </div>
-                          {hasTank && (
-                            <div className="text-xs text-gray-600 mt-1">
-                              GT: {tank?.number}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+              {/* OLD TANK (FROM CONSUMER) */}
+              <div className="flex-1 flex flex-col items-center">
+                <img
+                  src={getTankIcon(oldTankInConsumer?.current_grease_type ?? null)}
+                  alt="Old Tank"
+                  className="h-20 w-20 object-contain mb-3 opacity-60 hue-rotate-180"
+                />
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-gray-800">
+                    {oldTankInConsumer?.current_tank_nomor_gt || 'N/A'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {oldTankInConsumer?.unit_id || 'UNIT'}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    Qty: {oldTankInConsumer?.current_tank_qty}L
+                  </div>
+                  <div className="text-xs font-semibold text-orange-600 mt-1">
+                    DC
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Reference No */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Reference No {isReferenceNoMandatory && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type="text"
+              value={referenceNo}
+              onChange={(e) => setReferenceNo(e.target.value)}
+              placeholder="e.g., DO-2025-001"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* PIC Movement */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              PIC Movement <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={picMovement}
+              onChange={(e) => setPicMovement(e.target.value)}
+              placeholder="Person In Charge"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* To Qty - Show only for certain flows */}
+          {(isFromSefas && isToMainWarehouse) || (isFromRegister && isToMainWarehouse) ? (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Qty Received (Liters) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={toQty ?? ''}
+                onChange={(e) => setToQty(e.target.value ? parseInt(e.target.value) : null)}
+                placeholder="0"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">To Qty:</span> {toQty}L
+              </p>
+            </div>
+          )}
+
+          {/* Consumer Selection - Show only when moving to consumer */}
+          {isToConsumer && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Select Unit Destination <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedConsumerId || ''}
+                onChange={(e) => setSelectedConsumerId(e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              >
+                <option value="">-- Select a Consumer --</option>
+                {getConsumersForCluster(toCluster.id).map((consumer) => (
+                  <option key={consumer.id} value={consumer.id}>
+                    {getConsumerLabel(consumer)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Previous Movements */}
+          {previousMovements.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-3 mt-4">
+              <p className="text-xs font-semibold text-gray-700 mb-2">
+                Previous Movements (Last 5)
+              </p>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {previousMovements.map((movement) => (
+                  <div key={movement.id} className="text-xs text-gray-600 border-b pb-1">
+                    <p>
+                      <span className="font-semibold">{movement.reference_no || 'N/A'}</span> |{' '}
+                      {movement.from_qty}L → {movement.to_qty}L
+                    </p>
+                    <p className="text-gray-500">
+                      {movement.from_status} → {movement.to_status} |{' '}
+                      {new Date(movement.movement_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
+            >
+              Confirm Movement
+            </button>
+          </div>
+        </form>
       </div>
-    </>
+    </div>
   );
 };
 
-export default GreaseMonitoring;
+export default GreaseClusterMonitoring;

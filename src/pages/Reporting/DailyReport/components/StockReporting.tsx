@@ -10,6 +10,7 @@ import { ColDef, ValueFormatterParams } from 'ag-grid-community';
 // Import CSS AG Grid
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+import { parseIDNumber } from "../../../../Utils/NumberUtility";
 
 // --- Interfaces ---
 interface StorageUnit {
@@ -231,17 +232,27 @@ const StockReporting: React.FC = () => {
         // 2. Calculate Issuing by Flowmeter
         const flowAwal = parseFloat((d.flow_awal || "0").replace(/,/g, '.'));
         const flowAkhir = parseFloat((d.flow_akhir || d.flow_awal || "0").replace(/,/g, '.'));
-        d.issuing_flowmeter = Math.max(0, flowAkhir - flowAwal);
+        
+        const transferOut = parseIDNumber(d.transfer_out);
+        d.issuing_flowmeter = Math.max(0, flowAkhir - flowAwal - transferOut);
 
         // 3. Calculate Issuing by Sonding (Discrepancy/Usage)
-        const ritasi = parseFloat((d.ritasi || "0").replace(/,/g, '.'));
-        const transferOut = d.transfer_out || 0;
-        const transferIn = d.transfer_in || 0;
+        const ritasi = parseIDNumber(d.ritasi);
+        const transferIn = parseIDNumber(d.transfer_in);
+
+
         const stockAwal = d.stock_awal || 0;
         const stockAkhir = d.stock_akhir || 0;
 
         // Issuing_Sonding = Stock Awal + Ritasi + Transfer In - Transfer Out - Stock Akhir
         d.issuing_sonding = stockAwal + ritasi + transferIn - transferOut - stockAkhir;
+
+        console.log(ritasi);
+        // console.log(transferIn);
+        // console.log(transferOut);
+        
+        
+        
       }
 
       const dataArray = Object.values(updatedData).sort((a, b) => a.unit_id.localeCompare(b.unit_id));
@@ -271,12 +282,18 @@ const StockReporting: React.FC = () => {
     setIsLoading(false);
   };
   
-  const formatValue = (params: ValueFormatterParams) => {
-    if (params.value === undefined || params.value === null || isNaN(params.value)) {
-        return '-';
-    }
-    return Number(params.value).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
+const formatValue = (params: ValueFormatterParams) => {
+  if (params.value === undefined || params.value === null || params.value === "") return "-";
+  
+  const value = parseIDNumber(params.value); // Gunakan parser Indonesia
+  
+  return new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+
 
   const getIssuingSondingStyle = (params: any) => {
     if (params.data.issuing_sonding < -10 || params.data.issuing_sonding > 10) { 

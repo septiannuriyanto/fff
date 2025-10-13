@@ -1,0 +1,1 @@
+export const MAIN_WAREHOUSE_STORAGE_CLUSTER = 'OM1';
