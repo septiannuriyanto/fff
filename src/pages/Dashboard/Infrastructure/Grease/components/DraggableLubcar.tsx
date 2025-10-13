@@ -29,6 +29,10 @@ export const DraggableLubcar: React.FC<DraggableLubcarProps> = ({
   const style = {
     transform: CSS.Translate.toString(transform),
     cursor: isDragging ? 'grabbing' : 'grab',
+    // ✅ NEW: Improve touch handling
+    touchAction: 'none',
+    userSelect: 'none' as const,
+    WebkitUserSelect: 'none' as const,
   };
 
   const iconSrc = getConsumerIcon(
@@ -50,6 +54,8 @@ export const DraggableLubcar: React.FC<DraggableLubcarProps> = ({
         alt={`${consumer.unit_id} - ${consumer.current_grease_type}`}
         className="h-14 w-14 object-contain pointer-events-none select-none"
         draggable={false}
+        // ✅ NEW: Prevent context menu on long press
+        onContextMenu={(e) => e.preventDefault()}
       />
     </div>
   );

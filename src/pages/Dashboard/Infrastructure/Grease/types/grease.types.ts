@@ -7,6 +7,7 @@ export interface GreaseCluster {
   view_queue: number | null;
   is_issuing: boolean | null;
   is_receiving: boolean | null;
+   location?: string | null; // ✅ ADD THIS
 }
 
 export interface GreaseTank {
@@ -34,6 +35,7 @@ export interface ConsumerUnit {
   id: string;
   unit_id: string | null;
   description: string | null;
+  
   grease_cluster_id: string | null;
   current_grease_type: 'ALBIDA' | 'ALVANIA' | 'EMPTY';
   current_tank_id: string | null;
