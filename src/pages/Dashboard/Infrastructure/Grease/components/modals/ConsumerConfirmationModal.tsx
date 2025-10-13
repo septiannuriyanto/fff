@@ -2,7 +2,8 @@
 // components/modals/ConsumerConfirmationModal.tsx
 // ============================================
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 import { ConsumerUnit } from '../../types/grease.types';
 
 interface ConsumerConfirmationModalProps {
@@ -18,14 +19,44 @@ export const ConsumerConfirmationModal: React.FC<ConsumerConfirmationModalProps>
 }) => {
   const hasGrease = consumer.current_grease_type !== 'EMPTY' && consumer.current_tank_id;
 
+  // ✅ Handle Escape key
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscapeKey);
+    return () => window.removeEventListener('keydown', handleEscapeKey);
+  }, [onCancel]);
+
+  // ✅ Handle click outside modal
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onCancel();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full">
         {/* Header */}
-        <div className="border-b px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="border-b px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-800">
             {hasGrease ? 'Replacement Grease Tank' : 'Instalasi Grease Tank'}
           </h3>
+          {/* ✅ Close button */}
+          <button
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-700 transition p-1 rounded-lg hover:bg-gray-200"
+            aria-label="Close modal"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Content */}
