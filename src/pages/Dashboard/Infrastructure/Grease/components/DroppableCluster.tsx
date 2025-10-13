@@ -88,6 +88,9 @@ export const DroppableCluster: React.FC<{
     <h5 className="font-semibold text-sm text-gray-700 mb-2">
       Unit Konsumen (Droppoint)
     </h5>
+    <h5 className=" text-sm text-gray-700 mb-2">
+      Drag tank dari Main Warehouse ke salah satu Unit Konsumen di bawah ini, atau klik unit untuk melakukan penggantian/install GT baru.
+    </h5>
     <div className="flex flex-wrap gap-3 p-2 bg-gray-50 rounded-lg min-h-[100px]">
       {clusterConsumers.map((consumer) => (
         <DroppableConsumer
