@@ -43,9 +43,7 @@ export const DismantlingHero: React.FC<HeroSectionBaseProps> = ({ tank, toCluste
               <div className="inline-block bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded">
                 Qty: {tank.qty}L
               </div>
-              <div className="block text-xs text-red-600 font-semibold mt-1">
-                Status: DC (Dirty Container)
-              </div>
+           
             </div>
           </div>
         </div>
@@ -83,7 +81,7 @@ export const DismantlingHero: React.FC<HeroSectionBaseProps> = ({ tank, toCluste
       <div className="mt-4 bg-white rounded-lg px-4 py-3 border-l-4 border-orange-600 shadow-sm">
         <p className="text-xs text-gray-800 font-medium">
           <span className="text-orange-600 font-bold">Note:</span> Tank will be returned to warehouse 
-          with DC (Dirty Container) status and quantity set to 0L for refill.
+          with DC (Damage Core) status and quantity set to 0L for refill.
         </p>
       </div>
     </div>
