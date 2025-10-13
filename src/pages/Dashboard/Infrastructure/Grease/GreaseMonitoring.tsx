@@ -21,9 +21,6 @@ import { MAIN_WAREHOUSE_STORAGE_CLUSTER, SUPPLIER_NAME } from './types/grease.co
 // Import images
 import GreaseTankIcon from '../../../../images/icon/grease-tank.png';
 import GreaseTankIconYellow from '../../../../images/icon/grease-tank-alt.png';
-import LubcarAlbida from '../../../../images/icon/lubcar-mounted.png';
-import LubcarAlvania from '../../../../images/icon/lubcar-mounted-alt.png';
-import LubcarEmpty from '../../../../images/icon/lubcar-empty.png';
 import { useGreaseData } from './hooks/useGreaseData';
 import { useTankMovement } from './hooks/useTankMovement';
 import { ConsumerUnit, GreaseCluster, PendingMovement, TankWithLocation } from './types/grease.types';

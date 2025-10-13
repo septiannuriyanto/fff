@@ -59,15 +59,18 @@ export const DroppableCluster: React.FC<{
               {isOver ? 'Drop tank here' : 'No tanks in this cluster'}
             </div>
           ) : (
-            tanks.map((tank) => (
-              <DraggableTank
-                key={tank.id}
-                tank={tank}
-                fromClusterId={cluster.id}
-                clusterGroups={clusterGroups}
-                consumers={consumers}
-              />
-            ))
+            tanks
+              .sort((a, b) => (b.tipe ?? '').localeCompare(a.tipe ?? ''))
+              .sort((a, b) => (b.status ?? '').localeCompare(a.status ?? ''))
+              .map((tank) => (
+                <DraggableTank
+                  key={tank.id}
+                  tank={tank}
+                  fromClusterId={cluster.id}
+                  clusterGroups={clusterGroups}
+                  consumers={consumers}
+                />
+              ))
           )}
         </div>
       </div>
