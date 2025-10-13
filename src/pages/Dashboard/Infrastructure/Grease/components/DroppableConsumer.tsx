@@ -23,7 +23,7 @@ export const DroppableConsumer: React.FC<{
     consumer.current_grease_type || 'EMPTY'
   );
 
-  const qtyText = consumer.current_tank_qty > 0 ? `${consumer.current_tank_qty}L` : '';
+  const qtyText = consumer.current_tank_qty > 0 ? `${consumer.current_tank_qty} KG` : '';
   const hasFilledTank = consumer.current_grease_type !== 'EMPTY';
 
   // Ribbon color based on grease type
