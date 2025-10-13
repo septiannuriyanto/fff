@@ -1,18 +1,24 @@
+// ============================================
+// components/DraggableLubcar.tsx
+// ============================================
+
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { ConsumerUnit } from '../types/grease.types';
-import LubcarEmpty from '../../../../../images/icon/lubcar-empty.png';
-import LubcarAlbida from '../../../../../images/icon/lubcar-mounted.png';
-import LubcarAlvania from '../../../../../images/icon/lubcar-mounted-alt.png';
+import { getConsumerIcon } from './MovementModal/utils/iconHelpers';
 
-export const DraggableLubcar: React.FC<{
+interface DraggableLubcarProps {
   consumer: ConsumerUnit;
   parentClusterId: string;
-}> = React.memo(({ consumer, parentClusterId }) => {
-  const draggableId = `lubcar-${consumer.id}`;
+}
 
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: draggableId,
+export const DraggableLubcar: React.FC<DraggableLubcarProps> = ({ 
+  consumer, 
+  parentClusterId 
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `lubcar-release-${consumer.id}`,
     data: {
       isLubcarRelease: true,
       consumer,
@@ -20,33 +26,31 @@ export const DraggableLubcar: React.FC<{
     },
   });
 
-  let iconSrc = LubcarEmpty;
-  if (consumer.current_grease_type === 'ALBIDA') iconSrc = LubcarAlbida;
-  else if (consumer.current_grease_type === 'ALVANIA') iconSrc = LubcarAlvania;
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    cursor: isDragging ? 'grabbing' : 'grab',
+  };
 
-  const hasFilledTank = consumer.current_grease_type !== 'EMPTY';
-
-  if (!hasFilledTank) {
-    return null;
-  }
+  const iconSrc = getConsumerIcon(
+    consumer.unit_id || '',
+    consumer.current_grease_type || 'EMPTY'
+  );
 
   return (
     <div
       ref={setNodeRef}
+      style={style}
       {...listeners}
       {...attributes}
-      style={{ touchAction: 'none' }}
-      className={`cursor-grab active:cursor-grabbing p-2 transition-all w-full h-full flex flex-col items-center justify-center mb-9 ${
-        isDragging ? 'opacity-40' : ''
-      }`}
+      className={`transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      title={`Drag ${consumer.unit_id} to return tank ${consumer.current_tank_nomor_gt} to warehouse`}
     >
       <img
         src={iconSrc}
-        alt={`${consumer.unit_id} - Drag to release`}
-        className="h-12 w-12 object-contain hover:opacity-80 transition-opacity"
-        title="Drag to release grease tank"
+        alt={`${consumer.unit_id} - ${consumer.current_grease_type}`}
+        className="h-14 w-14 object-contain pointer-events-none select-none"
+        draggable={false}
       />
     </div>
   );
-});
-DraggableLubcar.displayName = 'DraggableLubcar';
+};

@@ -17,9 +17,17 @@ export interface GreaseTank {
   qty: number;
 }
 
-export interface TankWithLocation extends GreaseTank {
+export interface TankWithLocation {
+  id: string;
+  nomor_gt: string;
+  tipe: string | null;
+  status: string | null;
+  qty: number;
   current_cluster_id: string | null;
+  current_cluster_name: string | null;
   current_consumer_id: string | null;
+  current_consumer_unit_id?: string | null; // ✅ Tambahkan ini jika belum ada
+  // ... other fields
 }
 
 export interface ConsumerUnit {
