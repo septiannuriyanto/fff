@@ -310,13 +310,13 @@ export const MovementModal: React.FC<MovementModalProps> = ({
 </div>
 
 
-          {/* <QuantityField
+          <QuantityField
             value={toQty}
             onChange={setToQty}
             isManualInput={isManualQtyInput}
             isDismantlingFlow={isDismantlingFlow}
             isRefillToSupplierFlow={isRefillToSupplierFlow}
-          /> */}
+          />
 
           {/* <PreviousMovements movements={previousMovements} /> */}
 

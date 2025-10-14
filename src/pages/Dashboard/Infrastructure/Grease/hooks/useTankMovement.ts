@@ -1,10 +1,67 @@
 import { useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { TankWithLocation, ConsumerUnit, ClusterWithConsumers, MovementFormData } from '../types/grease.types';
+import {
+  ConsumerUnit,
+  ClusterWithConsumers,
+  MovementFormData,
+  GreaseCluster,
+} from '../types/grease.types';
 import { supabase } from '../../../../../db/SupabaseClient';
-import { MAIN_WAREHOUSE_STORAGE_CLUSTER } from '../types/grease.constants';
+import {
+  MAIN_WAREHOUSE_STORAGE_CLUSTER,
+  SUPPLIER_NAME,
+} from '../types/grease.constants';
 
 export const useTankMovement = (onMovementComplete: () => void) => {
+  // ============================================
+  // 🧭 Movement Type Determiner
+  // ============================================
+  const determineMovementType = (
+    fromCluster?: GreaseCluster,
+    toCluster?: GreaseCluster,
+    isToConsumer?: boolean,
+    hasReturn?: boolean
+  ): string => {
+    const fromName = fromCluster?.name?.toUpperCase() || '';
+    const toName = toCluster?.name?.toUpperCase() || '';
+
+    // REGISTER → MAIN WH
+    if (
+      (!fromCluster || fromName === 'REGISTER') &&
+      toName === MAIN_WAREHOUSE_STORAGE_CLUSTER
+    ) {
+      return "000"; // 000 - INITIALIZATION
+    }
+
+    // MAIN WH → CONSUMER
+    if (fromName === MAIN_WAREHOUSE_STORAGE_CLUSTER && isToConsumer) {
+      return hasReturn ? "101" : "100"; // REPLACE / INSTALL
+    }
+
+    // CONSUMER → MAIN WH
+    if (
+      fromName !== MAIN_WAREHOUSE_STORAGE_CLUSTER &&
+      toName === MAIN_WAREHOUSE_STORAGE_CLUSTER
+    ) {
+      return "102"; // DISMANTLING
+    }
+
+    // MAIN WH → SUPPLIER
+    if (fromName === MAIN_WAREHOUSE_STORAGE_CLUSTER && toName === SUPPLIER_NAME) {
+      return "103"; // REFILL
+    }
+
+    // SUPPLIER → MAIN WH
+    if (fromName === SUPPLIER_NAME && toName === MAIN_WAREHOUSE_STORAGE_CLUSTER) {
+      return "104"; // RESTOCK
+    }
+
+    return "000"; // default / unknown
+  };
+
+  // ============================================
+  // ⚙️ Main Movement Handler
+  // ============================================
   const handleConfirmMovement = useCallback(
     async (
       pendingMovement: any,
@@ -12,7 +69,8 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       clusterGroups: ClusterWithConsumers[],
       formData: MovementFormData
     ) => {
-      const { tank, fromClusterId, fromCluster, toCluster, isToConsumer } = pendingMovement;
+      const { tank, fromClusterId, fromCluster, toCluster, isToConsumer } =
+        pendingMovement;
 
       const { data: currentTankData } = await supabase
         .from('grease_tanks')
@@ -32,9 +90,12 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       const final_to_cluster_id = toCluster.id;
       const isFromSefas = fromCluster?.name.toUpperCase() === 'SEFAS';
       const isToSefas = toCluster.name.toUpperCase() === 'SEFAS';
-      const isFromMainWarehouse = fromCluster?.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
-      const isToMainWarehouse = toCluster.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
-      const isFromRegister = !fromCluster || fromCluster.name.toLowerCase() === 'register';
+      const isFromMainWarehouse =
+        fromCluster?.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+      const isToMainWarehouse =
+        toCluster.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
+      const isFromRegister =
+        !fromCluster || fromCluster.name.toLowerCase() === 'register';
 
       if (isFromSefas && isToMainWarehouse) {
         toStatus = 'NEW';
@@ -43,7 +104,11 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       let from_qty = 0;
       let to_qty = 0;
 
-      if (isFromMainWarehouse && isToConsumer) {
+      if (isFromRegister && isToMainWarehouse) {
+        // INITIALIZATION
+        from_qty = 0;
+        to_qty = formData.to_qty ?? currentQty;
+      } else if (isFromMainWarehouse && isToConsumer) {
         from_qty = currentQty;
         to_qty = currentQty;
       } else if (isToConsumer && isToMainWarehouse) {
@@ -55,9 +120,6 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       } else if (isFromSefas && isToMainWarehouse) {
         from_qty = 0;
         to_qty = formData.to_qty ?? 0;
-      } else if (isFromRegister && isToMainWarehouse) {
-        from_qty = 0;
-        to_qty = formData.to_qty ?? 0;
       } else {
         from_qty = currentQty;
         to_qty = formData.to_qty ?? currentQty;
@@ -67,10 +129,15 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       let oldTankQty: number = 0;
       let MainStorageClusterId: string | null = null;
 
+      // ============================
+      // 🌀 Handle Tank Return (Replace)
+      // ============================
+      let hasReturn = false;
       if (isToConsumer && to_consumer_id) {
         const targetConsumer = consumers.find((c) => c.id === to_consumer_id);
 
         if (targetConsumer?.current_tank_id) {
+          hasReturn = true;
           oldTankId = targetConsumer.current_tank_id;
           oldTankQty = targetConsumer.current_tank_qty;
 
@@ -86,15 +153,14 @@ export const useTankMovement = (onMovementComplete: () => void) => {
             return;
           }
 
+          // Insert return movement (old tank)
           const { error: returnError } = await supabase
             .from('grease_tank_movements')
             .insert([
               {
                 grease_tank_id: oldTankId,
                 from_consumer_id: to_consumer_id,
-                from_grease_cluster_id: null,
                 to_grease_cluster_id: MainStorageClusterId,
-                to_consumer_id: null,
                 from_qty: oldTankQty,
                 to_qty: 0,
                 from_status: 'DC',
@@ -102,6 +168,7 @@ export const useTankMovement = (onMovementComplete: () => void) => {
                 reference_no: formData.reference_no,
                 pic_movement: formData.pic_movement,
                 movement_date: new Date().toISOString(),
+                movement_type: 102, // DISMANTLING
               },
             ]);
 
@@ -118,24 +185,36 @@ export const useTankMovement = (onMovementComplete: () => void) => {
         }
       }
 
-      const { error } = await supabase
-        .from('grease_tank_movements')
-        .insert([
-          {
-            grease_tank_id: tank.id,
-            from_grease_cluster_id: fromClusterId,
-            from_consumer_id: null,
-            to_grease_cluster_id: final_to_cluster_id,
-            to_consumer_id: to_consumer_id,
-            from_qty,
-            to_qty,
-            from_status: currentStatus,
-            to_status: toStatus,
-            reference_no: formData.reference_no,
-            pic_movement: formData.pic_movement,
-            movement_date: new Date().toISOString(),
-          },
-        ]);
+      // ============================
+      // 🧭 Determine Movement Type
+      // ============================
+      const movementType = determineMovementType(
+        fromCluster,
+        toCluster,
+        isToConsumer,
+        hasReturn
+      );
+
+      // ============================
+      // 🚀 Insert Main Movement
+      // ============================
+      const { error } = await supabase.from('grease_tank_movements').insert([
+        {
+          grease_tank_id: tank.id,
+          from_grease_cluster_id: fromClusterId,
+          to_grease_cluster_id: final_to_cluster_id,
+          from_consumer_id: null,
+          to_consumer_id: to_consumer_id,
+          from_qty,
+          to_qty,
+          from_status: currentStatus,
+          to_status: toStatus,
+          reference_no: formData.reference_no,
+          pic_movement: formData.pic_movement,
+          movement_date: new Date().toISOString(),
+          movement_type: movementType,
+        },
+      ]);
 
       if (error) {
         console.error('Error creating movement:', error);
@@ -143,7 +222,9 @@ export const useTankMovement = (onMovementComplete: () => void) => {
         return;
       }
 
-      const final_tank_qty = isToConsumer && isFromMainWarehouse ? to_qty : to_qty;
+      // Update tank record
+      const final_tank_qty =
+        isToConsumer && isFromMainWarehouse ? to_qty : to_qty;
       await supabase
         .from('grease_tanks')
         .update({ qty: final_tank_qty, status: toStatus })
@@ -151,8 +232,12 @@ export const useTankMovement = (onMovementComplete: () => void) => {
 
       onMovementComplete();
 
+      // Toast summary
       const destinationName = to_consumer_id
-        ? `Unit: ${consumers.find((c) => c.id === to_consumer_id)?.unit_id || to_consumer_id}`
+        ? `Unit: ${
+            consumers.find((c) => c.id === to_consumer_id)?.unit_id ||
+            to_consumer_id
+          }`
         : toCluster.name;
 
       if (oldTankId) {
@@ -169,5 +254,5 @@ export const useTankMovement = (onMovementComplete: () => void) => {
     [onMovementComplete]
   );
 
-  return { handleConfirmMovement };
+  return { handleConfirmMovement, determineMovementType };
 };
