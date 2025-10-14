@@ -42,8 +42,12 @@ export const MovementModal: React.FC<MovementModalProps> = ({
   const [referenceNo, setReferenceNo] = useState('');
   const [picMovement, setPicMovement] = useState('');
   const [toQty, setToQty] = useState<number | null>(null);
-  const [previousMovements, setPreviousMovements] = useState<TankMovement[]>([]);
-  const [selectedConsumerId, setSelectedConsumerId] = useState<string | null>(null);
+  const [previousMovements, setPreviousMovements] = useState<TankMovement[]>(
+    [],
+  );
+  const [selectedConsumerId, setSelectedConsumerId] = useState<string | null>(
+    null,
+  );
   const modalRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
 
@@ -54,9 +58,16 @@ export const MovementModal: React.FC<MovementModalProps> = ({
         toCluster,
         isToConsumer,
         selectedConsumerId,
-        consumersList
+        consumersList,
       ),
-    [tank, fromCluster, toCluster, isToConsumer, selectedConsumerId, consumersList]
+    [
+      tank,
+      fromCluster,
+      toCluster,
+      isToConsumer,
+      selectedConsumerId,
+      consumersList,
+    ],
   );
 
   const {
@@ -93,7 +104,9 @@ export const MovementModal: React.FC<MovementModalProps> = ({
     const fetchPreviousMovements = async () => {
       const { data } = await supabase
         .from('grease_tank_movements')
-        .select('id, reference_no, from_qty, to_qty, from_status, to_status, movement_date')
+        .select(
+          'id, reference_no, from_qty, to_qty, from_status, to_status, movement_date',
+        )
         .eq('grease_tank_id', tank.id)
         .order('movement_date', { ascending: false })
         .limit(5);
@@ -109,7 +122,10 @@ export const MovementModal: React.FC<MovementModalProps> = ({
       setToQty(0);
     } else if (isRefillToSupplierFlow) {
       setToQty(0);
-    } else if (isRestockFromSupplierFlow || (isFromRegister && isToMainWarehouse)) {
+    } else if (
+      isRestockFromSupplierFlow ||
+      (isFromRegister && isToMainWarehouse)
+    ) {
       setToQty(null);
     } else {
       setToQty(tank.qty);
@@ -152,7 +168,9 @@ export const MovementModal: React.FC<MovementModalProps> = ({
     // }
 
     if (isReferenceNoMandatory && !referenceNo.trim()) {
-      toast.error('Reference number is required for this destination (Receiving/Register).');
+      toast.error(
+        'Reference number is required for this destination (Receiving/Register).',
+      );
       return;
     }
 
@@ -210,11 +228,23 @@ export const MovementModal: React.FC<MovementModalProps> = ({
     }
 
     if (isRefillToSupplierFlow) {
-      return <RefillHero tank={tank} fromCluster={fromCluster} toCluster={toCluster} />;
+      return (
+        <RefillHero
+          tank={tank}
+          fromCluster={fromCluster}
+          toCluster={toCluster}
+        />
+      );
     }
 
     if (isRestockFromSupplierFlow) {
-      return <RestockHero tank={tank} fromCluster={fromCluster} toCluster={toCluster} />;
+      return (
+        <RestockHero
+          tank={tank}
+          fromCluster={fromCluster}
+          toCluster={toCluster}
+        />
+      );
     }
 
     if (isFromRegister && isToMainWarehouse) {
@@ -224,7 +254,8 @@ export const MovementModal: React.FC<MovementModalProps> = ({
     return null;
   };
 
-  const isManualQtyInput = isRestockFromSupplierFlow || (isFromRegister && isToMainWarehouse);
+  const isManualQtyInput =
+    isRestockFromSupplierFlow || (isFromRegister && isToMainWarehouse);
 
   return (
     <div
@@ -236,7 +267,13 @@ export const MovementModal: React.FC<MovementModalProps> = ({
         ref={contentRef}
         className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <ModalHeader tank={tank} fromCluster={fromCluster} toCluster={toCluster} onClose={onCancel}  onBack={onBack}  />
+        <ModalHeader
+          tank={tank}
+          fromCluster={fromCluster}
+          toCluster={toCluster}
+          onClose={onCancel}
+          onBack={onBack}
+        />
 
         {renderHeroSection()}
 
@@ -290,15 +327,18 @@ export const MovementModal: React.FC<MovementModalProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold transition"
+              className="flex-1 px-[1px] py-[1px] rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition shadow-md"
             >
-              Cancel
+              <div className="w-full h-full bg-white rounded-lg flex items-center justify-center font-semibold text-gray-800 hover:bg-gray-50 transition">
+                Cancel
+              </div>
             </button>
+
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg font-semibold transition shadow-md"
             >
-              Confirm Movement
+              Checkout
             </button>
           </div>
         </form>
