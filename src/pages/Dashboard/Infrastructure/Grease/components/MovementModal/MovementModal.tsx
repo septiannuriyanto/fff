@@ -291,29 +291,36 @@ export const MovementModal: React.FC<MovementModalProps> = ({
             isMandatory={isReferenceNoMandatory}
           />
 
-          <PICField value={picMovement} onChange={setPicMovement} />
+          <div className="flex flex-wrap gap-4">
+  <div className="flex-1 min-w-[200px]">
+    <PICField value={picMovement} onChange={setPicMovement} />
+  </div>
 
-          <QuantityField
+  {isToConsumer && (
+    <div className="flex-1 min-w-[200px]">
+      <ConsumerSelectField
+        value={selectedConsumerId}
+        onChange={setSelectedConsumerId}
+        clusterId={toCluster.id}
+        consumersList={consumersList}
+        isDisabled={false}
+      />
+    </div>
+  )}
+</div>
+
+
+          {/* <QuantityField
             value={toQty}
             onChange={setToQty}
             isManualInput={isManualQtyInput}
             isDismantlingFlow={isDismantlingFlow}
             isRefillToSupplierFlow={isRefillToSupplierFlow}
-          />
+          /> */}
 
-          {isToConsumer && (
-            <ConsumerSelectField
-              value={selectedConsumerId}
-              onChange={setSelectedConsumerId}
-              clusterId={toCluster.id}
-              consumersList={consumersList}
-              isDisabled={false} // ✅ Tidak perlu disable karena validasi sudah di parent
-            />
-          )}
+          {/* <PreviousMovements movements={previousMovements} /> */}
 
-          <PreviousMovements movements={previousMovements} />
-
-          <SummarySection
+          {/* <SummarySection
             tank={tank}
             fromCluster={fromCluster}
             toCluster={toCluster}
@@ -321,7 +328,7 @@ export const MovementModal: React.FC<MovementModalProps> = ({
             toQty={toQty}
             consumersList={consumersList}
             isToConsumer={isToConsumer}
-          />
+          /> */}
 
           <div className="flex gap-3 pt-4 border-t">
             <button
