@@ -88,8 +88,8 @@ export const useTankMovement = (onMovementComplete: () => void) => {
 
       const to_consumer_id = isToConsumer ? formData.consumer_id : null;
       const final_to_cluster_id = toCluster.id;
-      const isFromSefas = fromCluster?.name.toUpperCase() === 'SEFAS';
-      const isToSefas = toCluster.name.toUpperCase() === 'SEFAS';
+      const isFromSupplier = fromCluster?.name.toUpperCase() === SUPPLIER_NAME;
+      const isToSupplier = toCluster.name.toUpperCase() === SUPPLIER_NAME;
       const isFromMainWarehouse =
         fromCluster?.name.toUpperCase() === MAIN_WAREHOUSE_STORAGE_CLUSTER;
       const isToMainWarehouse =
@@ -97,7 +97,7 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       const isFromRegister =
         !fromCluster || fromCluster.name.toLowerCase() === 'register';
 
-      if (isFromSefas && isToMainWarehouse) {
+      if (isFromSupplier && isToMainWarehouse) {
         toStatus = 'NEW';
       }
 
@@ -114,10 +114,10 @@ export const useTankMovement = (onMovementComplete: () => void) => {
       } else if (isToConsumer && isToMainWarehouse) {
         from_qty = currentQty;
         to_qty = 0;
-      } else if (isFromMainWarehouse && isToSefas) {
+      } else if (isFromMainWarehouse && isToSupplier) {
         from_qty = 0;
         to_qty = 0;
-      } else if (isFromSefas && isToMainWarehouse) {
+      } else if (isFromSupplier && isToMainWarehouse) {
         from_qty = 0;
         to_qty = formData.to_qty ?? 0;
       } else {

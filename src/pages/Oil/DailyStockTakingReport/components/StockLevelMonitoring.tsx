@@ -10,6 +10,7 @@ import { supabase } from '../../../../db/SupabaseClient';
 import LiquidMeter from '../../../../components/FluidMeterComponent/LiquidMeter';
 import { fetchStorageOilSetup } from './fetchSelectedSpecialMonitoring';    
 import { JSX } from 'react/jsx-runtime';
+import { fetchAvailableStorageOil } from './fetchOilDstRecords';
 
 interface StockLevelMonitoringProps {
   onUpdated?: () => void;
@@ -27,10 +28,7 @@ const StockLevelMonitoring: React.FC<StockLevelMonitoringProps> = ({
   const updateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchAvailable = async () => {
-    const { data } = await supabase
-      .from('storage_oil_setup')
-      .select('*, materials:material_code(item_description, material_code)')
-      .in('storage_model', ['tank6000', 'tank2000']);
+    const data = await fetchAvailableStorageOil();
     setAvailable(data ?? []);
   };
 

@@ -6,12 +6,13 @@ import StockTakingOilChart from './StockTakingOilChart';
 import StockLevelMonitoring from './StockLevelMonitoring';
 import { fetchStorageOilSetup } from './fetchSelectedSpecialMonitoring';
 import { detectAndUpload } from './sourceFileProcessing';
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import UploadModal from './UploadModal';
-import CompanyLogo from '../../../../images/logo/company_logo.png'
 import { exportToExcel } from '../utils/exportToExcel';
+import IBCEngine from '../../../images/icon/ibc-engine.png';
+import IBCTransmission from '../../../../images/icon/ibc-transmission.png';
+import IBCHydraulic from '../../../../images/icon/ibc-hydraulic.png';
+import BufferStockPanel from './BufferStockInfo';
 
 interface DetailTableProps {
   records: DstOliWithLocation[];
@@ -317,6 +318,11 @@ const DetailTable: React.FC<DetailTableProps> = ({
         onUpdated={fetchStorageOilSetup}
         selectedDate={selectedDate}
       />
+
+      <div className='buffer-stock_panel mb-2'>
+        <BufferStockPanel records={records} />
+      </div>
+
 
       <div className="chart__and-summary p-4 border rounded mb-4">
         {/* Chart summary */}
