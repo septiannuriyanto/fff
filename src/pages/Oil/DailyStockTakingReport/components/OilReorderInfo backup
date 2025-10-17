@@ -1,0 +1,406 @@
+import React, { useMemo } from 'react';
+import { AlertCircle, TrendingUp, Package, Truck, Combine, Zap } from 'lucide-react'; 
+import {
+  OIL_TYPE_CONFIG,
+  SUPPLIER_ORDER_RULES,
+  BUFFER_STOCK_TARGETS,
+  getSupplierByOilType,
+  CombinationTemplate,
+  TARGET_BUFFERS, 
+  ORDER_WEIGHT, 
+} from './supplierConfig';
+
+// --- INTERFACES ---
+
+interface BufferSummary {
+  type: string;
+  availableIBC: number;
+  emptySpaceOW: number;
+  remainingIBC: number;
+}
+
+interface RecommendationResult {
+  needOrder: boolean;
+  urgency: 'critical' | 'warning' | 'normal' | 'good';
+  recommendedQty: number;
+  reason: string;
+  shipments: number;
+  supplierName: string;
+  supplierId: string;
+  priorityScore: number; 
+}
+
+interface CombinedOrderRecommendation {
+  combination: CombinationTemplate;
+  totalShipments: number;
+  reason: string;
+  transmission: BufferSummary | undefined;
+  hydraulic: BufferSummary | undefined;
+  priorityScore: number;
+}
+
+// --- UTILITY FUNCTIONS ---
+// ... (getUrgencyStyle dan getUrgencyIcon tetap sama)
+const getUrgencyStyle = (urgency: string) => {
+  const styles = {
+    critical: { bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-400 dark:border-red-700', text: 'text-red-800 dark:text-red-300', label: 'CRITICAL' },
+    warning: { bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-400 dark:border-orange-700', text: 'text-orange-800 dark:text-orange-300', label: 'WARNING' },
+    normal: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-400 dark:border-yellow-700', text: 'text-yellow-800 dark:text-yellow-300', label: 'NORMAL' },
+    good: { bg: 'bg-green-100 dark:bg-green-900/30', border: 'border-green-400 dark:border-green-700', text: 'text-green-800 dark:text-green-300', label: 'GOOD' },
+  };
+  return styles[urgency as keyof typeof styles] || styles.good;
+};
+
+const getUrgencyIcon = (urgency: string) => {
+  if (urgency === 'critical' || urgency === 'warning') return <AlertCircle className="w-4 h-4" />;
+  if (urgency === 'normal') return <TrendingUp className="w-4 h-4" />;
+  return <Package className="w-4 h-4" />;
+};
+
+
+// --- CORE CALCULATION FUNCTIONS ---
+
+const calculateRecommendation = (item: BufferSummary): RecommendationResult => {
+  const supplier = getSupplierByOilType(item.type);
+  const oilConfig = OIL_TYPE_CONFIG[item.type];
+  const orderRule = SUPPLIER_ORDER_RULES[oilConfig.supplierId];
+  
+  if (!supplier || !orderRule) {
+    return { needOrder: false, urgency: 'good', recommendedQty: 0, reason: 'Konfigurasi supplier tidak ditemukan', shipments: 0, supplierName: 'Unknown', supplierId: '', priorityScore: 0 };
+  }
+  
+  const targetBuffer = TARGET_BUFFERS[item.type] || BUFFER_STOCK_TARGETS.targetBuffer; 
+  const weight = ORDER_WEIGHT[item.type] || 1; 
+  const { safetyStock, reorderPoint } = BUFFER_STOCK_TARGETS; 
+  
+  const shortage = item.remainingIBC < reorderPoint;
+  const needToReach = Math.max(0, targetBuffer - item.remainingIBC);
+  
+  let urgency: 'critical' | 'warning' | 'normal' | 'good';
+  if (item.remainingIBC < 0) urgency = 'critical';
+  else if (item.remainingIBC < safetyStock) urgency = 'warning';
+  else if (item.remainingIBC < reorderPoint) urgency = 'normal';
+  else urgency = 'good';
+  
+  let recommendedQty = 0;
+  let shipments = 0;
+  let reason = '';
+  
+  if (shortage || item.remainingIBC < targetBuffer) {
+    if (oilConfig.supplierId === 'SUPPLIER_A') {
+      const minQty = oilConfig.minOrderQty || 8;
+      const maxQty = oilConfig.maxOrderQty || 10;
+      
+      if (needToReach >= maxQty) {
+        recommendedQty = maxQty;
+        shipments = 1;
+        reason = `Order maksimal ${maxQty} IBC`;
+      } else if (needToReach >= minQty) {
+        recommendedQty = needToReach;
+        shipments = 1;
+        reason = `Order ${needToReach} IBC`;
+      } else if (needToReach > 0) {
+        recommendedQty = minQty;
+        shipments = 1;
+        reason = `Order minimal ${minQty} IBC (MOQ)`;
+      }
+    } else if (oilConfig.supplierId === 'SUPPLIER_B') {
+      const maxPerShipment = orderRule.maxTotalIBCPerShipment;
+      
+      if (needToReach > 0) {
+        recommendedQty = Math.min(needToReach, maxPerShipment);
+        shipments = 1;
+        reason = `Lihat kombinasi order di bawah (butuh ${needToReach} IBC)`;
+      }
+    }
+  } else {
+    reason = 'Stock aman';
+  }
+  
+  // Perhitungan Skor Prioritas (Normalized Weighted Shortfall Score)
+  const shortfall = Math.max(0, reorderPoint - item.remainingIBC);
+  const priorityScore = recommendedQty > 0 ? shortfall * weight : 0; 
+
+  return {
+    needOrder: recommendedQty > 0,
+    urgency,
+    recommendedQty,
+    reason,
+    shipments,
+    supplierName: supplier.name,
+    supplierId: oilConfig.supplierId,
+    priorityScore: priorityScore, 
+  };
+};
+
+const calculateSupplierBCombination = (bufferInfo: BufferSummary[]): CombinedOrderRecommendation | null => {
+  const transmission = bufferInfo.find((item) => item.type === 'transmission');
+  const hydraulic = bufferInfo.find((item) => item.type === 'hydraulic');
+
+  if (!transmission || !hydraulic) return null;
+
+  // Ambil parameter penting
+  const maxPerShipment = SUPPLIER_ORDER_RULES.SUPPLIER_B.maxTotalIBCPerShipment;
+  const transWeight = ORDER_WEIGHT.transmission || 1;
+  const hydroWeight = ORDER_WEIGHT.hydraulic || 1;
+  const totalWeight = transWeight + hydroWeight;
+
+  // Hitung kebutuhan aktual
+  const transTarget = TARGET_BUFFERS.transmission || BUFFER_STOCK_TARGETS.targetBuffer;
+  const hydroTarget = TARGET_BUFFERS.hydraulic || BUFFER_STOCK_TARGETS.targetBuffer;
+
+  const transNeed = Math.max(0, transTarget - transmission.remainingIBC);
+  const hydroNeed = Math.max(0, hydroTarget - hydraulic.remainingIBC);
+
+  if (transNeed === 0 && hydroNeed === 0) return null;
+
+  // Hitung total kebutuhan berbobot
+  const totalWeightedNeed = (transNeed * transWeight) + (hydroNeed * hydroWeight);
+  if (totalWeightedNeed === 0) return null;
+
+  // Hitung proporsi sesuai bobot dan kebutuhan
+  let transPortion = Math.round((transNeed * transWeight / totalWeightedNeed) * maxPerShipment);
+  let hydroPortion = Math.round((hydroNeed * hydroWeight / totalWeightedNeed) * maxPerShipment);
+
+  // Pastikan tidak melebihi kapasitas per shipment
+  if (transPortion + hydroPortion > maxPerShipment) {
+    const ratio = maxPerShipment / (transPortion + hydroPortion);
+    transPortion = Math.floor(transPortion * ratio);
+    hydroPortion = Math.floor(hydroPortion * ratio);
+  }
+
+  // Hitung total kebutuhan & pengiriman
+  const totalNeed = transNeed + hydroNeed;
+  const totalShipments = Math.ceil(totalNeed / maxPerShipment);
+
+  // Hitung skor prioritas kombinasi (rata-rata berbobot shortfall)
+  const transShortfall = Math.max(0, BUFFER_STOCK_TARGETS.reorderPoint - transmission.remainingIBC);
+  const hydroShortfall = Math.max(0, BUFFER_STOCK_TARGETS.reorderPoint - hydraulic.remainingIBC);
+
+  const combinationScore = Math.round(
+    (transShortfall * transWeight + hydroShortfall * hydroWeight) / totalWeight
+  );
+
+  // Tentukan alasan
+  let reason = '';
+  if (totalNeed <= maxPerShipment) {
+    reason = `${transPortion}T + ${hydroPortion}H dalam 1x pengiriman`;
+  } else {
+    reason = `Total ${totalNeed} IBC, perlu ${totalShipments}x pengiriman`;
+  }
+
+  return {
+    combination: { transmission: transPortion, hydraulic: hydroPortion, description: `${transPortion}T + ${hydroPortion}H` },
+    totalShipments,
+    reason,
+    transmission,
+    hydraulic,
+    priorityScore: combinationScore,
+  };
+};
+
+
+
+// --- PRESENTATION COMPONENTS ---
+
+const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation }> = ({ combo }) => {
+    const totalOrdered = combo.combination.transmission + combo.combination.hydraulic;
+    const transTarget = TARGET_BUFFERS.transmission || BUFFER_STOCK_TARGETS.targetBuffer;
+    const hydroTarget = TARGET_BUFFERS.hydraulic || BUFFER_STOCK_TARGETS.targetBuffer;
+
+    return (
+        <div className="p-3 rounded border-2 border-blue-400 bg-blue-50 dark:bg-blue-900/30 flex-1 min-w-[300px]">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                    <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />
+                    <h5 className="font-bold text-sm text-blue-800 dark:text-blue-200">
+                        Kombinasi Order ({getSupplierByOilType('transmission')?.name || 'Supplier B'})
+                    </h5>
+                </div>
+                {/* Tampilkan Skor Prioritas Kombinasi */}
+                <div className="flex items-center gap-1 text-sm font-bold text-blue-700 dark:text-blue-300 p-1 rounded bg-white/50 dark:bg-black/20">
+                    <Zap className="w-3 h-3 text-yellow-500" />
+                    Max Score: {combo.priorityScore}
+                </div>
+            </div>
+            
+            <div className="flex gap-2 mb-3 text-center">
+                {/* Transmission Info */}
+                <div className="flex-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-300">
+                    <p className="text-[10px] text-yellow-700 dark:text-yellow-300">Trans (Target {transTarget} | W: {ORDER_WEIGHT.transmission})</p>
+                    <p className="text-xl font-bold text-yellow-800 dark:text-yellow-200">{combo.combination.transmission}</p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer: {combo.transmission?.remainingIBC} IBC</p>
+                </div>
+                {/* Hydraulic Info */}
+                <div className="flex-1 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-300">
+                    <p className="text-[10px] text-purple-700 dark:text-purple-300">Hydro (Target {hydroTarget} | W: {ORDER_WEIGHT.hydraulic})</p>
+                    <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{combo.combination.hydraulic}</p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer: {combo.hydraulic?.remainingIBC} IBC</p>
+                </div>
+            </div>
+
+            <div className="text-sm p-2 bg-white/50 dark:bg-gray-800/50 rounded border border-blue-300 dark:border-blue-600">
+                <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Summary Order:</p>
+                <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
+                    <span>Total IBC Dipesan:</span>
+                    <span className="font-bold text-base text-blue-600 dark:text-blue-400">{totalOrdered} IBC</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
+                    <span>Total Pengiriman:</span>
+                    <span className="font-bold">{combo.totalShipments}x</span>
+                </div>
+                <p className="text-[10px] italic pt-1 mt-1 border-t border-blue-200 dark:border-blue-700">{combo.reason}</p>
+            </div>
+        </div>
+    );
+};
+
+const SupplierAPanel: React.FC<{ item: BufferSummary, rec: RecommendationResult }> = ({ item, rec }) => {
+    const style = getUrgencyStyle(rec.urgency);
+    const specificTarget = TARGET_BUFFERS.engine || BUFFER_STOCK_TARGETS.targetBuffer;
+    const engineWeight = ORDER_WEIGHT.engine || 1;
+
+    return (
+        <div className={`p-3 rounded border-2 ${style.border} ${style.bg} flex-1 min-w-[300px]`}>
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                    {getUrgencyIcon(rec.urgency)}
+                    <h5 className={`font-bold text-sm ${style.text}`}>
+                        Order Engine Oil ({getSupplierByOilType('engine')?.name || 'Supplier A'})
+                    </h5>
+                </div>
+                {/* Tampilkan Status Urgensi */}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 ${style.text}`}>
+                    {style.label}
+                </span>
+            </div>
+
+            <div className="text-sm p-2 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600">
+                <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
+                    <span>Buffer:</span>
+                    <span className="font-semibold">{item.remainingIBC} IBC</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
+                    <span>Target:</span>
+                    <span className="font-semibold">{specificTarget} IBC</span>
+                </div>
+
+                {rec.needOrder && (
+                    <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
+                        <span className="font-bold text-gray-800 dark:text-gray-200">Order Rekomendasi:</span>
+                        <span className="font-bold text-lg text-red-600 dark:text-red-400">
+                            {rec.recommendedQty} IBC
+                        </span>
+                    </div>
+                )}
+
+                {/* Tampilkan Skor Prioritas */}
+                {rec.needOrder && (
+                    <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
+                        <span className="font-bold text-gray-800 dark:text-gray-200">Prioritas Skor (W:{engineWeight}):</span>
+                        <span className="font-bold text-base text-red-600 dark:text-red-400">
+                            {rec.priorityScore}
+                        </span>
+                    </div>
+                )}
+                
+                <p className="text-[10px] italic pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 opacity-80">
+                    {rec.reason}
+                </p>
+            </div>
+        </div>
+    );
+};
+
+
+// --- MAIN COMPONENT ---
+
+const OilReorderInfo: React.FC<{ bufferInfo: BufferSummary[] }> = ({ bufferInfo }) => {
+  
+  const { supplierBCombo, engineData } = useMemo(() => {
+    const combo = calculateSupplierBCombination(bufferInfo);
+    
+    const engineItem = bufferInfo.find((item) => item.type === 'engine');
+    let engineRec = null;
+    if (engineItem) {
+        engineRec = calculateRecommendation(engineItem);
+    }
+
+    return {
+      supplierBCombo: combo,
+      engineData: engineItem && engineRec ? { item: engineItem, rec: engineRec } : null,
+    };
+  }, [bufferInfo]);
+
+
+  
+
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Truck className="w-5 h-5 text-blue-600" />
+        <h4 className="font-bold text-base text-gray-800 dark:text-gray-100">
+          Rekomendasi Order Berdasarkan Supplier
+        </h4>
+      </div>
+
+      {/* Main Order Panels - Responsif: Flex Row di Web, Column di Mobile */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        
+        {/* Panel Supplier A (Engine Oil) */}
+        {engineData && engineData.rec.needOrder && (
+            <SupplierAPanel item={engineData.item} rec={engineData.rec} />
+        )}
+        
+        {/* Panel Supplier B (Transmission + Hydraulic Oil) */}
+        {supplierBCombo && (
+            <SupplierBPanel combo={supplierBCombo} />
+        )}
+
+        {/* Jika tidak ada order yang dibutuhkan sama sekali */}
+        {!engineData?.rec.needOrder && !supplierBCombo && (
+            <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700">
+                <p className="text-green-800 dark:text-green-200 font-semibold">
+                    <Package className="inline w-4 h-4 mr-2" /> 
+                    Semua stok oli (Engine, Trans, Hydraulic) berada di atas Reorder Point dan Target. Tidak ada rekomendasi order saat ini.
+                </p>
+            </div>
+        )}
+      </div>
+      
+      {/* --- Garis Pemisah --- */}
+      <hr className="border-gray-200 dark:border-gray-700" />
+      
+      {/* Info Summary - Compact */}
+      <div className="p-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] text-gray-700 dark:text-gray-300">
+        <p className="font-semibold mb-1">ℹ️ Info Supplier & Target Stock:</p>
+        {(() => {
+          const engineSupplier = getSupplierByOilType('engine');
+          const engineRule = SUPPLIER_ORDER_RULES[OIL_TYPE_CONFIG.engine.supplierId];
+          const transSupplier = getSupplierByOilType('transmission');
+          const transRule = SUPPLIER_ORDER_RULES[OIL_TYPE_CONFIG.transmission.supplierId];
+          
+          return (
+            <>
+              <p>• <strong>{engineSupplier?.name || 'Supplier A'}:</strong> {engineRule?.minTotalIBCPerShipment}-{engineRule?.maxTotalIBCPerShipment} IBC (Engine)</p>
+              <p>• <strong>{transSupplier?.name || 'Supplier B'}:</strong> Max {transRule?.maxTotalIBCPerShipment} IBC Total (Trans+Hydro, Kombinasi)</p>
+              
+              <p className="mt-2 pt-2 border-t border-gray-400 dark:border-gray-600 italic">
+                Target Buffer: **Engine {TARGET_BUFFERS.engine}**, **Trans {TARGET_BUFFERS.transmission}**, **Hydro {TARGET_BUFFERS.hydraulic}** IBC
+              </p>
+              <p className="italic text-[9px] mt-0.5">
+                Safety Stock: {BUFFER_STOCK_TARGETS.safetyStock} | Reorder Point: {BUFFER_STOCK_TARGETS.reorderPoint} IBC
+              </p>
+              <p className="italic text-[9px] mt-0.5">
+                Bobot Prioritas (W): Engine **{ORDER_WEIGHT.engine}**, Trans **{ORDER_WEIGHT.transmission}**, Hydro **{ORDER_WEIGHT.hydraulic}**
+              </p>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  );
+};
+
+export default OilReorderInfo;
