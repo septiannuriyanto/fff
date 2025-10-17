@@ -10,7 +10,7 @@ import { getBufferTargetsByWarehouse } from "./oilSetupHelpers";
 import IBCEngine from "../../../../images/icon/ibc-engine.png";
 import IBCHydraulic from "../../../../images/icon/ibc-hydraulic.png";
 import IBCTransmission from "../../../../images/icon/ibc-transmission.png";
-import { ArrowRight, Target, Package } from "lucide-react";
+import { ArrowRight, Target, Package, Percent } from "lucide-react";
 import { BufferSummary } from "../types/bufferSummary";
 
 // ============================================
@@ -189,9 +189,12 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
   // ============================================
   return (
     <div className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-      <h3 className="text-xs font-semibold mb-2 text-gray-800 dark:text-gray-100">
-        Buffer Stock (OM1 → OW01)
-      </h3>
+      <div className="flex items-center gap-2 mt-0">
+          <Percent className="w-5 h-5 text-blue-600" />
+          <h4 className="font-bold text-base text-gray-800 dark:text-gray-100">
+            Buffer Stock (OM1 → OW01)
+          </h4>
+        </div>
 
       <div className="grid sm:grid-cols-3 gap-2">
         {summary.map((item) => {

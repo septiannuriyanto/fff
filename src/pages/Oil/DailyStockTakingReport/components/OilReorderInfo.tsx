@@ -505,10 +505,10 @@ const fetchConfig = async () => {
   // Render Komponen Utama
   // ========================
   return (
-    <div className="space-y-4 relative">
+    <div className="space-y-0 relative">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between mt-8">
+        <div className="flex items-center gap-2 ">
           <Truck className="w-5 h-5 text-blue-600" />
           <h4 className="font-bold text-base text-gray-800 dark:text-gray-100">
             Rekomendasi Order Berdasarkan Supplier
@@ -528,7 +528,7 @@ const fetchConfig = async () => {
       </div>
 
       {/* Main Order Panels - Flex Row di Web, Column di Mobile */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col lg:flex-row gap-2 mt-0">
         
         {/* Panel Supplier A (Engine Oil) */}
         {engineRec && engineRec.needOrder && (
