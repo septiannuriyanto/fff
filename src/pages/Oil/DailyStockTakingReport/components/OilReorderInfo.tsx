@@ -505,7 +505,7 @@ const fetchConfig = async () => {
   // Render Komponen Utama
   // ========================
   return (
-    <div className="space-y-0 relative">
+    <div className=" relative">
       {/* Header */}
       <div className="flex items-center justify-between mt-8">
         <div className="flex items-center gap-2 ">
@@ -569,10 +569,10 @@ const fetchConfig = async () => {
       </div>
       
       {/* --- Garis Pemisah --- */}
-      <hr className="border-gray-200 dark:border-gray-700" />
+      <hr className="border-gray-200 dark:border-gray-700 my-2" />
       
       {/* Info Summary - Compact */}
-      <div className="p-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] text-gray-700 dark:text-gray-300">
+      <div className=" p-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] text-gray-700 dark:text-gray-300">
         <p className="font-semibold mb-1">ℹ️ Info Konfigurasi:</p>
         
         <p>• **Engine (W:{engineWeight})** | Target: {engineTarget.target_buffer} | ROP: {engineTarget.reorder_point} IBC</p>
