@@ -166,7 +166,6 @@ const SupplierAPanel: React.FC<{
     );
 };
 
-
 interface SupplierBPanelProps {
   combo: CombinedOrderRecommendation;
   targets: Record<string, OilBufferTarget>;
@@ -175,7 +174,7 @@ interface SupplierBPanelProps {
   onIncomingChange: (type: 'transmission' | 'hydraulic', val: number) => void;
 }
 
-// --- Komponen Panel Kombinasi Supplier B (Revisi: Menggunakan data currentStock dari combo) ---
+// --- Komponen Panel Kombinasi Supplier B (REVISI FULL) ---
 const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
   combo,
   targets,
@@ -183,10 +182,13 @@ const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
   incoming,
   onIncomingChange
 }) => {
-    // REVISI: Menggunakan data dari combo yang sudah disimulasi
+    
+    // Data dari combo (sudah termasuk simulasi)
     const totalOrdered = combo.combination.transmission + combo.combination.hydraulic;
     const transCurrentStock = combo.currentStock.transmission;
     const hydroCurrentStock = combo.currentStock.hydraulic;
+    
+    // Konfigurasi Target dan ROP
     const transTarget = targets.transmission?.target_buffer || 0;
     const hydroTarget = targets.hydraulic?.target_buffer || 0;
     const transROP = targets.transmission?.reorder_point || 0;
@@ -195,48 +197,52 @@ const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
     const hydroWeight = weights.hydraulic || 1;
     const MAX_SHIPMENT_CAPACITY = 10;
     
-    // Ambil nama Supplier B yang sebenarnya
+    // Ambil nama Supplier B
     const supplierBInfo = SUPPLIERS['SUPPLIER_B']; 
     const supplierBName = supplierBInfo ? supplierBInfo.name : 'Supplier B (Unknown)';
 
-    // Logic untuk menentukan urgensi visual (berdasarkan stock AKTUAL + SIMULASI)
+    // Logika Penentuan Style
     const isTransUnderROP = transCurrentStock < transROP;
     const isHydroUnderROP = hydroCurrentStock < hydroROP;
 
-    const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY && (isTransUnderROP || isHydroUnderROP);
+    let panelClass = 'border-green-400 bg-green-50 dark:bg-green-900/30'; 
+    let headerTextColor = 'text-green-800 dark:text-green-200';
+    let summaryBgClass = 'bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600';
+    let orderedQtyColor = 'text-green-600 dark:text-green-400';
+    let instructionText = 'Stock Aman. Order tidak diperlukan.';
+    let instructionTextColor = 'text-green-700 dark:text-green-300';
+    let headerIcon = <Package className="w-4 h-4 text-green-700 dark:text-green-300" />;
 
-    const panelClass = isFullTruckOrder 
-        ? 'border-red-400 bg-red-50 dark:bg-red-900/30' 
-        : (totalOrdered > 0 ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/30' : 'border-green-400 bg-green-50 dark:bg-green-900/30'); // NEW: Normal/Aman jika tidak ada order
-    
-    const headerTextColor = isFullTruckOrder 
-        ? 'text-red-800 dark:text-red-200' 
-        : (totalOrdered > 0 ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200');
+    if (totalOrdered > 0) {
+        const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY && (isTransUnderROP || isHydroUnderROP);
 
-    const summaryBgClass = isFullTruckOrder 
-        ? 'bg-red-100/50 dark:bg-red-900/50 border-red-300 dark:border-red-600'
-        : (totalOrdered > 0 ? 'bg-orange-100/50 dark:bg-orange-900/50 border-orange-300 dark:border-orange-600' : 'bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600');
-
-    const orderedQtyColor = isFullTruckOrder 
-        ? 'text-red-600 dark:text-red-400' 
-        : 'text-orange-600 dark:text-orange-400';
-
-    const instructionText = isFullTruckOrder
-        ? 'SEGERA BUAT PERMINTAAN ORDER (Truk Penuh)'
-        : (totalOrdered > 0 ? 'Rekomendasi Order Sebagian' : 'Stock Aman. Order tidak diperlukan.');
-        
-    const instructionTextColor = isFullTruckOrder
-        ? 'text-red-700 dark:text-red-300' 
-        : (totalOrdered > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300');
+        if (isFullTruckOrder) {
+            // CRITICAL / Full Truck
+            panelClass = 'border-red-400 bg-red-50 dark:bg-red-900/30'; 
+            headerTextColor = 'text-red-800 dark:text-red-200';
+            summaryBgClass = 'bg-red-100/50 dark:bg-red-900/50 border-red-300 dark:border-red-600';
+            orderedQtyColor = 'text-red-600 dark:text-red-400';
+            instructionText = 'SEGERA BUAT PERMINTAAN ORDER (Truk Penuh)';
+            instructionTextColor = 'text-red-700 dark:text-red-300';
+            headerIcon = <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-300" />;
+        } else {
+            // WARNING / Partial Truck
+            panelClass = 'border-orange-400 bg-orange-50 dark:bg-orange-900/30';
+            headerTextColor = 'text-orange-800 dark:text-orange-200';
+            summaryBgClass = 'bg-orange-100/50 dark:bg-orange-900/50 border-orange-300 dark:border-orange-600';
+            orderedQtyColor = 'text-orange-600 dark:text-orange-400';
+            instructionText = 'Rekomendasi Order Sebagian';
+            instructionTextColor = 'text-orange-700 dark:text-orange-300';
+            headerIcon = <Combine className="w-4 h-4 text-orange-700 dark:text-orange-300" />;
+        }
+    }
 
 
     return (
         <div className={`p-3 rounded border-2 ${panelClass} flex-1 min-w-[300px]`}>
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                    {isFullTruckOrder 
-                        ? <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-300" />
-                        : <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />}
+                    {headerIcon}
                     <h5 className={`font-bold text-sm ${headerTextColor}`}>
                         Kombinasi Order ({supplierBName})
                     </h5>
@@ -251,7 +257,7 @@ const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
                 {/* Transmission Info */}
                 <div className="flex-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-300">
                     <p className="text-[10px] text-yellow-700 dark:text-yellow-300">Trans (Target {transTarget} | W: {transWeight})</p>
-                    <p className="text-xl font-bold text-yellow-800 dark:text-yellow-200">{combo.combination.transmission}</p>
+                    <p className={`text-xl font-bold text-yellow-800 dark:text-yellow-200 ${totalOrdered === 0 ? 'text-gray-500 dark:text-gray-400' : ''}`}>{combo.combination.transmission}</p>
                     <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer (Aktual {combo.actualStock.transmission} + Sim {incoming.transmission}): {transCurrentStock} IBC</p>
                     {/* Input Simulasi */}
                     <input
@@ -259,14 +265,14 @@ const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
                         min={0}
                         className="w-full text-xs p-1 mt-1 border rounded bg-white dark:bg-slate-700"
                         placeholder="Kedatangan IBC..."
-                        value={incoming.transmission === 0 ? '' : incoming.transmission} // Binding nilai
+                        value={incoming.transmission === 0 ? '' : incoming.transmission} 
                         onChange={(e) => onIncomingChange('transmission', parseInt(e.target.value) || 0)}
                     />
                 </div>
                 {/* Hydraulic Info */}
                 <div className="flex-1 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-300">
                     <p className="text-[10px] text-purple-700 dark:text-purple-300">Hydro (Target {hydroTarget} | W: {hydroWeight})</p>
-                    <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{combo.combination.hydraulic}</p>
+                    <p className={`text-xl font-bold text-purple-800 dark:text-purple-200 ${totalOrdered === 0 ? 'text-gray-500 dark:text-gray-400' : ''}`}>{combo.combination.hydraulic}</p>
                     <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer (Aktual {combo.actualStock.hydraulic} + Sim {incoming.hydraulic}): {hydroCurrentStock} IBC</p>
                     {/* Input Simulasi */}
                     <input
@@ -274,7 +280,7 @@ const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
                         min={0}
                         className="w-full text-xs p-1 mt-1 border rounded bg-white dark:bg-gray-700"
                         placeholder="Kedatangan IBC..."
-                        value={incoming.hydraulic === 0 ? '' : incoming.hydraulic} // Binding nilai
+                        value={incoming.hydraulic === 0 ? '' : incoming.hydraulic} 
                         onChange={(e) => onIncomingChange('hydraulic', parseInt(e.target.value) || 0)}
                     />
                 </div>
