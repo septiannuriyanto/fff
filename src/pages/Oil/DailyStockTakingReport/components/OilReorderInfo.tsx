@@ -183,7 +183,7 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
         
     const instructionTextColor = isFullTruckOrder
         ? 'text-red-700 dark:text-red-300' // Merah untuk SEGERA
-        : 'text-gray-700 dark:text-gray-300'; // Abu-abu/Normal untuk Rencanakan
+        : 'text-blue-700 dark:text-blue-300'; // Abu-abu/Normal untuk Rencanakan
 
 
     return (
