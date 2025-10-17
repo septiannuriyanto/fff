@@ -81,7 +81,7 @@ const getUrgencyIcon = (urgency: string) => {
 };
 
 // ===============================================
-// PANEL COMPONENTS (REMADE)
+// PANEL COMPONENTS
 // ===============================================
 
 // --- Komponen Panel Order Supplier A ---
@@ -120,7 +120,7 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
                         </span>
                     </div>
                 )}
-{/* 
+
                 {rec.needOrder && (
                     <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
                         <span className="font-bold text-gray-800 dark:text-gray-200">Prioritas Skor (W:{weight}):</span>
@@ -128,7 +128,7 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
                             {rec.priorityScore.toFixed(2)}
                         </span>
                     </div>
-                )} */}
+                )}
                 
                 <p className="text-[10px] italic pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 opacity-80">
                     {rec.reason}
@@ -145,13 +145,45 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
     const hydroTarget = targets.hydraulic?.target_buffer || 0;
     const transWeight = weights.transmission || 1;
     const hydroWeight = weights.hydraulic || 1;
+    const MAX_SHIPMENT_CAPACITY = 10; // Asumsi max IBC per shipment Supplier B
+
+    // Logic untuk menentukan urgensi visual
+    const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY;
+
+    const panelClass = isFullTruckOrder 
+        ? 'border-red-400 bg-red-50 dark:bg-red-900/30' 
+        : 'border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+    
+    const headerTextColor = isFullTruckOrder 
+        ? 'text-red-800 dark:text-red-200' 
+        : 'text-blue-800 dark:text-blue-200';
+
+    const summaryBgClass = isFullTruckOrder 
+        ? 'bg-red-100/50 dark:bg-red-900/50 border-red-300 dark:border-red-600'
+        : 'bg-white/50 dark:bg-gray-800/50 border-blue-300 dark:border-blue-600';
+
+    const orderedQtyColor = isFullTruckOrder 
+        ? 'text-red-600 dark:text-red-400' 
+        : 'text-blue-600 dark:text-blue-400';
+
+    const instructionText = isFullTruckOrder
+        ? 'SEGERA BUAT PERMINTAAN ORDER (Truk Penuh)'
+        : 'Rencanakan order dalam beberapa hari ke depan';
+        
+    // *** PERUBAHAN DI SINI: Warna teks instruksi ***
+    const instructionTextColor = isFullTruckOrder
+        ? 'text-red-700 dark:text-red-300' // Merah untuk SEGERA
+        : 'text-gray-700 dark:text-gray-300'; // Abu-abu/Normal untuk Rencanakan
+
 
     return (
-        <div className="p-3 rounded border-2 border-blue-400 bg-blue-50 dark:bg-blue-900/30 flex-1 min-w-[300px]">
+        <div className={`p-3 rounded border-2 ${panelClass} flex-1 min-w-[300px]`}>
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                    <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />
-                    <h5 className="font-bold text-sm text-blue-800 dark:text-blue-200">
+                    {isFullTruckOrder 
+                        ? <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-300" />
+                        : <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />}
+                    <h5 className={`font-bold text-sm ${headerTextColor}`}>
                         Kombinasi Order (Supplier B)
                     </h5>
                 </div>
@@ -177,17 +209,27 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
                 </div>
             </div>
 
-            <div className="text-sm p-2 bg-white/50 dark:bg-gray-800/50 rounded border border-blue-300 dark:border-blue-600">
-                <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Summary Order:</p>
+            <div className={`text-sm p-2 rounded border ${summaryBgClass}`}>
+                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1">Summary Order:</p>
+                
                 <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
                     <span>Total IBC Dipesan:</span>
-                    <span className="font-bold text-base text-blue-600 dark:text-blue-400">{totalOrdered} IBC</span>
+                    <span className={`font-bold text-base ${orderedQtyColor}`}>{totalOrdered} / {MAX_SHIPMENT_CAPACITY} IBC</span>
                 </div>
+                
                 <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
                     <span>Total Pengiriman:</span>
                     <span className="font-bold">{combo.totalShipments}x</span>
                 </div>
-                <p className="text-[10px] italic pt-1 mt-1 border-t border-blue-200 dark:border-blue-700">{combo.reason}</p>
+                
+                {/* Teks Instruksi dengan warna kondisional */}
+                <p className={`text-[10px] font-bold pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 ${instructionTextColor}`}>
+                    {instructionText}
+                </p>
+
+                <p className="text-[10px] italic pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 opacity-80">
+                    {combo.reason}
+                </p>
             </div>
         </div>
     );
@@ -201,12 +243,11 @@ const OilReorderInfo: React.FC<{ bufferInfo: BufferSummary[]; warehouseId: strin
   const [weights, setWeights] = useState<Record<string, number>>({});
   const [targets, setTargets] = useState<Record<string, OilBufferTarget>>({});
   const [loading, setLoading] = useState(true);
-  const [showSetupModal, setShowSetupModal] = useState(false); // 👈 state baru untuk modal
+  const [showSetupModal, setShowSetupModal] = useState(false); 
 
 
 // Fetch Konfigurasi Supabase
-useEffect(() => {
-  const fetchConfig = async () => {
+const fetchConfig = async () => {
     try {
       setLoading(true);
 
@@ -245,8 +286,10 @@ useEffect(() => {
       setLoading(false);
     }
   };
-  fetchConfig();
-}, [warehouseId]);
+  
+  useEffect(() => {
+    fetchConfig();
+  }, [warehouseId]);
 
 
   // ========================
@@ -368,6 +411,7 @@ useEffect(() => {
     if (transPortion + hydroPortion > maxPerShipment) {
       const excess = (transPortion + hydroPortion) - maxPerShipment;
       // Kurangi dari item dengan bobot lebih rendah atau kekurangan IBC yang lebih sedikit
+      // (Asumsi Transmisi lebih berat, jadi Hidraulik yang dikurangi duluan)
       if (hydroWeight < transWeight) {
         hydroPortion = Math.max(0, hydroPortion - excess);
       } else {
@@ -528,10 +572,13 @@ useEffect(() => {
       {/* MODAL SETUP CONFIG */}
       {/* ======================== */}
       {showSetupModal && (
-        <div className="fixed inset-0 bg-black/50  flex items-center justify-center z-999">
+        <div className="fixed inset-0 bg-black/50  flex items-center justify-center z-50"> {/* z-999 diubah jadi z-50 agar tidak terlalu agresif */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[90%] max-w-3xl p-4 relative">
             <button
-              onClick={() => setShowSetupModal(false)}
+              onClick={() => {
+                  setShowSetupModal(false);
+                  fetchConfig(); // Muat ulang konfigurasi setelah modal ditutup
+              }}
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 dark:hover:text-white"
             >
               ✕
