@@ -9,7 +9,14 @@ import toast from 'react-hot-toast';
 import { BufferSummary } from '../types/bufferSummary';
 import OilSetupPanel from './OilSetupPanels';
 import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
-import { ADMIN, SUPERVISOR } from '../../../../store/roles';
+import { SUPERVISOR } from '../../../../store/roles';
+import { getSupplierByOilType, SUPPLIERS } from './supplierConfig';
+
+// *************************************************************
+// ASUMSI IMPOR DARI supplierConfig.ts:
+// Ini diperlukan untuk mendapatkan nama supplier yang sebenarnya
+
+// *************************************************************
 
 // ===============================================
 // KONSTANTA MATERIAL CODE
@@ -45,7 +52,7 @@ interface RecommendationResult {
   recommendedQty: number;
   reason: string;
   shipments: number;
-  supplierName: string;
+  supplierName: string; // Nama supplier yang sebenarnya
   supplierId: string;
   priorityScore: number;
   remainingIBC: number;
@@ -94,7 +101,7 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
                 <div className="flex items-center gap-1.5">
                     {getUrgencyIcon(rec.urgency)}
                     <h5 className={`font-bold text-sm ${style.text}`}>
-                        Order Engine Oil ({rec.supplierName})
+                        Order Engine Oil ({rec.supplierName}) {/* MENGGUNAKAN NAMA SUPPLIER ASLI */}
                     </h5>
                 </div>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 ${style.text}`}>
@@ -146,6 +153,10 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
     const transWeight = weights.transmission || 1;
     const hydroWeight = weights.hydraulic || 1;
     const MAX_SHIPMENT_CAPACITY = 10; // Asumsi max IBC per shipment Supplier B
+    
+    // Ambil nama Supplier B yang sebenarnya
+    const supplierBInfo = SUPPLIERS['SUPPLIER_B']; 
+    const supplierBName = supplierBInfo ? supplierBInfo.name : 'Supplier B (Unknown)';
 
     // Logic untuk menentukan urgensi visual
     const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY;
@@ -170,7 +181,6 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
         ? 'SEGERA BUAT PERMINTAAN ORDER (Truk Penuh)'
         : 'Rencanakan order dalam beberapa hari ke depan';
         
-    // *** PERUBAHAN DI SINI: Warna teks instruksi ***
     const instructionTextColor = isFullTruckOrder
         ? 'text-red-700 dark:text-red-300' // Merah untuk SEGERA
         : 'text-gray-700 dark:text-gray-300'; // Abu-abu/Normal untuk Rencanakan
@@ -184,7 +194,7 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
                         ? <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-300" />
                         : <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />}
                     <h5 className={`font-bold text-sm ${headerTextColor}`}>
-                        Kombinasi Order (Supplier B)
+                        Kombinasi Order ({supplierBName}) {/* MENGGUNAKAN NAMA SUPPLIER ASLI */}
                     </h5>
                 </div>
                 {/* Tampilkan Skor Prioritas Kombinasi */}
@@ -299,6 +309,12 @@ const fetchConfig = async () => {
     const conf = targets[item.type];
     const weight = weights[item.type] || 1;
 
+    // Ambil info supplier yang sebenarnya
+    const supplierInfo = getSupplierByOilType(item.type);
+    const supplierName = supplierInfo ? supplierInfo.name : 'Supplier A (Unknown)';
+    const supplierId = supplierInfo ? supplierInfo.id : 'SUPPLIER_A';
+
+
     if (!conf) {
       return {
         type: item.type as 'engine' | 'transmission' | 'hydraulic',
@@ -307,8 +323,8 @@ const fetchConfig = async () => {
         recommendedQty: 0,
         reason: 'Konfigurasi buffer tidak ditemukan',
         shipments: 0,
-        supplierName: '-',
-        supplierId: '-',
+        supplierName: supplierName,
+        supplierId: supplierId,
         priorityScore: 0,
         remainingIBC: item.remainingIBC,
         emptySpaceOW: item.emptySpaceOW,
@@ -356,8 +372,8 @@ const fetchConfig = async () => {
       recommendedQty,
       reason,
       shipments,
-      supplierName: item.type === 'engine' ? 'Supplier A' : 'Supplier B',
-      supplierId: item.type === 'engine' ? 'SUPPLIER_A' : 'SUPPLIER_B',
+      supplierName: supplierName, // Menggunakan nama supplier yang sebenarnya
+      supplierId: supplierId,
       priorityScore,
       remainingIBC: item.remainingIBC,
       emptySpaceOW: item.emptySpaceOW,
@@ -411,7 +427,6 @@ const fetchConfig = async () => {
     if (transPortion + hydroPortion > maxPerShipment) {
       const excess = (transPortion + hydroPortion) - maxPerShipment;
       // Kurangi dari item dengan bobot lebih rendah atau kekurangan IBC yang lebih sedikit
-      // (Asumsi Transmisi lebih berat, jadi Hidraulik yang dikurangi duluan)
       if (hydroWeight < transWeight) {
         hydroPortion = Math.max(0, hydroPortion - excess);
       } else {
@@ -572,7 +587,7 @@ const fetchConfig = async () => {
       {/* MODAL SETUP CONFIG */}
       {/* ======================== */}
       {showSetupModal && (
-        <div className="fixed inset-0 bg-black/50  flex items-center justify-center z-50"> {/* z-999 diubah jadi z-50 agar tidak terlalu agresif */}
+        <div className="fixed inset-0 bg-black/50  flex items-center justify-center z-50"> 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[90%] max-w-3xl p-4 relative">
             <button
               onClick={() => {
