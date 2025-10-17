@@ -128,14 +128,14 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
                     </div>
                 )}
 
-                {rec.needOrder && (
+                {/* {rec.needOrder && (
                     <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
                         <span className="font-bold text-gray-800 dark:text-gray-200">Prioritas Skor (W:{weight}):</span>
                         <span className="font-bold text-base text-red-600 dark:text-red-400">
                             {rec.priorityScore.toFixed(2)}
                         </span>
                     </div>
-                )}
+                )} */}
                 
                 <p className="text-[10px] italic pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 opacity-80">
                     {rec.reason}
@@ -198,10 +198,10 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
                     </h5>
                 </div>
                 {/* Tampilkan Skor Prioritas Kombinasi */}
-                <div className="flex items-center gap-1 text-sm font-bold text-blue-700 dark:text-blue-300 p-1 rounded bg-white/50 dark:bg-black/20">
+                {/* <div className="flex items-center gap-1 text-sm font-bold text-blue-700 dark:text-blue-300 p-1 rounded bg-white/50 dark:bg-black/20">
                     <Zap className="w-3 h-3 text-yellow-500" />
                     Score: {combo.priorityScore.toFixed(2)}
-                </div>
+                </div> */}
             </div>
             
             <div className="flex gap-2 mb-3 text-center">
