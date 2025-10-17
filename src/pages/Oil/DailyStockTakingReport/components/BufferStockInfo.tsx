@@ -48,10 +48,9 @@ interface BufferStockPanelProps {
 }
 
 const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
-  const [summary, setSummary] = useState<(BufferSummary & {
-    material_code: string;
-    targetBuffer: number;
-  })[]>([]);
+  const [summary, setSummary] = useState<
+    (BufferSummary & { material_code: string; targetBuffer: number })[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +63,6 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
         setLoading(true);
         setError(null);
 
-        // Ambil konfigurasi storage dan target buffer dari Supabase
         const setupData = await fetchAvailableStorageOil();
         const bufferTargets = await getBufferTargetsByWarehouse("OM01");
 
@@ -80,15 +78,28 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
           if (!target.active) continue;
 
           const mat = target.material_code;
-          const om1 = records.find((r) => r.warehouse_id === "OM01" && r.material_code === mat);
-          const ow01 = records.find((r) => r.warehouse_id === "OW01" && r.material_code === mat);
-          const tankSetup = setupData.find((s) => s.warehouse_id === "OW01" && s.material_code === mat);
 
-          const maxCap = tankSetup?.storage_model === "tank6000" ? 6000 : 2000;
-          const filled = ow01?.qty ?? 0;
-          const emptySpace = Math.max(maxCap - filled, 0);
+          // === AGREGASI DATA PER MATERIAL CODE ===
+          const om1Tanks = records.filter(
+            (r) => r.warehouse_id === "OM01" && r.material_code === mat
+          );
+          const ow01Tanks = records.filter(
+            (r) => r.warehouse_id === "OW01" && r.material_code === mat
+          );
 
-          const available = om1?.qty ?? 0;
+          const setupOw = setupData.filter(
+            (s) => s.warehouse_id === "OW01" && s.material_code === mat
+          );
+
+          const totalCapacity = setupOw.reduce((sum, s) => {
+            const cap = s.storage_model === "tank6000" ? 6000 : 2000;
+            return sum + cap;
+          }, 0);
+
+          const filled = ow01Tanks.reduce((sum, t) => sum + (t.qty ?? 0), 0);
+          const available = om1Tanks.reduce((sum, t) => sum + (t.qty ?? 0), 0);
+
+          const emptySpace = Math.max(totalCapacity - filled, 0);
           const availableIBC = Math.floor(available / 1000);
           const emptyIBC = Math.ceil(emptySpace / 1000);
           const remainingIBC = availableIBC - emptyIBC;
@@ -118,21 +129,19 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
         }
       } catch (err) {
         console.error("❌ Error calculating buffer stock:", err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menghitung buffer stock");
-        }
+        if (isMounted)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Terjadi kesalahan saat menghitung buffer stock"
+          );
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
-    if (records?.length > 0) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
+    if (records?.length > 0) loadData();
+    else setLoading(false);
 
     return () => {
       isMounted = false;
@@ -165,7 +174,7 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
     );
 
   // ============================================
-  // RENDER ELEMENT
+  // RENDER ICONS
   // ============================================
   const renderIBCIcons = (count: number, icon: string) => {
     const displayCount = Math.min(count, 8);
@@ -189,12 +198,12 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
   // ============================================
   return (
     <div className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
-      <div className="flex items-center gap-2 mt-0">
-          <Percent className="w-5 h-5 text-blue-600" />
-          <h4 className="font-bold text-base text-gray-800 dark:text-gray-100">
-            Buffer Stock (OM1 → OW01)
-          </h4>
-        </div>
+      <div className="flex items-center gap-2 mt-0 mb-2">
+        <Percent className="w-5 h-5 text-blue-600" />
+        <h4 className="font-bold text-base text-gray-800 dark:text-gray-100">
+          Buffer Stock (OM1 → OW01)
+        </h4>
+      </div>
 
       <div className="grid sm:grid-cols-3 gap-2">
         {summary.map((item) => {
@@ -256,7 +265,6 @@ const BufferStockPanel: React.FC<BufferStockPanelProps> = ({ records }) => {
                     {item.remainingIBC}
                   </span>
                 </div>
-
 
                 {/* Target */}
                 <div className="flex items-center justify-between text-xs">
