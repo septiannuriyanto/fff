@@ -1,5 +1,5 @@
 // ===============================================
-// src/components/OilReorderInfo.tsx
+// src/components/OilReorderInfo.tsx (REVISI TOTAL)
 // ===============================================
 
 import React, { useMemo, useEffect, useState } from 'react';
@@ -12,12 +12,6 @@ import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
 import { SUPERVISOR } from '../../../../store/roles';
 import { getSupplierByOilType, SUPPLIERS } from './supplierConfig';
 
-// *************************************************************
-// ASUMSI IMPOR DARI supplierConfig.ts:
-// Ini diperlukan untuk mendapatkan nama supplier yang sebenarnya
-
-// *************************************************************
-
 // ===============================================
 // KONSTANTA MATERIAL CODE
 // ===============================================
@@ -28,7 +22,7 @@ export const MATERIALS = {
 };
 
 // ===============================================
-// INTERFACES
+// INTERFACES (Revisi: Tambah currentStock di Combo)
 // ===============================================
 
 interface OilPriorityWeight {
@@ -47,15 +41,16 @@ interface OilBufferTarget {
 
 interface RecommendationResult {
   type: 'engine' | 'transmission' | 'hydraulic';
-  needOrder: boolean;
-  urgency: 'critical' | 'warning' | 'normal' | 'good';
+  needOrder: boolean; // Apakah order dibutuhkan (berdasarkan stock AKTUAL)
+  urgency: 'critical' | 'warning' | 'normal' | 'good'; // Urgensi visual (berdasarkan stock AKTUAL + SIMULASI)
   recommendedQty: number;
   reason: string;
   shipments: number;
-  supplierName: string; // Nama supplier yang sebenarnya
+  supplierName: string; 
   supplierId: string;
   priorityScore: number;
-  remainingIBC: number;
+  remainingIBC: number; // Stock AKTUAL + SIMULASI
+  actualIBC: number; // Stock IBC AKTUAL (tanpa simulasi)
   emptySpaceOW: number;
 }
 
@@ -66,10 +61,12 @@ interface CombinedOrderRecommendation {
   transmission: BufferSummary | undefined;
   hydraulic: BufferSummary | undefined;
   priorityScore: number;
+  currentStock: { transmission: number; hydraulic: number }; // Stock AKTUAL + SIMULASI
+  actualStock: { transmission: number; hydraulic: number }; // Stock IBC AKTUAL
 }
 
 // ===============================================
-// STYLE & ICON UTILITIES
+// STYLE & ICON UTILITIES (Dipertahankan)
 // ===============================================
 const getUrgencyStyle = (urgency: string) => {
   const styles = {
@@ -91,9 +88,27 @@ const getUrgencyIcon = (urgency: string) => {
 // PANEL COMPONENTS
 // ===============================================
 
-// --- Komponen Panel Order Supplier A ---
-const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTarget, weight: number }> = ({ rec, target, weight }) => {
+// --- Komponen Panel Order Supplier A (Revisi: Tambah prop `incoming`) ---
+const SupplierAPanel: React.FC<{
+  rec: RecommendationResult,
+  target: OilBufferTarget,
+  onIncomingChange: (val: number) => void;
+  weight: number,
+  incoming: number // NEW: Menerima nilai incoming
+}> = ({ rec, target, weight, incoming, onIncomingChange }) => {
     const style = getUrgencyStyle(rec.urgency);
+    
+    // Tentukan Order Qty yang ditampilkan
+    const displayQty = rec.needOrder ? rec.recommendedQty : 0;
+    
+    // Tentukan Reason yang ditampilkan
+    let displayReason = rec.reason;
+    if (!rec.needOrder && incoming > 0) {
+        displayReason = `Stok aman. Kedatangan simulasi (${incoming} IBC) menaikkan buffer ke ${rec.remainingIBC} IBC.`;
+    } else if (!rec.needOrder && incoming === 0) {
+        displayReason = `Stock aman (${rec.remainingIBC} IBC). Tidak ada rekomendasi order saat ini.`;
+    }
+    
 
     return (
         <div className={`p-3 rounded border-2 ${style.border} ${style.bg} flex-1 min-w-[300px]`}>
@@ -101,7 +116,7 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
                 <div className="flex items-center gap-1.5">
                     {getUrgencyIcon(rec.urgency)}
                     <h5 className={`font-bold text-sm ${style.text}`}>
-                        Order Engine Oil ({rec.supplierName}) {/* MENGGUNAKAN NAMA SUPPLIER ASLI */}
+                        Order Engine Oil ({rec.supplierName})
                     </h5>
                 </div>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 ${style.text}`}>
@@ -111,79 +126,108 @@ const SupplierAPanel: React.FC<{ rec: RecommendationResult, target: OilBufferTar
 
             <div className="text-sm p-2 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600">
                 <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
-                    <span>Buffer Tersisa:</span>
+                    <span>Buffer Tersisa (Aktual {rec.actualIBC} + Sim {incoming}):</span>
                     <span className="font-semibold">{rec.remainingIBC} IBC</span>
                 </div>
                 <div className="flex justify-between text-[11px] text-gray-700 dark:text-gray-300">
                     <span>Target Buffer:</span>
                     <span className="font-semibold">{target.target_buffer} IBC</span>
                 </div>
+                
+                {/* Input simulasi */}
+                <div className="mt-2">
+                  <label className="text-[10px] font-semibold block mb-0.5 text-gray-600 dark:text-gray-300">
+                    Simulasi Kedatangan Hari Ini (IBC):
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="w-full text-xs p-1 border rounded bg-white dark:bg-gray-700"
+                    value={incoming === 0 ? '' : incoming} // Binding nilai
+                    onChange={(e) => onIncomingChange(parseInt(e.target.value) || 0)}
+                    placeholder="Masukkan jumlah IBC..."
+                  />
+                </div>
 
-                {rec.needOrder && (
+                {displayQty > 0 && (
                     <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
                         <span className="font-bold text-gray-800 dark:text-gray-200">Order Rekomendasi:</span>
                         <span className="font-bold text-lg text-red-600 dark:text-red-400">
-                            {rec.recommendedQty} IBC
+                            {displayQty} IBC
                         </span>
                     </div>
                 )}
-
-                {/* {rec.needOrder && (
-                    <div className="flex justify-between pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50">
-                        <span className="font-bold text-gray-800 dark:text-gray-200">Prioritas Skor (W:{weight}):</span>
-                        <span className="font-bold text-base text-red-600 dark:text-red-400">
-                            {rec.priorityScore.toFixed(2)}
-                        </span>
-                    </div>
-                )} */}
                 
                 <p className="text-[10px] italic pt-1 mt-1 border-t border-gray-400 dark:border-gray-600/50 opacity-80">
-                    {rec.reason}
+                    {displayReason}
                 </p>
             </div>
         </div>
     );
 };
 
-// --- Komponen Panel Kombinasi Supplier B ---
-const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Record<string, OilBufferTarget>, weights: Record<string, number> }> = ({ combo, targets, weights }) => {
+
+interface SupplierBPanelProps {
+  combo: CombinedOrderRecommendation;
+  targets: Record<string, OilBufferTarget>;
+  weights: Record<string, number>;
+  incoming: { transmission: number; hydraulic: number };
+  onIncomingChange: (type: 'transmission' | 'hydraulic', val: number) => void;
+}
+
+// --- Komponen Panel Kombinasi Supplier B (Revisi: Menggunakan data currentStock dari combo) ---
+const SupplierBPanel: React.FC<SupplierBPanelProps> = ({
+  combo,
+  targets,
+  weights,
+  incoming,
+  onIncomingChange
+}) => {
+    // REVISI: Menggunakan data dari combo yang sudah disimulasi
     const totalOrdered = combo.combination.transmission + combo.combination.hydraulic;
+    const transCurrentStock = combo.currentStock.transmission;
+    const hydroCurrentStock = combo.currentStock.hydraulic;
     const transTarget = targets.transmission?.target_buffer || 0;
     const hydroTarget = targets.hydraulic?.target_buffer || 0;
+    const transROP = targets.transmission?.reorder_point || 0;
+    const hydroROP = targets.hydraulic?.reorder_point || 0;
     const transWeight = weights.transmission || 1;
     const hydroWeight = weights.hydraulic || 1;
-    const MAX_SHIPMENT_CAPACITY = 10; // Asumsi max IBC per shipment Supplier B
+    const MAX_SHIPMENT_CAPACITY = 10;
     
     // Ambil nama Supplier B yang sebenarnya
     const supplierBInfo = SUPPLIERS['SUPPLIER_B']; 
     const supplierBName = supplierBInfo ? supplierBInfo.name : 'Supplier B (Unknown)';
 
-    // Logic untuk menentukan urgensi visual
-    const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY;
+    // Logic untuk menentukan urgensi visual (berdasarkan stock AKTUAL + SIMULASI)
+    const isTransUnderROP = transCurrentStock < transROP;
+    const isHydroUnderROP = hydroCurrentStock < hydroROP;
+
+    const isFullTruckOrder = totalOrdered >= MAX_SHIPMENT_CAPACITY && (isTransUnderROP || isHydroUnderROP);
 
     const panelClass = isFullTruckOrder 
         ? 'border-red-400 bg-red-50 dark:bg-red-900/30' 
-        : 'border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+        : (totalOrdered > 0 ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/30' : 'border-green-400 bg-green-50 dark:bg-green-900/30'); // NEW: Normal/Aman jika tidak ada order
     
     const headerTextColor = isFullTruckOrder 
         ? 'text-red-800 dark:text-red-200' 
-        : 'text-blue-800 dark:text-blue-200';
+        : (totalOrdered > 0 ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200');
 
     const summaryBgClass = isFullTruckOrder 
         ? 'bg-red-100/50 dark:bg-red-900/50 border-red-300 dark:border-red-600'
-        : 'bg-white/50 dark:bg-gray-800/50 border-blue-300 dark:border-blue-600';
+        : (totalOrdered > 0 ? 'bg-orange-100/50 dark:bg-orange-900/50 border-orange-300 dark:border-orange-600' : 'bg-white/50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600');
 
     const orderedQtyColor = isFullTruckOrder 
         ? 'text-red-600 dark:text-red-400' 
-        : 'text-blue-600 dark:text-blue-400';
+        : 'text-orange-600 dark:text-orange-400';
 
     const instructionText = isFullTruckOrder
         ? 'SEGERA BUAT PERMINTAAN ORDER (Truk Penuh)'
-        : 'Rencanakan order dalam beberapa hari ke depan';
+        : (totalOrdered > 0 ? 'Rekomendasi Order Sebagian' : 'Stock Aman. Order tidak diperlukan.');
         
     const instructionTextColor = isFullTruckOrder
-        ? 'text-red-700 dark:text-red-300' // Merah untuk SEGERA
-        : 'text-blue-700 dark:text-blue-300'; // Abu-abu/Normal untuk Rencanakan
+        ? 'text-red-700 dark:text-red-300' 
+        : (totalOrdered > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300');
 
 
     return (
@@ -194,14 +238,13 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
                         ? <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-300" />
                         : <Combine className="w-4 h-4 text-blue-700 dark:text-blue-300" />}
                     <h5 className={`font-bold text-sm ${headerTextColor}`}>
-                        Kombinasi Order ({supplierBName}) {/* MENGGUNAKAN NAMA SUPPLIER ASLI */}
+                        Kombinasi Order ({supplierBName})
                     </h5>
                 </div>
-                {/* Tampilkan Skor Prioritas Kombinasi */}
-                {/* <div className="flex items-center gap-1 text-sm font-bold text-blue-700 dark:text-blue-300 p-1 rounded bg-white/50 dark:bg-black/20">
-                    <Zap className="w-3 h-3 text-yellow-500" />
-                    Score: {combo.priorityScore.toFixed(2)}
-                </div> */}
+                {/* Menampilkan status order/aman */}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20 ${headerTextColor}`}>
+                    {totalOrdered > 0 ? 'ORDER DIBUTUHKAN' : 'STOCK AMAN'}
+                </span>
             </div>
             
             <div className="flex gap-2 mb-3 text-center">
@@ -209,13 +252,31 @@ const SupplierBPanel: React.FC<{ combo: CombinedOrderRecommendation, targets: Re
                 <div className="flex-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-300">
                     <p className="text-[10px] text-yellow-700 dark:text-yellow-300">Trans (Target {transTarget} | W: {transWeight})</p>
                     <p className="text-xl font-bold text-yellow-800 dark:text-yellow-200">{combo.combination.transmission}</p>
-                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer: {combo.transmission?.remainingIBC} IBC</p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer (Aktual {combo.actualStock.transmission} + Sim {incoming.transmission}): {transCurrentStock} IBC</p>
+                    {/* Input Simulasi */}
+                    <input
+                        type="number"
+                        min={0}
+                        className="w-full text-xs p-1 mt-1 border rounded bg-white dark:bg-slate-700"
+                        placeholder="Kedatangan IBC..."
+                        value={incoming.transmission === 0 ? '' : incoming.transmission} // Binding nilai
+                        onChange={(e) => onIncomingChange('transmission', parseInt(e.target.value) || 0)}
+                    />
                 </div>
                 {/* Hydraulic Info */}
                 <div className="flex-1 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border border-purple-300">
                     <p className="text-[10px] text-purple-700 dark:text-purple-300">Hydro (Target {hydroTarget} | W: {hydroWeight})</p>
                     <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{combo.combination.hydraulic}</p>
-                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer: {combo.hydraulic?.remainingIBC} IBC</p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">Buffer (Aktual {combo.actualStock.hydraulic} + Sim {incoming.hydraulic}): {hydroCurrentStock} IBC</p>
+                    {/* Input Simulasi */}
+                    <input
+                        type="number"
+                        min={0}
+                        className="w-full text-xs p-1 mt-1 border rounded bg-white dark:bg-gray-700"
+                        placeholder="Kedatangan IBC..."
+                        value={incoming.hydraulic === 0 ? '' : incoming.hydraulic} // Binding nilai
+                        onChange={(e) => onIncomingChange('hydraulic', parseInt(e.target.value) || 0)}
+                    />
                 </div>
             </div>
 
@@ -254,9 +315,14 @@ const OilReorderInfo: React.FC<{ bufferInfo: BufferSummary[]; warehouseId: strin
   const [targets, setTargets] = useState<Record<string, OilBufferTarget>>({});
   const [loading, setLoading] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false); 
+  const [incomingIBCs, setIncomingIBCs] = useState<Record<'engine' | 'transmission' | 'hydraulic', number>>({
+    engine: 0,
+    transmission: 0,
+    hydraulic: 0,
+  });
 
 
-// Fetch Konfigurasi Supabase
+// Fetch Konfigurasi Supabase (Dipertahankan)
 const fetchConfig = async () => {
     try {
       setLoading(true);
@@ -303,17 +369,20 @@ const fetchConfig = async () => {
 
 
   // ========================
-  // Fungsi Perhitungan
+  // REVISI FUNGSI Perhitungan
   // ========================
-  const calculateRecommendation = (item: BufferSummary): RecommendationResult => {
+  const calculateRecommendation = (item: BufferSummary, incoming = 0): RecommendationResult => {
     const conf = targets[item.type];
     const weight = weights[item.type] || 1;
-
-    // Ambil info supplier yang sebenarnya
     const supplierInfo = getSupplierByOilType(item.type);
     const supplierName = supplierInfo ? supplierInfo.name : 'Supplier A (Unknown)';
     const supplierId = supplierInfo ? supplierInfo.id : 'SUPPLIER_A';
 
+    // 1. Stock Aktual
+    const actualStock = item.remainingIBC;
+    
+    // 2. Stock Setelah Simulasi
+    const currentStock = actualStock + incoming;
 
     if (!conf) {
       return {
@@ -323,64 +392,84 @@ const fetchConfig = async () => {
         recommendedQty: 0,
         reason: 'Konfigurasi buffer tidak ditemukan',
         shipments: 0,
-        supplierName: supplierName,
-        supplierId: supplierId,
+        supplierName,
+        supplierId,
         priorityScore: 0,
-        remainingIBC: item.remainingIBC,
+        remainingIBC: currentStock,
+        actualIBC: actualStock,
         emptySpaceOW: item.emptySpaceOW,
       };
     }
 
     const { target_buffer, reorder_point, max_buffer } = conf;
-
-    // Safety Stock ditentukan sebagai 50% dari Reorder Point
     const safetyStock = reorder_point / 2;
 
+    // A. Urgensi Visual (Berdasarkan Current Stock: Aktual + Simulasi)
     let urgency: 'critical' | 'warning' | 'normal' | 'good';
-    if (item.remainingIBC <= 0) urgency = 'critical';
-    else if (item.remainingIBC < safetyStock) urgency = 'warning';
-    else if (item.remainingIBC < reorder_point) urgency = 'normal';
+    if (currentStock <= 0) urgency = 'critical';
+    else if (currentStock < safetyStock) urgency = 'warning';
+    else if (currentStock < reorder_point) urgency = 'normal';
     else urgency = 'good';
 
-    const shortage = item.remainingIBC < reorder_point;
-    const needToReach = Math.max(0, target_buffer - item.remainingIBC);
+    // B. Kalkulasi Order (Berdasarkan Stock AKTUAL)
+    const actualShortage = actualStock < reorder_point; 
+    const actualNeedToReach = Math.max(0, target_buffer - actualStock);
 
     let recommendedQty = 0;
-    let reason = 'Stock aman';
+    let reason = 'Stock aman (setelah/tanpa order)';
     let shipments = 0;
 
-    if (shortage || item.remainingIBC < target_buffer) {
-      recommendedQty = Math.min(needToReach, max_buffer);
-      shipments = 1;
-      reason = `Order ${recommendedQty} IBC untuk capai target buffer (${target_buffer} IBC)`;
+    if (actualShortage || actualStock < target_buffer) {
+        recommendedQty = Math.min(actualNeedToReach, max_buffer);
+        shipments = 1;
+        
+        const stockAfterOrder = actualStock + recommendedQty;
+        reason = `Order ${recommendedQty} IBC direkomendasikan untuk capai target (${target_buffer} IBC).`;
 
-      // Tambahkan logika MOQ untuk Supplier A (Engine)
-      if (item.type === 'engine' && recommendedQty < 8 && recommendedQty > 0) {
-        recommendedQty = 8; // Asumsi MOQ Supplier A adalah 8 IBC
-        reason = `Order minimal 8 IBC (MOQ) untuk capai target buffer`;
-      }
+        if (item.type === 'engine' && recommendedQty < 8 && recommendedQty > 0) {
+            recommendedQty = 8;
+            reason = `Order minimal 8 IBC (MOQ) untuk capai target buffer.`;
+        }
+
+        // Tambahkan konteks simulasi
+        if (incoming > 0) {
+            if (currentStock >= reorder_point) {
+                 // Jika simulasi sudah menutupi ROP, order tidak perlu
+                recommendedQty = 0; 
+                reason = `Stock saat ini (${actualStock} IBC) + Kedatangan simulasi (${incoming} IBC) = ${currentStock} IBC. Stock sudah melewati ROP. Order tidak diperlukan.`;
+            } else {
+                // Stock + incoming masih di bawah ROP, tapi kita tetap perlu order
+                const finalStock = currentStock + recommendedQty;
+                reason += ` Jika order dilakukan dan simulasi datang, total stok akan menjadi ${finalStock} IBC.`;
+            }
+        } else {
+            // Tanpa simulasi
+            reason += ` Jika order dilakukan, total stok akan menjadi ${stockAfterOrder} IBC.`;
+        }
     }
     
-    // Skor Prioritas: Shortfall dari Reorder Point dikali Bobot
-    const shortfall = Math.max(0, reorder_point - item.remainingIBC);
+    // Priority Score berdasarkan Shortfall AKTUAL (atau Shortfall setelah simulasi jika simulasi diaktifkan)
+    const shortfall = Math.max(0, reorder_point - currentStock);
     const priorityScore = recommendedQty > 0 ? shortfall * weight : 0;
 
     return {
       type: item.type as 'engine' | 'transmission' | 'hydraulic',
-      needOrder: recommendedQty > 0,
+      needOrder: recommendedQty > 0, // Order hanya dibutuhkan jika recommendedQty > 0
       urgency,
       recommendedQty,
       reason,
       shipments,
-      supplierName: supplierName, // Menggunakan nama supplier yang sebenarnya
-      supplierId: supplierId,
+      supplierName,
+      supplierId,
       priorityScore,
-      remainingIBC: item.remainingIBC,
+      remainingIBC: currentStock,
+      actualIBC: actualStock,
       emptySpaceOW: item.emptySpaceOW,
     };
   };
 
-  const calculateSupplierBCombination = (bufferInfo: BufferSummary[]): CombinedOrderRecommendation | null => {
+
+  const calculateSupplierBCombination = (bufferInfo: BufferSummary[], incoming: { transmission: number; hydraulic: number }): CombinedOrderRecommendation | null => {
     const transmission = bufferInfo.find((i) => i.type === 'transmission');
     const hydraulic = bufferInfo.find((i) => i.type === 'hydraulic');
     if (!transmission || !hydraulic) return null;
@@ -392,14 +481,23 @@ const fetchConfig = async () => {
 
     if (!transConf || !hydroConf) return null;
 
-    const maxPerShipment = 10; // Asumsi max IBC per shipment Supplier B
+    const maxPerShipment = 10;
 
-    const transNeed = Math.max(0, transConf.target_buffer - transmission.remainingIBC);
-    const hydroNeed = Math.max(0, hydroConf.target_buffer - hydraulic.remainingIBC);
+    // Stock Aktual
+    const transActualStock = transmission.remainingIBC;
+    const hydroActualStock = hydraulic.remainingIBC;
+
+    // Stock Setelah Simulasi
+    const transCurrentStock = transActualStock + incoming.transmission;
+    const hydroCurrentStock = hydroActualStock + incoming.hydraulic;
     
-    // Gunakan Reorder Point untuk perhitungan Shortfall Prioritas
-    const transShortfall = Math.max(0, transConf.reorder_point - transmission.remainingIBC);
-    const hydroShortfall = Math.max(0, hydroConf.reorder_point - hydraulic.remainingIBC);
+    // Kebutuhan (dihitung berdasarkan Stock Setelah Simulasi)
+    const transNeed = Math.max(0, transConf.target_buffer - transCurrentStock);
+    const hydroNeed = Math.max(0, hydroConf.target_buffer - hydroCurrentStock);
+    
+    // Shortfall untuk Prioritas (dihitung berdasarkan Stock Setelah Simulasi)
+    const transShortfall = Math.max(0, transConf.reorder_point - transCurrentStock);
+    const hydroShortfall = Math.max(0, hydroConf.reorder_point - hydroCurrentStock);
     
     const transWeightedShortfall = transShortfall * transWeight;
     const hydroWeightedShortfall = hydroShortfall * hydroWeight;
@@ -407,18 +505,27 @@ const fetchConfig = async () => {
     const totalNeed = transNeed + hydroNeed;
     const totalWeightedNeed = transNeed * transWeight + hydroNeed * hydroWeight;
 
-    if (totalNeed === 0) return null;
+    if (totalNeed === 0) return {
+        combination: { transmission: 0, hydraulic: 0, description: 'Stock aman' },
+        totalShipments: 0,
+        reason: `Semua stock Transmission (${transCurrentStock} IBC) dan Hydraulic (${hydroCurrentStock} IBC) berada di atas Target Buffer.`,
+        transmission,
+        hydraulic,
+        priorityScore: 0,
+        currentStock: { transmission: transCurrentStock, hydraulic: hydroCurrentStock },
+        actualStock: { transmission: transActualStock, hydraulic: hydroActualStock },
+    };
+    
 
-    // Logika Alokasi IBC (distribusi berdasarkan bobot kebutuhan untuk 1 truk penuh)
+    // Logika Alokasi IBC
     let transPortion = 0;
     let hydroPortion = 0;
-
+    
+    // Distribusi untuk 1 truk penuh (10 IBC)
     if (totalWeightedNeed > 0) {
-      // Hitung proporsi berdasarkan kebutuhan berbobot
       transPortion = Math.round((transNeed * transWeight / totalWeightedNeed) * maxPerShipment);
       hydroPortion = Math.round((hydroNeed * hydroWeight / totalWeightedNeed) * maxPerShipment);
     } else {
-      // Jika salah satu butuh tapi weighted need 0 (misal stok di atas ROP tapi di bawah Target)
       transPortion = Math.min(transNeed, maxPerShipment);
       hydroPortion = Math.min(hydroNeed, maxPerShipment - transPortion);
     }
@@ -426,33 +533,33 @@ const fetchConfig = async () => {
     // Koreksi jika melebihi kapasitas truk
     if (transPortion + hydroPortion > maxPerShipment) {
       const excess = (transPortion + hydroPortion) - maxPerShipment;
-      // Kurangi dari item dengan bobot lebih rendah atau kekurangan IBC yang lebih sedikit
-      if (hydroWeight < transWeight) {
+      // Prioritaskan yang memiliki bobot/shortfall lebih tinggi
+      if (transWeightedShortfall > hydroWeightedShortfall) {
         hydroPortion = Math.max(0, hydroPortion - excess);
       } else {
         transPortion = Math.max(0, transPortion - excess);
       }
-      // Koreksi final jika masih ada sisa
+      
       if (transPortion + hydroPortion > maxPerShipment) {
            const finalExcess = (transPortion + hydroPortion) - maxPerShipment;
-           transPortion = transPortion - finalExcess;
+           transPortion = transPortion - finalExcess; 
       }
     }
     
-    // Pastikan order tidak melebihi kebutuhan
+    // Pastikan order tidak melebihi kebutuhan (NEED yang sudah dihitung dengan SIMULASI)
     transPortion = Math.min(transPortion, transNeed);
     hydroPortion = Math.min(hydroPortion, hydroNeed);
 
     // Hitung jumlah pengiriman aktual yang dibutuhkan
     const totalShipments = Math.ceil(totalNeed / maxPerShipment);
 
-    // Skor Kombinasi: Ambil skor tertinggi dari Shortfall berbobot (yang paling urgent)
+    // Skor Kombinasi
     const combinationScore = Math.max(transWeightedShortfall, hydroWeightedShortfall);
 
     const reason =
       totalNeed <= maxPerShipment
-        ? `Rekomendasi 1 pengiriman: ${transPortion}T + ${hydroPortion}H`
-        : `Total ${totalNeed} IBC, ${transPortion}T + ${hydroPortion}H untuk pengiriman pertama. Total ${totalShipments}x pengiriman`;
+        ? `Rekomendasi 1 pengiriman: ${transPortion}T + ${hydroPortion}H. Stock akan mencapai Target Buffer.`
+        : `Total ${totalNeed} IBC dibutuhkan. Pengiriman pertama: ${transPortion}T + ${hydroPortion}H. Total ${totalShipments}x pengiriman.`;
 
     return {
       combination: { transmission: transPortion, hydraulic: hydroPortion, description: `${transPortion}T + ${hydroPortion}H` },
@@ -461,24 +568,27 @@ const fetchConfig = async () => {
       transmission,
       hydraulic,
       priorityScore: combinationScore,
+      currentStock: { transmission: transCurrentStock, hydraulic: hydroCurrentStock },
+      actualStock: { transmission: transActualStock, hydraulic: hydroActualStock },
     };
   };
 
   // ========================
-  // Generate Rekomendasi
+  // Generate Rekomendasi (Update dependencies useMemo)
   // ========================
   const engineRec = useMemo(() => {
     const engineItem = bufferInfo.find((i) => i.type === 'engine');
     if (!engineItem) return null;
-    return calculateRecommendation(engineItem);
-  }, [bufferInfo, weights, targets]);
+    return calculateRecommendation(engineItem, incomingIBCs.engine);
+  }, [bufferInfo, weights, targets, incomingIBCs.engine]);
+
 
   const supplierBCombo = useMemo(
-    () => calculateSupplierBCombination(bufferInfo),
-    [bufferInfo, weights, targets]
+    () => calculateSupplierBCombination(bufferInfo, { transmission: incomingIBCs.transmission, hydraulic: incomingIBCs.hydraulic }),
+    [bufferInfo, weights, targets, incomingIBCs.transmission, incomingIBCs.hydraulic]
   );
   
-  // Ambil Target dan Weight untuk ditampilkan di info summary
+  // Ambil Target dan Weight (Dipertahankan)
   const engineTarget = targets.engine;
   const transTarget = targets.transmission;
   const hydroTarget = targets.hydraulic;
@@ -502,7 +612,7 @@ const fetchConfig = async () => {
   }
 
   // ========================
-  // Render Komponen Utama
+  // Render Komponen Utama (Revisi: Perbaiki kondisi render Engine Panel)
   // ========================
   return (
     <div className=" relative">
@@ -530,12 +640,16 @@ const fetchConfig = async () => {
       {/* Main Order Panels - Flex Row di Web, Column di Mobile */}
       <div className="flex flex-col lg:flex-row gap-2 mt-0">
         
-        {/* Panel Supplier A (Engine Oil) */}
-        {engineRec && engineRec.needOrder && (
+        {/* Panel Supplier A (Engine Oil) - SELALU RENDER JIKA ADA DATA */}
+        {engineRec && (
             <SupplierAPanel 
                 rec={engineRec} 
                 target={engineTarget}
                 weight={engineWeight}
+                incoming={incomingIBCs.engine}
+                onIncomingChange={(val) =>
+                    setIncomingIBCs((prev) => ({ ...prev, engine: val }))
+                }
             />
         )}
         
@@ -545,15 +659,19 @@ const fetchConfig = async () => {
                 combo={supplierBCombo} 
                 targets={targets}
                 weights={weights}
+                incoming={{ transmission: incomingIBCs.transmission, hydraulic: incomingIBCs.hydraulic }}
+                onIncomingChange={(type, val) =>
+                    setIncomingIBCs((prev) => ({ ...prev, [type]: val }))
+                }
             />
         )}
 
-        {/* Jika tidak ada order yang dibutuhkan sama sekali */}
-        {(!engineRec || !engineRec.needOrder) && !supplierBCombo && (
+        {/* Jika TIDAK ADA order yang dibutuhkan sama sekali */}
+        {engineRec && !engineRec.needOrder && supplierBCombo && supplierBCombo.totalShipments === 0 && (
             <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700">
                 <p className="text-green-800 dark:text-green-200 font-semibold">
                     <Package className="inline w-4 h-4 mr-2" /> 
-                    Semua stok oli berada di atas Reorder Point. Tidak ada rekomendasi order saat ini.
+                    Semua stok oli berada di atas Reorder Point (Setelah memperhitungkan simulasi). Tidak ada rekomendasi order saat ini.
                 </p>
             </div>
         )}
@@ -564,6 +682,10 @@ const fetchConfig = async () => {
                 rec={engineRec} 
                 target={engineTarget}
                 weight={engineWeight}
+                incoming={incomingIBCs.engine}
+                onIncomingChange={(val) =>
+                    setIncomingIBCs((prev) => ({ ...prev, engine: val }))
+                }
             />
         )}
       </div>
