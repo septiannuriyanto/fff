@@ -52,6 +52,10 @@ import ComponentLibrary from './pages/MasterData/ComponentLibrary/ComponentLibra
 import MaterialRequirementPlanning from './pages/MasterData/MaterialRequirementPlanning.tsx/MaterialRequirementPlanning';
 import GreaseMonitoring from './pages/Dashboard/Infrastructure/Grease/GreaseMonitoring';
 import MasterStorageFuel from './pages/MasterData/Storage/Fuel/MasterStorageFuel';
+import FleetManagement from './pages/Operational/FleetManagement/FleetManagement';
+import RefuelingDistribution from './pages/Operational/RefuelingDistribution/RefuelingDistribution';
+import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMeterManagement';
+import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
 
 
 const routes = [
@@ -165,6 +169,40 @@ const routes = [
     title: 'FFF | Fuel Ritation Plan',
     allowedRoles: SUPERVISOR
   },
+
+  // Operational Routes
+  {
+    path: '/operational/fleet',
+    component: <FleetManagement />,
+    title: 'FFF | Fleet Management',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/operational/delay',
+    component: <FleetManagement />,
+    title: 'FFF | Delay Refueling',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/operational/distribution',
+    component: <RefuelingDistribution />,
+    title: 'FFF | Refueling Distribution',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/operational/hm',
+    component: <HourMeterManagement />,
+    title: 'FFF | Hour Meters',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/operational/issuing',
+    component: <IssuingFuel />,
+    title: 'FFF | Issuing Fuel',
+    allowedRoles: SUPERVISOR
+  },
+
+
   // Reporting Routes
   {
     path: '/reporting/dailyreport',

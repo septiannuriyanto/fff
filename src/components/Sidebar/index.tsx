@@ -196,6 +196,23 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 />
               </SidebarGroup>
 
+
+              {/* <!-- Menu Item Oil Reporting Pages --> */}
+              <SidebarGroup
+              currentRole={role!}
+              roles={SUPERVISOR}
+                title="Operational"
+                icon={<TbReport />}
+                pathname={pathname}
+                basePath="/operational"
+              >
+                <SidebarLink to="/operational/fleet" label="Fleet Mgmt" />
+                <SidebarLink to="/operational/delay" label="Delay Refueling" />
+                <SidebarLink to="/operational/distribution" label="Refueling Dist." />
+                <SidebarLink to="/operational/hm" label="HM" />
+                <SidebarLink to="/operational/issuing" label="issuing" />
+              </SidebarGroup>
+
               {/* <!-- Menu Item Partner Reporting --> */}
               <SidebarGroup
                 currentRole={role!}
