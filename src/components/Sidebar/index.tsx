@@ -181,6 +181,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/reporting/stock" label="Stock" />
                 <SidebarLink to="/reporting/ritation" label="Ritation" />
                 <SidebarLink to="/reporting/tmr" label="TMR" />
+                
                 <SidebarLink
                   to="/reporting/pressureless"
                   label="Pressureless"
@@ -194,6 +195,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                   to="/reporting/ftbacklogreq"
                   label="FT Backlog Request"
                 />
+                <SidebarLink to="/reporting/gardaloto" label="Garda Loto" />
               </SidebarGroup>
 
 

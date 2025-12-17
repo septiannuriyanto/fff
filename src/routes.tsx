@@ -56,6 +56,7 @@ import FleetManagement from './pages/Operational/FleetManagement/FleetManagement
 import RefuelingDistribution from './pages/Operational/RefuelingDistribution/RefuelingDistribution';
 import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMeterManagement';
 import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
+import GardaLoto from './pages/Reporting/GardaLoto/GardaLoto';
 
 
 const routes = [
@@ -263,6 +264,12 @@ const routes = [
     component: <FuelTruckBacklogRequest />,
     title: 'FFF | FT Backlog Request',
     allowedRoles: FUEL_ROLES
+  },
+  {
+    path: '/reporting/gardaloto',
+    component: <GardaLoto />,
+    title: 'FFF | Garda Loto',
+    allowedRoles: ALL_ROLES
   },
 
   // Partner Reporting Routes
