@@ -164,6 +164,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/operational" label="Operational" />
                 <SidebarLink to="/infrastructure" label="Infrastructure" />
                 <SidebarLink to="/manpower" label="Manpower" />
+                <SidebarLink to="/gardaloto" label="Garda Loto" />
               </SidebarGroup>
               {/* <!-- Menu Item Dashboard --> */}
 

@@ -56,7 +56,9 @@ import FleetManagement from './pages/Operational/FleetManagement/FleetManagement
 import RefuelingDistribution from './pages/Operational/RefuelingDistribution/RefuelingDistribution';
 import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMeterManagement';
 import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
-import GardaLoto from './pages/Reporting/GardaLoto/GardaLoto';
+import GardaLoto from './pages/Reporting/GardaLotoReport/GardaLotoReport';
+import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
+import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
 
 
 const routes = [
@@ -148,6 +150,17 @@ const routes = [
     component: <Manpower />,
     title: 'FFF | Fuel Feasibility for Fleet',
     allowedRoles: ADMIN
+  },
+
+  {
+    path: '/gardaloto',
+    component: <GardaLotoDashboard />,
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/gardaloto/sessions/:session_id',
+    component: <GardaLotoDashboard />,
+    allowedRoles: ALL_ROLES
   },
 
   {
@@ -267,8 +280,8 @@ const routes = [
   },
   {
     path: '/reporting/gardaloto',
-    component: <GardaLoto />,
-    title: 'FFF | Garda Loto',
+    component: <GardaLotoReport />,
+    title: 'FFF | Garda Loto Report',
     allowedRoles: ALL_ROLES
   },
 
