@@ -103,7 +103,7 @@ const downloadImage = async (photoPath: string, fileName: string) => {
   }
 }
 
-const GardaLotoDashboard = () => {
+const GardaLotoSessionDetails = () => {
   const { session_id } = useParams<{ session_id: string }>()
 
   const [session, setSession] = useState<SessionData | null>(null)
@@ -229,7 +229,7 @@ const GardaLotoDashboard = () => {
 
   /* ================= UI ================= */
   return (
-    <PanelTemplate title="Garda Loto Dashboard">
+    <PanelTemplate title="Garda Loto Session Details">
       {loading && (
         <div className="text-center py-10 text-gray-500">
           Loading session…
@@ -470,4 +470,4 @@ const GardaLotoDashboard = () => {
   )
 }
 
-export default GardaLotoDashboard
+export default GardaLotoSessionDetails

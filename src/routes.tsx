@@ -58,7 +58,7 @@ import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMet
 import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
 import GardaLoto from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
-import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
+import GardaLotoSessionDetails from './pages/Dashboard/GardaLoto/GardaLotoSessionDetails';
 
 
 const routes = [
@@ -154,12 +154,13 @@ const routes = [
 
   {
     path: '/gardaloto',
-    component: <GardaLotoDashboard />,
+    component: <GardaLotoSessionDetails />,
     allowedRoles: ALL_ROLES
   },
+
   {
     path: '/gardaloto/sessions/:session_id',
-    component: <GardaLotoDashboard />,
+    component: <GardaLotoSessionDetails />,
     allowedRoles: ALL_ROLES
   },
 
