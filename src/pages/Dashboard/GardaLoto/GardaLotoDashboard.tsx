@@ -229,7 +229,7 @@ const GardaLotoDashboard = () => {
 
   /* ================= UI ================= */
   return (
-    <PanelTemplate title="Garda Loto Session Details">
+    <PanelTemplate title="Garda Loto Dashboard">
       {loading && (
         <div className="text-center py-10 text-gray-500">
           Loading session…
@@ -331,7 +331,7 @@ const GardaLotoDashboard = () => {
                   onLoad={() => {
                     setImageLoaded(prev => new Set(prev).add(i))
                   }}
-                  className="h-full w-full object-cover transition-all duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover object-left-bottom transition-all duration-300 group-hover:scale-105"
                   style={{ 
                     opacity: imageLoaded.has(i) ? 1 : 0
                   }}
@@ -350,7 +350,7 @@ const GardaLotoDashboard = () => {
 
       {/* ================= FULLSCREEN VIEWER ================= */}
       {activeIndex !== null && (
-        <div className="fixed inset-0 z-999">
+        <div className="fixed inset-0 z-50">
           {/* BACKDROP */}
           <div
             className="absolute inset-0 bg-black/95"
@@ -456,7 +456,7 @@ const GardaLotoDashboard = () => {
                       src={getOptimizedUrl(r.photo_path, r.thumbnail_url, 100)}
                       loading={shouldPreload ? "eager" : "lazy"}
                       decoding="async"
-                      className="h-16 w-16 rounded object-cover"
+                      className="h-16 w-16 rounded object-cover object-left-bottom"
                       alt={`Thumbnail ${i + 1}`}
                     />
                   </button>
