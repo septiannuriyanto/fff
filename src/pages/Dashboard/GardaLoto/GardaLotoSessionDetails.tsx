@@ -350,7 +350,7 @@ const GardaLotoSessionDetails = () => {
 
       {/* ================= FULLSCREEN VIEWER ================= */}
       {activeIndex !== null && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-9999">
           {/* BACKDROP */}
           <div
             className="absolute inset-0 bg-black/95"
