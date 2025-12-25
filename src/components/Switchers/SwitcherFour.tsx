@@ -6,7 +6,7 @@ interface SwitcherProps {
   trueColor?: string;
   falseColor?: string;
   /** nilai on/off yang dikontrol parent */
-  value: boolean;
+  value?: boolean;
   /** dipanggil saat user toggle */
   onChange?: (enabled: boolean) => void;
 }
