@@ -2,6 +2,8 @@ import React from 'react';
 import PanelTemplate from '../../PanelTemplate'
 import LotoAchievementByWarehouse from './LotoAchievementByWarehouse'
 import LotoTrendChart from './LotoTrendChart'
+import LotoCountByFuelman from './components/LotoCountByFuelman';
+
 
 
 const GardaLotoDashboard = () => {
@@ -43,7 +45,7 @@ const GardaLotoDashboard = () => {
             onSelectWarehouse={setSelectedWarehouse}
         />
       </div>
-      {/* <UnitLocationMapper/> */}
+      <LotoCountByFuelman />
       </div>
     </PanelTemplate>
   )
