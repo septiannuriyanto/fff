@@ -222,7 +222,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
 
       return (
         <div key={item.warehouse_code} className={`
-             relative bg-white rounded-xl border transition-all duration-300 overflow-hidden
+             relative bg-white dark:bg-boxdark rounded-xl border transition-all duration-300 overflow-hidden
              ${isSelected ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-gray-100'}
         `}>
              <div 
@@ -269,10 +269,10 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
   };
 
   return (
-    <div ref={wrapperRef} className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div ref={wrapperRef} className="w-full bg-white dark:bg-boxdark rounded-xl shadow-sm border border-bodydark p-6">
       <div className="mb-6 flex flex-col md:flex-row justify-between md:items-end gap-2">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">Warehouse Performance</h3>
+            <h3 className="text-lg font-bold text-black dark:text-white">Warehouse Performance</h3>
             <p className="text-xs text-gray-500">
                 {selectedDate 
                     ? `Achievement for ${format(selectedDate, 'dd MMM yyyy')}` 

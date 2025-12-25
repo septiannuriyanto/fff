@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
-import Breadcrumb from '../components/Breadcrumbs/Breadcrumb';
 import CoverOne from '../images/cover/cover-01.png';
-import userSix from '../images/user/user-06.png';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../db/SupabaseClient';
 import toast from 'react-hot-toast';
 import { Manpower } from '../types/manpower';
-import { getFileFromUrl, profileImageBaseUrl } from '../services/ImageUploader';
+import { getFileFromUrl, profileImageBaseUrl, uploadImageGeneralGetUrl } from '../services/ImageUploader';
 import { getPositionFromPositionCode } from '../functions/get_nrp';
+import { analyzeImageBrightness } from '../functions/imageBrightness';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faBackward } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPen, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
+import DropdownProfileEdit from '../components/Dropdowns/DropdownProfileEdit';
 
 const Profile = () => {
   const [profileData, setProfileData] = useState<Manpower>();
+  const [isCoverMaximized, setIsCoverMaximized] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [contentTheme, setContentTheme] = useState('text-black dark:text-white');
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [tempBio, setTempBio] = useState('');
 
   const { id } = useParams<{ id: string }>();
 
@@ -37,9 +43,12 @@ const Profile = () => {
           .split(' ')
           .map((word: any) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' '),
-        image: (await getFileFromUrl(`${profileImageBaseUrl}/${item.nrp}`))
-          ? `${profileImageBaseUrl}/${item.nrp}`
-          : null,
+        image: item.photo_url 
+          ? item.photo_url 
+          : (await getFileFromUrl(`${profileImageBaseUrl}/${item.nrp}`))
+            ? `${profileImageBaseUrl}/${item.nrp}`
+            : null,
+        cover_image: item.bg_photo_url || CoverOne, // Use bg_photo_url or fallback
         position: await getPositionFromPositionCode(item.position),
       })),
     );
@@ -52,19 +61,138 @@ const Profile = () => {
     fetchSingleProfile();
   }, []);
 
+  useEffect(() => {
+    if (profileData?.cover_image) {
+      analyzeImageBrightness(profileData.cover_image).then((brightness) => {
+        // If image is dark, we need light text (white).
+        // If image is light, we need dark text (black).
+        setContentTheme(brightness === 'dark' ? 'text-white' : 'text-black');
+      });
+    }
+  }, [profileData?.cover_image]);
+
   const handleBack = () =>{
     window.history.back();
   }
 
+  const triggerFileInput = (id: string) => {
+    document.getElementById(id)?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (type === 'profile') setUploadingProfile(true);
+    else setUploadingCover(true);
+
+    const bucketName = 'images';
+    const fileExt = file.name.split('.').pop();
+    // Filename format: nrp.ext or nrp-bg.ext
+    const fileName = type === 'profile' 
+        ? `profile/${id}.${fileExt}` 
+        : `profile/${id}-bg.${fileExt}`;
+
+    try {
+        // Upload logic with upsert (handled by uploadImageGeneralGetUrl usually if configured, or we assume overwrite)
+        const originalUrl = await uploadImageGeneralGetUrl(file, bucketName, fileName);
+
+        if (originalUrl) {
+            const timestamp = Date.now();
+            const publicUrl = `${originalUrl}?t=${timestamp}`;
+            const field = type === 'profile' ? 'photo_url' : 'bg_photo_url';
+            
+            // Store URL with timestamp in DB to invalid cache on reload
+            const { error } = await supabase
+                .from('manpower')
+                .update({ [field]: publicUrl })
+                .eq('nrp', id);
+
+            if (error) {
+                throw error;
+            }
+
+            toast.success(`${type === 'profile' ? 'Profile' : 'Cover'} updated successfully`);
+            
+            
+            // Force refresh local state with cache buster
+            setProfileData(prev => {
+                if (!prev) return undefined;
+                return {
+                    ...prev,
+                    [type === 'profile' ? 'image' : 'cover_image']: `${publicUrl}?t=${timestamp}`,
+                    [type === 'profile' ? 'photo_url' : 'bg_photo_url']: publicUrl
+                };
+            });
+        }
+    } catch (error: any) {
+        toast.error(`Error uploading image: ${error.message}`);
+        console.error(error);
+    } finally {
+        if (type === 'profile') setUploadingProfile(false);
+        else setUploadingCover(false);
+    }
+  };
+
+  const handleDeleteImage = async (type: 'profile' | 'cover') => {
+    const field = type === 'profile' ? 'photo_url' : 'bg_photo_url';
+    const confirmMessage = type === 'profile' ? 'Delete profile picture?' : 'Delete cover photo?';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    const { error } = await supabase
+        .from('manpower')
+        .update({ [field]: null })
+        .eq('nrp', id);
+
+    if (error) {
+        toast.error(`Error deleting ${type} image`);
+        console.error(error);
+    } else {
+        toast.success(`${type === 'profile' ? 'Profile' : 'Cover'} image deleted`);
+        // Update local state
+        if (profileData) {
+            setProfileData({
+                ...profileData,
+                image: type === 'profile' ? undefined : profileData.image, // Reset to fallback or undefined
+                cover_image: type === 'cover' ? undefined : profileData.cover_image
+            });
+            // Re-fetch to ensure sync/fallbacks work if needed
+            fetchSingleProfile(); 
+        }
+    }
+  };
+
+  const handleSaveBio = async () => {
+    try {
+      const { error } = await supabase
+        .from('manpower')
+        .update({ biography: tempBio })
+        .eq('nrp', id);
+
+      if (error) throw error;
+
+      toast.success('Biography updated');
+      setProfileData(prev => prev ? { ...prev, biography: tempBio } : undefined);
+      setIsEditingBio(false);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   return (
     <>
-      <div className="overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <div className="relative z-20 h-35 md:h-65">
+      <div className={`overflow-hidden rounded-sm ${isCoverMaximized ? 'relative min-h-screen' : 'border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark'}`}>
+        <div className={`${isCoverMaximized ? 'absolute inset-0 z-0 h-full w-full' : 'relative z-20 h-35 md:h-65'}`}>
           <img
-            src={profileData?.image}
+            src={profileData?.cover_image}
             alt="profile cover"
-            className="h-full w-full rounded-tl-sm rounded-tr-sm object-cover object-center"
+            className={`h-full w-full object-cover object-center ${isCoverMaximized ? '' : 'rounded-tl-sm rounded-tr-sm'}`}
           />
+          {uploadingCover && (
+             <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-2 dark:bg-meta-4 animate-pulse">
+             </div>
+          )}
           <div className="absolute top-2 left-4 h-8 w-8 flex">
             <button
             onClick={handleBack}
@@ -72,97 +200,67 @@ const Profile = () => {
               <FontAwesomeIcon icon={faArrowLeft} className="text-xxl" />
             </button>
           </div>
-          <div className="absolute bottom-1 right-1 z-10 xsm:bottom-4 xsm:right-4">
-            <label
-              htmlFor="cover"
-              className="flex cursor-pointer items-center justify-center gap-2 rounded bg-primary py-1 px-2 text-sm font-medium text-white hover:bg-opacity-90 xsm:px-4"
-            >
-              <input type="file" name="cover" id="cover" className="sr-only" />
-              <span>
-                <svg
-                  className="fill-current"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M4.76464 1.42638C4.87283 1.2641 5.05496 1.16663 5.25 1.16663H8.75C8.94504 1.16663 9.12717 1.2641 9.23536 1.42638L10.2289 2.91663H12.25C12.7141 2.91663 13.1592 3.101 13.4874 3.42919C13.8156 3.75738 14 4.2025 14 4.66663V11.0833C14 11.5474 13.8156 11.9925 13.4874 12.3207C13.1592 12.6489 12.7141 12.8333 12.25 12.8333H1.75C1.28587 12.8333 0.840752 12.6489 0.512563 12.3207C0.184375 11.9925 0 11.5474 0 11.0833V4.66663C0 4.2025 0.184374 3.75738 0.512563 3.42919C0.840752 3.101 1.28587 2.91663 1.75 2.91663H3.77114L4.76464 1.42638ZM5.56219 2.33329L4.5687 3.82353C4.46051 3.98582 4.27837 4.08329 4.08333 4.08329H1.75C1.59529 4.08329 1.44692 4.14475 1.33752 4.25415C1.22812 4.36354 1.16667 4.51192 1.16667 4.66663V11.0833C1.16667 11.238 1.22812 11.3864 1.33752 11.4958C1.44692 11.6052 1.59529 11.6666 1.75 11.6666H12.25C12.4047 11.6666 12.5531 11.6052 12.6625 11.4958C12.7719 11.3864 12.8333 11.238 12.8333 11.0833V4.66663C12.8333 4.51192 12.7719 4.36354 12.6625 4.25415C12.5531 4.14475 12.4047 4.08329 12.25 4.08329H9.91667C9.72163 4.08329 9.53949 3.98582 9.4313 3.82353L8.43781 2.33329H5.56219Z"
-                    fill="white"
-                  />
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M6.99992 5.83329C6.03342 5.83329 5.24992 6.61679 5.24992 7.58329C5.24992 8.54979 6.03342 9.33329 6.99992 9.33329C7.96642 9.33329 8.74992 8.54979 8.74992 7.58329C8.74992 6.61679 7.96642 5.83329 6.99992 5.83329ZM4.08325 7.58329C4.08325 5.97246 5.38909 4.66663 6.99992 4.66663C8.61075 4.66663 9.91659 5.97246 9.91659 7.58329C9.91659 9.19412 8.61075 10.5 6.99992 10.5C5.38909 10.5 4.08325 9.19412 4.08325 7.58329Z"
-                    fill="white"
-                  />
-                </svg>
-              </span>
-              <span>Edit</span>
-            </label>
+
+          
+          <div className="absolute top-4 right-4 z-30">
+             <DropdownProfileEdit 
+                onUpload={() => triggerFileInput('cover')}
+                onDelete={() => handleDeleteImage('cover')}
+                onMaximize={() => setIsCoverMaximized(!isCoverMaximized)}
+                isMaximized={isCoverMaximized}
+                showDelete={!!profileData?.bg_photo_url}
+                iconColor="white"
+                className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur hover:bg-white/30 transition shadow-card"
+             />
+             <input type="file" name="cover" id="cover" className="hidden" onChange={(e) => handleFileChange(e, 'cover')} />
           </div>
         </div>
-        <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11.5">
-          <div className="relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-1 backdrop-blur sm:h-44 sm:max-w-44 sm:p-3">
-            <div className="relative drop-shadow-2">
-              <img src={profileData?.image} alt="profile" />
-              <label
-                htmlFor="profile"
-                className="absolute bottom-0 right-0 flex h-8.5 w-8.5 cursor-pointer items-center justify-center rounded-full bg-primary text-white hover:bg-opacity-90 sm:bottom-2 sm:right-2"
-              >
-                <svg
-                  className="fill-current"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M4.76464 1.42638C4.87283 1.2641 5.05496 1.16663 5.25 1.16663H8.75C8.94504 1.16663 9.12717 1.2641 9.23536 1.42638L10.2289 2.91663H12.25C12.7141 2.91663 13.1592 3.101 13.4874 3.42919C13.8156 3.75738 14 4.2025 14 4.66663V11.0833C14 11.5474 13.8156 11.9925 13.4874 12.3207C13.1592 12.6489 12.7141 12.8333 12.25 12.8333H1.75C1.28587 12.8333 0.840752 12.6489 0.512563 12.3207C0.184375 11.9925 0 11.5474 0 11.0833V4.66663C0 4.2025 0.184374 3.75738 0.512563 3.42919C0.840752 3.101 1.28587 2.91663 1.75 2.91663H3.77114L4.76464 1.42638ZM5.56219 2.33329L4.5687 3.82353C4.46051 3.98582 4.27837 4.08329 4.08333 4.08329H1.75C1.59529 4.08329 1.44692 4.14475 1.33752 4.25415C1.22812 4.36354 1.16667 4.51192 1.16667 4.66663V11.0833C1.16667 11.238 1.22812 11.3864 1.33752 11.4958C1.44692 11.6052 1.59529 11.6666 1.75 11.6666H12.25C12.4047 11.6666 12.5531 11.6052 12.6625 11.4958C12.7719 11.3864 12.8333 11.238 12.8333 11.0833V4.66663C12.8333 4.51192 12.7719 4.36354 12.6625 4.25415C12.5531 4.14475 12.4047 4.08329 12.25 4.08329H9.91667C9.72163 4.08329 9.53949 3.98582 9.4313 3.82353L8.43781 2.33329H5.56219Z"
-                    fill=""
-                  />
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M7.00004 5.83329C6.03354 5.83329 5.25004 6.61679 5.25004 7.58329C5.25004 8.54979 6.03354 9.33329 7.00004 9.33329C7.96654 9.33329 8.75004 8.54979 8.75004 7.58329C8.75004 6.61679 7.96654 5.83329 7.00004 5.83329ZM4.08337 7.58329C4.08337 5.97246 5.38921 4.66663 7.00004 4.66663C8.61087 4.66663 9.91671 5.97246 9.91671 7.58329C9.91671 9.19412 8.61087 10.5 7.00004 10.5C5.38921 10.5 4.08337 9.19412 4.08337 7.58329Z"
-                    fill=""
-                  />
-                </svg>
-                <input
+        <div className={`px-4 pb-6 text-center lg:pb-8 xl:pb-11.5 transition-all duration-500 ease-in-out ${isCoverMaximized ? 'relative z-20 mx-auto mt-60 max-w-203 rounded-xl bg-white/30 px-8 pb-8 shadow-card backdrop-blur-md dark:bg-black/30 border border-white/40' : ''}`}>
+          <div className={`relative z-30 mx-auto -mt-22 h-30 w-full max-w-30 rounded-full bg-white/20 p-2 backdrop-blur sm:h-44 sm:max-w-44 sm:p-4 ${isCoverMaximized ? '-mt-22' : '-mt-22'}`}>
+            <div className="relative drop-shadow-2 h-full w-full rounded-full">
+              <img src={profileData?.image} alt="profile" className="h-full w-full rounded-full object-cover"/>
+              {uploadingProfile && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center rounded-full bg-gray-2 dark:bg-meta-4 animate-pulse">
+                </div>
+              )}
+              <div className="absolute bottom-0 right-0 sm:bottom-2 sm:right-2">
+                 <DropdownProfileEdit 
+                    onUpload={() => triggerFileInput('profile')}
+                    onDelete={() => handleDeleteImage('profile')}
+                    showDelete={!!profileData?.photo_url}
+                    iconColor="white"
+                    className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur hover:bg-white/30 transition shadow-card"
+                 />
+                 <input
                   type="file"
                   name="profile"
                   id="profile"
-                  className="sr-only"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e, 'profile')}
                 />
-              </label>
+              </div>
             </div>
           </div>
           <div className="mt-4">
-            <h3 className="mb-1.5 text-2xl font-semibold text-black dark:text-white">
+            <h3 className={`mb-1.5 text-2xl font-semibold ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
               {profileData?.nama}
             </h3>
-            <p className="font-medium">{profileData?.position}</p>
+            <p className={`font-medium ${isCoverMaximized ? contentTheme : ''}`}>{profileData?.position}</p>
             <div className="mx-auto mt-4.5 mb-5.5 grid max-w-94 grid-cols-3 rounded-md border border-stroke py-2.5 shadow-1 dark:border-strokedark dark:bg-[#37404F]">
               <div className="flex flex-col items-center justify-center gap-1 border-r border-stroke px-4 dark:border-strokedark xsm:flex-row">
-                <span className="font-semibold text-black dark:text-white">
+                <span className={`font-semibold ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
                   259
                 </span>
                 <span className="text-sm">Posts</span>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 border-r border-stroke px-4 dark:border-strokedark xsm:flex-row">
-                <span className="font-semibold text-black dark:text-white">
+                <span className={`font-semibold ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
                   129K
                 </span>
                 <span className="text-sm">Followers</span>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 px-4 xsm:flex-row">
-                <span className="font-semibold text-black dark:text-white">
+                <span className={`font-semibold ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
                   2K
                 </span>
                 <span className="text-sm">Following</span>
@@ -170,20 +268,54 @@ const Profile = () => {
             </div>
 
             <div className="mx-auto max-w-180">
-              <h4 className="font-semibold text-black dark:text-white">
-                About Me
-              </h4>
-              <p className="mt-4.5">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                Pellentesque posuere fermentum urna, eu condimentum mauris
-                tempus ut. Donec fermentum blandit aliquet. Etiam dictum dapibus
-                ultricies. Sed vel aliquet libero. Nunc a augue fermentum,
-                pharetra ligula sed, aliquam lacus.
-              </p>
+              <div className="flex items-center gap-2 mb-3.5">
+                <h4 className={`font-semibold ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
+                  About Me
+                </h4>
+                <button
+                  onClick={() => {
+                    setIsEditingBio(!isEditingBio);
+                    setTempBio(profileData?.biography || '');
+                  }}
+                  className={`${isCoverMaximized ? contentTheme : 'text-primary'}`}
+                >
+                  <FontAwesomeIcon icon={faPen} size="xs" />
+                </button>
+              </div>
+
+              {isEditingBio ? (
+                <div className="space-y-3">
+                   <textarea
+                    rows={4}
+                    value={tempBio}
+                    onChange={(e) => setTempBio(e.target.value)}
+                    className="w-full rounded border border-stroke bg-gray py-3 px-4.5 text-black focus:border-primary focus-visible:outline-none dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-primary"
+                    placeholder="Write your biography..."
+                  ></textarea>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveBio}
+                      className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-medium text-white hover:bg-opacity-90"
+                    >
+                      <FontAwesomeIcon icon={faSave} /> Save
+                    </button>
+                    <button
+                      onClick={() => setIsEditingBio(false)}
+                      className="flex items-center gap-2 rounded border border-stroke px-4 py-2 font-medium text-black hover:shadow-1 dark:border-strokedark dark:text-white"
+                    >
+                      <FontAwesomeIcon icon={faTimes} /> Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className={`mt-4.5 ${isCoverMaximized ? contentTheme : ''} ${!profileData?.biography ? 'italic text-gray-500' : ''}`}>
+                  {profileData?.biography || 'No Biography Yet'}
+                </p>
+              )}
             </div>
 
             <div className="mt-6.5">
-              <h4 className="mb-3.5 font-medium text-black dark:text-white">
+              <h4 className={`mb-3.5 font-medium ${isCoverMaximized ? contentTheme : 'text-black dark:text-white'}`}>
                 Follow me on
               </h4>
               <div className="flex items-center justify-center gap-3.5">
@@ -336,6 +468,7 @@ const Profile = () => {
             </div>
           </div>
         </div>
+
       </div>
     </>
   );

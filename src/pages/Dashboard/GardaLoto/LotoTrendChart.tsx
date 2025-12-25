@@ -199,7 +199,7 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
         toolbar: { show: false },
         zoom: { enabled: false },
         events: {
-            markerClick: function(event, chartContext, { seriesIndex, dataPointIndex, config }) {
+            markerClick: function(_e, _chart, { dataPointIndex }) {
                 if (onDataPointClick && data[dataPointIndex]) {
                     onDataPointClick(data[dataPointIndex].date);
                 }
@@ -287,22 +287,22 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
   };
 
   return (
-    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="w-full bg-white dark:bg-boxdark rounded-xl shadow-sm border border-gray-100 dark:border p-6">
       
       {/* Header Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-           <h3 className="text-lg font-bold text-gray-800">Loto Trend Overview</h3>
-           <p className="text-sm text-gray-500">Monitoring verification vs actual records</p>
+           <h3 className="text-lg font-bold text-gray-800 dark:text-white">Loto Trend Overview</h3>
+           <p className="text-sm text-gray-500 dark:text-gray-400">Monitoring verification vs actual records</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
             {/* Month Year Selector */}
-            <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-200">
+            <div className="flex items-center bg-gray-50 dark:bg-boxdark rounded-lg p-1 border border-bod">
                 <select 
                     value={selectedMonth} 
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    className="bg-transparent border-none text-sm font-medium text-gray-700 focus:ring-0 cursor-pointer py-1 pl-2 pr-6"
+                    className="bg-transparent border-none text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer py-1 pl-2 pr-6"
                 >
                     {months.map((m, i) => (
                         <option key={i} value={i}>{m}</option>
@@ -312,7 +312,7 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
                 <select 
                     value={selectedYear} 
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="bg-transparent border-none text-sm font-medium text-gray-700 focus:ring-0 cursor-pointer py-1 pl-2 pr-6"
+                    className="bg-transparent border-none text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-0 cursor-pointer py-1 pl-2 pr-6"
                 >
                     {years.map((y) => (
                         <option key={y} value={y}>{y}</option>
@@ -323,7 +323,7 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
       </div>
 
        {/* Series Selector - Tabs Style */}
-       <div className="flex items-center gap-1 mb-6 bg-gray-100/50 p-1 rounded-lg w-fit">
+       <div className="flex items-center gap-1 mb-6 bg-gray-100/50 dark:bg-meta-4/30 p-1 rounded-lg w-fit">
             {(['Trend', 'Shift 1 Only', 'Shift 2 Only', 'All Series'] as SeriesType[]).map((seriesType) => (
                 <button
                     key={seriesType}
@@ -331,8 +331,8 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
                     className={`
                         px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200
                         ${selectedSeries === seriesType 
-                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' 
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}
+                            ? 'bg-white dark:bg-boxdark text-blue-600 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-meta-4'}
                     `}
                 >
                     {seriesType}
@@ -341,7 +341,7 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
         </div>
 
       {/* Chart */}
-      <div className="relative border border-gray-100 rounded-lg bg-white overflow-hidden" >
+      <div className="relative border border-gray-100 dark:border-strokedark rounded-lg bg-white dark:bg-boxdark-2 overflow-hidden" >
         {loading && (
              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -357,12 +357,12 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
       {/* Footer Info */}
       <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4 text-center md:text-left">
         <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex flex-col">
-            <span className="text-xs text-blue-400 font-semibold uppercase tracking-wider block mb-1">Last Planned Date</span>
-            <span className="text-md font-bold text-gray-800">{footerData.lastPlanned}</span>
+            <span className="text-xs text-blue-400 dark:text-white font-semibold uppercase tracking-wider block mb-1">Last Planned Date</span>
+            <span className="text-md font-bold text-boxdark dark:text-white">{footerData.lastPlanned}</span>
         </div>
         <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Last LOTO Date</span>
-            <span className="text-md font-bold text-gray-800">{footerData.lastLoto}</span>
+            <span className="text-xs text-indigo-400 dark:text-white font-semibold uppercase tracking-wider block mb-1">Last LOTO Date</span>
+            <span className="text-md font-bold text-boxdark dark:text-white">{footerData.lastLoto}</span>
         </div>
       </div>
 

@@ -181,9 +181,9 @@ const LotoCountByFuelman = () => {
   }, []);
 
   return (
-    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="w-full bg-white dark:bg-boxdark rounded-xl shadow-sm border border-gray-100 p-6">
        <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Loto Contributions by Fuelman (Beta)</h3>
+            <h3 className="text-lg font-bold text-black dark:text-white">Loto Contributions by Fuelman (Beta)</h3>
             <p className="text-xs text-gray-500">Ranking based on activity (Last 30 Days)</p>
        </div>
 
