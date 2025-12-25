@@ -10,6 +10,8 @@ const formatName = (name: string, limit: number = 20) => {
 };
 
 const DesktopChart = ({ data }: { data: any[] }) => {
+    const labelColors = data.map(d => d.loto_count > 0 ? '#ffffff' : '#000000');
+
     const chartOptions: ApexOptions = {
         chart: { type: 'bar', height: 450, toolbar: { show: false } },
         plotOptions: {
@@ -17,12 +19,13 @@ const DesktopChart = ({ data }: { data: any[] }) => {
                 borderRadius: 4,
                 columnWidth: '60%',
                 distributed: true,
+                dataLabels: { position: 'center' }
             }
         },
         dataLabels: {
             enabled: true,
-            offsetY: -25,
-            style: { fontSize: '11px', colors: ["#111827"], fontWeight: 'bold' }
+            offsetY: 0,
+            style: { fontSize: '11px', colors: labelColors, fontWeight: 'bold' }
         },
         fill: {
             type: 'gradient',
@@ -77,6 +80,8 @@ const DesktopChart = ({ data }: { data: any[] }) => {
 };
 
 const MobileChart = ({ data }: { data: any[] }) => {
+    const labelColors = data.map(d => d.loto_count > 0 ? '#ffffff' : '#000000');
+
     const chartOptions: ApexOptions = {
         chart: { 
             type: 'bar', 
@@ -89,13 +94,14 @@ const MobileChart = ({ data }: { data: any[] }) => {
                 borderRadius: 4,
                 barHeight: '70%',
                 distributed: true,
+                dataLabels: { position: 'center' }
             }
         },
         dataLabels: {
             enabled: true,
-            textAnchor: 'start',
+            textAnchor: 'middle',
             offsetX: 0,
-            style: { fontSize: '11px', colors: ["#111827"], fontWeight: 'bold' },
+            style: { fontSize: '11px', colors: labelColors, fontWeight: 'bold' },
             formatter: (val, opts) => {
                  return val?.toString()
             }
@@ -177,7 +183,7 @@ const LotoCountByFuelman = () => {
   return (
     <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-6">
        <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Loto Contributions by Fuelman</h3>
+            <h3 className="text-lg font-bold text-gray-800">Loto Contributions by Fuelman (Beta)</h3>
             <p className="text-xs text-gray-500">Ranking based on activity (Last 30 Days)</p>
        </div>
 
