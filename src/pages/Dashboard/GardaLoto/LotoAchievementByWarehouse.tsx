@@ -27,8 +27,9 @@ interface HistoryItem {
 
 const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWarehouse, onSelectWarehouse }) => {
   const [data, setData] = useState<WarehouseStats[]>([]);
-  const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
+  const [historyDataMap, setHistoryDataMap] = useState<Record<string, HistoryItem[]>>({});
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'overview' | 'detail' | 'table'>('overview');
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Click Outside to reset selected warehouse
@@ -49,84 +50,88 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
     fetchData();
   }, [selectedDate]);
 
-  // Fetch History when warehouse selected
+  // Auto switch to detail on date select
   useEffect(() => {
-    if (selectedWarehouse) {
-      fetchHistory(selectedWarehouse);
-    } else {
-        setHistoryData([]);
+    if (selectedDate) {
+        setViewMode('detail');
     }
-  }, [selectedWarehouse]);
+  }, [selectedDate]);
+
+  // Fetch History logic
+  useEffect(() => {
+    // If Detail Mode, fetch for ALL
+    if (viewMode === 'detail' && data.length > 0) {
+        data.forEach(item => {
+            if (!historyDataMap[item.warehouse_code]) {
+                fetchHistory(item.warehouse_code);
+            }
+        });
+    }
+    // If Overview Mode but one is selected, fetch for that one
+    else if (viewMode === 'overview' && selectedWarehouse) {
+        if (!historyDataMap[selectedWarehouse]) {
+            fetchHistory(selectedWarehouse);
+        }
+    }
+  }, [viewMode, data, selectedWarehouse, historyDataMap]);
 
   const fetchData = async () => {
     setLoading(true);
 
     try {
+        let rawData;
+        
         if (selectedDate) {
-            // DAILY VIEW WITH SHIFT BREAKDOWN
-            const { data: raw, error } = await supabase.rpc('get_loto_warehouse_daily_achievement_by_shift', { 
+             const { data, error } = await supabase.rpc('get_loto_warehouse_daily_achievement_by_shift', { 
                 target_date: format(selectedDate, 'yyyy-MM-dd') 
             });
-            
             if (error) throw error;
-
-            // Process raw rows (w, s, loto, verif, pct) into aggregated view
-            const processedMap = new Map<string, WarehouseStats>();
-
-            (raw || []).forEach((r: any) => {
-                const existing = processedMap.get(r.warehouse_code) || {
-                    warehouse_code: r.warehouse_code,
-                    total_loto: 0,
-                    total_verification: 0,
-                    percentage: 0,
-                    shift1: { loto: 0, plan: 0, pct: 0 },
-                    shift2: { loto: 0, plan: 0, pct: 0 }
-                };
-
-                // Add to Aggregates
-                existing.total_loto += r.total_loto;
-                existing.total_verification += r.total_verification;
-
-                // Set Shift Data
-                const sData = { 
-                    loto: r.total_loto, 
-                    plan: r.total_verification, 
-                    pct: parseFloat(r.percentage) 
-                };
-
-                if (r.shift === 1) existing.shift1 = sData;
-                else if (r.shift === 2) existing.shift2 = sData;
-
-                processedMap.set(r.warehouse_code, existing);
-            });
-
-            // Recalculate Total Percentage
-            const finalData = Array.from(processedMap.values()).map(item => {
-                const pct = item.total_verification > 0 
-                    ? (item.total_loto / item.total_verification) * 100 
-                    : 0;
-                return { ...item, percentage: pct.toFixed(2) };
-            });
-
-            setData(finalData);
-
+            rawData = data;
         } else {
-            // 30 DAY AVG VIEW (Keep existing simple RPC for now, or assume shift 1/2 avg is too complex to display currently?)
-            // For now, we use the original RPC which gives totals only.
-            const { data: raw, error } = await supabase.rpc('get_loto_achievement_warehouse', { days_back: 30 });
+            // Use the 'by shift' RPC for 30 days as well
+            const { data, error } = await supabase.rpc('get_loto_achievement_warehouse_by_shift', { days_back: 30 });
             if (error) throw error;
-            
-            // Map simple RPC result to WarehouseStats structure
-            const simpleData = (raw || []).map((r: any) => ({
-                warehouse_code: r.warehouse_code,
-                total_loto: r.total_loto,
-                total_verification: r.total_verification,
-                percentage: r.percentage
-                // No shift breakdowns available in this view yet
-            }));
-            
-            setData(simpleData);
+            rawData = data;
         }
+
+        // Common Processing Logic
+        const processedMap = new Map<string, WarehouseStats>();
+
+        (rawData || []).forEach((r: any) => {
+            const existing = processedMap.get(r.warehouse_code) || {
+                warehouse_code: r.warehouse_code,
+                total_loto: 0,
+                total_verification: 0,
+                percentage: 0,
+                shift1: { loto: 0, plan: 0, pct: 0 },
+                shift2: { loto: 0, plan: 0, pct: 0 }
+            };
+
+            // Add to Aggregates
+            existing.total_loto += r.total_loto;
+            existing.total_verification += r.total_verification;
+
+            const sData = { 
+                loto: r.total_loto,     // Actual
+                plan: r.total_verification, // Plan
+                pct: parseFloat(r.percentage) 
+            };
+
+            if (r.shift === 1) existing.shift1 = sData;
+            else if (r.shift === 2) existing.shift2 = sData;
+
+            processedMap.set(r.warehouse_code, existing);
+        });
+
+        const finalData = Array.from(processedMap.values()).map(item => {
+            const pct = item.total_verification > 0 
+                ? (item.total_loto / item.total_verification) * 100 
+                : 0;
+            return { ...item, percentage: pct.toFixed(2) };
+        });
+
+        setData(finalData);
+
     } catch (e) {
         console.error("Fetch Error:", e);
     } finally {
@@ -144,23 +149,29 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
     if (error) {
         console.error('Error fetching history', error);
     } else {
-        setHistoryData(result || []);
+        setHistoryDataMap(prev => ({ ...prev, [warehouse]: result || [] }));
     }
   };
 
-  const renderMiniChart = () => {
-      if (!historyData.length) return null;
+  const renderMiniChart = (history: HistoryItem[]) => {
+      if (!history || !history.length) {
+          return (
+             <div className="h-[130px] flex items-center justify-center text-xs text-gray-400 italic">
+                 {loading ? 'Loading history...' : 'No history data'}
+             </div>
+          );
+      }
 
       // Extract unique dates for X-axis
-      const dates = Array.from(new Set(historyData.map(d => d.date)));
+      const dates = Array.from(new Set(history.map(d => d.date)));
       
       const s1Series = dates.map(date => {
-        const item = historyData.find(d => d.date === date && d.shift === 1);
-        return { x: date, y: item ? item.percentage : null }; // Use null for gap or 0?
+        const item = history.find(d => d.date === date && d.shift === 1);
+        return { x: date, y: item ? item.percentage : null }; 
       });
 
       const s2Series = dates.map(date => {
-        const item = historyData.find(d => d.date === date && d.shift === 2);
+        const item = history.find(d => d.date === date && d.shift === 2);
         return { x: date, y: item ? item.percentage : null };
       });
 
@@ -230,11 +241,107 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       );
   };
 
+  const renderTable = () => {
+      // Calculate Totals
+      const totals = data.reduce((acc, item) => ({
+          s1Plan: acc.s1Plan + (item.shift1?.plan || 0),
+          s1Loto: acc.s1Loto + (item.shift1?.loto || 0),
+          s2Plan: acc.s2Plan + (item.shift2?.plan || 0),
+          s2Loto: acc.s2Loto + (item.shift2?.loto || 0),
+      }), { s1Plan: 0, s1Loto: 0, s2Plan: 0, s2Loto: 0 });
+
+      const s1TotalPct = totals.s1Plan > 0 ? (totals.s1Loto / totals.s1Plan) * 100 : 0;
+      const s2TotalPct = totals.s2Plan > 0 ? (totals.s2Loto / totals.s2Plan) * 100 : 0;
+
+      return (
+          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-strokedark animate-in fade-in zoom-in-95 duration-300">
+              <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-meta-4 dark:text-gray-400">
+                      <tr>
+                          <th rowSpan={2} className="px-6 py-3 border-r border-b border-gray-200 dark:border-strokedark text-center align-middle">Warehouse</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-r border-gray-200 dark:border-strokedark text-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Shift 1</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-gray-200 dark:border-strokedark text-center bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">Shift 2</th>
+                      </tr>
+                      <tr>
+                          {/* S1 Headers */}
+                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Achv</th>
+                          
+                          {/* S2 Headers */}
+                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-b border-gray-200 dark:border-strokedark">Achv</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {data.map((item) => {
+                          const s1Plan = item.shift1?.plan || 0;
+                          const s1Achv = s1Plan > 0 ? (item.shift1?.pct || 0).toFixed(0) + '%' : 'N/A';
+                          const s1Class = s1Plan > 0 
+                                ? ((item.shift1?.pct || 0) >= 100 ? 'text-green-500' : 'text-amber-500')
+                                : 'text-gray-400 font-normal';
+
+                          const s2Plan = item.shift2?.plan || 0;
+                          const s2Achv = s2Plan > 0 ? (item.shift2?.pct || 0).toFixed(0) + '%' : 'N/A';
+                          const s2Class = s2Plan > 0 
+                                ? ((item.shift2?.pct || 0) >= 100 ? 'text-green-500' : 'text-amber-500')
+                                : 'text-gray-400 font-normal';
+
+                          return (
+                            <tr key={item.warehouse_code} className="bg-white border-b dark:bg-boxdark dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/30 transition-colors">
+                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap border-r border-gray-200 dark:border-strokedark">
+                                    {item.warehouse_code}
+                                </td>
+                                
+                                {/* S1 Data */}
+                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{s1Plan}</td>
+                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{item.shift1?.loto || 0}</td>
+                                <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark font-bold ${s1Class}`}>
+                                    {s1Achv}
+                                </td>
+
+                                {/* S2 Data */}
+                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{s2Plan}</td>
+                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{item.shift2?.loto || 0}</td>
+                                <td className={`px-4 py-4 text-center font-bold ${s2Class}`}>
+                                    {s2Achv}
+                                </td>
+                            </tr>
+                          );
+                      })}
+                      {/* Total Row */}
+                       <tr className="bg-slate-200 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-strokedark shadow-sm">
+                              <td className="px-6 py-4 text-slate-900 dark:text-white border-r border-slate-300 dark:border-strokedark">
+                                  TOTAL
+                              </td>
+                              
+                              {/* S1 Totals */}
+                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s1Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s1Loto}</td>
+                              <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark ${s1TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                                  {totals.s1Plan > 0 ? s1TotalPct.toFixed(0) + '%' : 'N/A'}
+                              </td>
+
+                              {/* S2 Totals */}
+                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s2Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s2Loto}</td>
+                              <td className={`px-4 py-4 text-center ${s2TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                                  {totals.s2Plan > 0 ? s2TotalPct.toFixed(0) + '%' : 'N/A'}
+                              </td>
+                          </tr>
+                  </tbody>
+              </table>
+          </div>
+      )
+  };
+
   // ------------------------------------
   // Render Gauge Item
   // ------------------------------------
   const renderGauge = (item: WarehouseStats) => {
       const isSelected = selectedWarehouse === item.warehouse_code;
+      const isExpanded = viewMode === 'detail' || isSelected;
       const pct = typeof item.percentage === 'string' ? parseFloat(item.percentage) : item.percentage;
 
       // Gradient Colors & Text Color
@@ -285,27 +392,29 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       return (
         <div key={item.warehouse_code} className={`
              relative bg-white dark:bg-boxdark rounded-xl border transition-all duration-300 overflow-hidden
-             ${isSelected ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-gray-100 dark:border-strokedark'}
+             ${isExpanded ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-gray-100 dark:border-strokedark'}
         `}>
              <div 
                 onClick={(e) => {
                     e.stopPropagation(); 
-                    if (!isSelected) {
-                        onSelectWarehouse(item.warehouse_code);
-                    } else {
-                        onSelectWarehouse(null);
+                    if(viewMode === 'overview') {
+                        if (!isSelected) {
+                            onSelectWarehouse(item.warehouse_code);
+                        } else {
+                            onSelectWarehouse(null);
+                        }
                     }
                 }}
-                className="p-3 flex flex-col items-center cursor-pointer h-full"
+                className={`p-3 flex flex-col items-center h-full ${viewMode === 'overview' ? 'cursor-pointer' : ''}`}
              >
                 {/* Gauge Area */}
-                <div className={`flex w-full ${isSelected ? 'items-start justify-between' : 'items-center justify-center'}`}>
+                <div className={`flex w-full ${isExpanded ? 'items-start justify-between' : 'items-center justify-center'}`}>
                     <div className="relative pointer-events-none flex-shrink-0">
                          <ReactApexChart key={item.warehouse_code + pct} options={radialOptions} series={[pct]} type="radialBar" height={140} width={140} />
                     </div>
 
                      {/* Breakdown Grid (Shown only when expanded) */}
-                     {isSelected && item.shift1 && item.shift2 ? (
+                     {isExpanded && item.shift1 && item.shift2 ? (
                          <div className="flex-grow px-2 self-center">
                             <table className="w-full text-xs text-center border-collapse">
                                 <thead>
@@ -338,7 +447,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                                 </tbody>
                             </table>
                          </div>
-                     ) : isSelected && (
+                     ) : isExpanded && (
                         <div className="flex flex-col gap-2 mt-4 text-xs text-gray-500 flex-grow px-4">
                               <div className="flex justify-between items-center border-b pb-1">
                                   <span className="text-gray-400 font-medium">LOTO</span>
@@ -353,11 +462,62 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                 </div>
 
                 {/* Mini Chart Injection */}
-                {isSelected && (
+                {isExpanded && (
                     <div className="w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95 duration-300">
-                         {renderMiniChart()}
+                         {renderMiniChart(historyDataMap[item.warehouse_code])}
                     </div>
                 )}
+             </div>
+        </div>
+      );
+  };
+
+  const renderSkeleton = (index: number) => {
+      const isDetail = viewMode === 'detail';
+      return (
+        <div key={`skeleton-${index}`} className={`
+             relative bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-strokedark overflow-hidden
+             ${isDetail ? 'col-span-1 min-h-[350px]' : 'col-span-1 min-h-[160px]'}
+             animate-pulse
+        `}>
+             <div className="p-4 flex flex-col items-center h-full gap-4">
+                 {/* Gauge Placeholder */}
+                 <div className="relative w-32 h-32 rounded-full border-8 border-gray-100 dark:border-strokedark flex items-center justify-center">
+                     <div className="w-24 h-24 rounded-full bg-gray-50 dark:bg-meta-4/30"></div>
+                 </div>
+                 
+                 {isDetail && (
+                     <>
+                        {/* Table Placeholder */}
+                        <div className="w-full space-y-2 px-2 mt-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                            </div>
+                            <div className="h-px bg-gray-100 dark:bg-strokedark w-full my-2"/>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                            </div>
+                             <div className="grid grid-cols-3 gap-2 mt-1">
+                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                            </div>
+                        </div>
+                        {/* Mini Chart Placeholder */}
+                        <div className="w-full mt-auto pt-4 border-t border-gray-100 dark:border-strokedark">
+                            <div className="h-3 w-1/3 bg-gray-100 dark:bg-strokedark rounded mb-2"/>
+                            <div className="h-[100px] w-full bg-gray-50 dark:bg-meta-4/20 rounded-lg flex items-end gap-1 p-2 justify-between">
+                                {[...Array(10)].map((_, i) => (
+                                    <div key={i} style={{ height: `${Math.random() * 100}%` }} className="w-full bg-gray-200 dark:bg-strokedark rounded-t-sm"></div>
+                                ))}
+                            </div>
+                        </div>
+                     </>
+                 )}
              </div>
         </div>
       );
@@ -375,28 +535,83 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                 }
             </p>
           </div>
-          {selectedWarehouse && (
-               <button 
-                  onClick={() => onSelectWarehouse(null)} 
-                  className="text-xs text-red-500 hover:text-red-700 underline"
-               >
-                   Close Details
-               </button>
-          )}
+
+          <div className="flex items-center gap-2">
+              {/* View Mode Toggle */}
+              <div className="flex bg-gray-100 dark:bg-meta-4 rounded-lg p-1">
+                    <button
+                        onClick={() => setViewMode('overview')}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                            viewMode === 'overview' 
+                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                        }`}
+                    >
+                        Overview
+                    </button>
+                    <button
+                        onClick={() => setViewMode('detail')}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                            viewMode === 'detail' 
+                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                        }`}
+                    >
+                        Detail
+                    </button>
+                    <button
+                        onClick={() => setViewMode('table')}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                            viewMode === 'table' 
+                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
+                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                        }`}
+                    >
+                        Table
+                    </button>
+              </div>
+
+              {/* Close Details Button (Contextual) */}
+              {selectedWarehouse && viewMode === 'overview' && (
+                <button 
+                    onClick={() => onSelectWarehouse(null)} 
+                    className="text-xs text-red-500 hover:text-red-700 underline ml-2"
+                >
+                    Close
+                </button>
+              )}
+          </div>
       </div>
 
       <div className="relative min-h-[200px]">
-          {loading && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-[1px] rounded-xl transition-all duration-300">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
+          {/* View Mode: Table */}
+          {viewMode === 'table' ? (
+              loading ? (
+                <div className="grid grid-cols-1 gap-2">
+                    {Array.from({length: 5}).map((_, i) => (
+                        <div key={i} className="h-16 w-full bg-gray-100 dark:bg-strokedark rounded animate-pulse"/>
+                    ))}
+                </div>
+              ) : (
+                renderTable()
+              )
+          ) : (
+              /* View Mode: Grid (Overview/Detail) */
+              <div className={`
+                  grid gap-3 transition-opacity duration-300 
+                  ${viewMode === 'detail' 
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                    : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+                  }
+              `}>
+                    {loading 
+                        ? Array.from({ length: viewMode === 'detail' ? 4 : 12 }).map((_, i) => renderSkeleton(i))
+                        : data.length > 0 
+                            ? data.map(renderGauge) 
+                            : <div className="col-span-full text-center py-8 text-gray-400 text-sm">No data available</div>
+                    }
+              </div>
           )}
-          
-          <div className={`grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 transition-opacity duration-300 ${loading ? 'opacity-40' : 'opacity-100'}`}>
-                {data.length > 0 ? data.map(renderGauge) : (
-                    !loading && <div className="col-span-full text-center py-8 text-gray-400 text-sm">No data available</div>
-                )}
-          </div>
       </div>
     </div>
   )

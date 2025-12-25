@@ -16,9 +16,10 @@ interface DailyData {
 
 interface LotoTrendChartProps {
   onDataPointClick?: (date: Date) => void;
+  selectedDate: Date | null;
 }
 
-const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => {
+const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick, selectedDate }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedSeries, setSelectedSeries] = useState<SeriesType>('Trend');
@@ -26,6 +27,7 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
   const [chartOptions, setChartOptions] = useState<ApexOptions>({});
   const [footerData, setFooterData] = useState({ lastPlanned: '-', lastLoto: '-' });
   const [lastPlannedDate, setLastPlannedDate] = useState<string | null>(null);
+  const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [loading, setLoading] = useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -131,6 +133,8 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
         actualS2: s2?.total_loto || 0
       };
     });
+
+    setDailyData(processedData);
 
     const cutoffDate = lastVerif?.issued_date ? parseISO(lastVerif.issued_date) : null;
     buildChart(processedData, cutoffDate);
@@ -286,6 +290,52 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
     setSelectedSeries(s);
   };
 
+  const renderTooltipCard = (date: Date) => {
+      const dayData = dailyData.find(d => format(d.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+      if (!dayData) return null;
+
+      const dateStr = format(dayData.date, 'dd MMM yyyy');
+      
+      const renderRow = (label: string, plan: number, act: number, colorClass: string) => {
+          const ach = plan > 0 ? ((act / plan) * 100).toFixed(1) : '0.0';
+          const achColor = parseFloat(ach) >= 100 ? 'text-green-600' : 'text-amber-600';
+          return (
+             <div className="mb-2 last:mb-0">
+                <div className={`text-xs font-bold ${colorClass} mb-0.5`}>{label}</div>
+                <div className="flex justify-between gap-4 text-xs">
+                    <span>Plan: <b className="text-gray-700 dark:text-gray-300">{plan}</b></span>
+                    <span>Act: <b className="text-gray-700 dark:text-gray-300">{act}</b></span>
+                    <span className={`${achColor} font-bold`}>{ach}%</span>
+                </div>
+             </div>
+          );
+      };
+
+      return (
+          <div className="px-4 py-3 bg-white dark:bg-boxdark border border-gray-200 dark:border-strokedark rounded shadow-xl text-sm min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
+             <div className="font-bold mb-2 border-b border-gray-100 dark:border-strokedark pb-1 text-gray-900 dark:text-white flex justify-between items-center">
+                 <span>{dateStr}</span>
+                 <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">Selected</span>
+             </div>
+             
+             {selectedSeries === 'Shift 1 Only' && renderRow('Shift 1', dayData.planS1, dayData.actualS1, 'text-blue-600')}
+             
+             {selectedSeries === 'Shift 2 Only' && renderRow('Shift 2', dayData.planS2, dayData.actualS2, 'text-purple-600')}
+             
+             {selectedSeries === 'All Series' && (
+                 <>
+                    {renderRow('Shift 1', dayData.planS1, dayData.actualS1, 'text-blue-600')}
+                    {renderRow('Shift 2', dayData.planS2, dayData.actualS2, 'text-purple-600')}
+                    <div className="my-2 border-t border-gray-100 dark:border-strokedark"></div>
+                    {renderRow('Total Trend', dayData.planS1 + dayData.planS2, dayData.actualS1 + dayData.actualS2, 'text-green-600')}
+                 </>
+             )}
+             
+             {selectedSeries === 'Trend' && renderRow('Achievement', dayData.planS1 + dayData.planS2, dayData.actualS1 + dayData.actualS2, 'text-green-600')}
+          </div>
+      );
+  }
+
   return (
     <div className="w-full bg-white dark:bg-boxdark rounded-xl shadow-sm border border-gray-100 dark:border p-6">
       
@@ -347,6 +397,14 @@ const LotoTrendChart: React.FC<LotoTrendChartProps> = ({ onDataPointClick }) => 
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
              </div>
         )}
+        
+        {/* Persistent Tooltip Overlay */}
+        {selectedDate && !loading && (
+            <div className="absolute top-4 right-4 z-20 pointer-events-none">
+                {renderTooltipCard(selectedDate)}
+            </div>
+        )}
+
         <div className="overflow-x-auto transition-all duration-500" ref={scrollRef}>
             <div style={{ minWidth: `${Math.max(600, chartData[0]?.data?.length * 50)}px` }}>
                 <ReactApexChart options={chartOptions} series={chartData} type="line" height={350} />

@@ -37,7 +37,7 @@ const GardaLotoDashboard = () => {
                 Reset Filter (ESC)
              </button>
         )}
-      <LotoTrendChart onDataPointClick={handleDateClick} />
+      <LotoTrendChart onDataPointClick={handleDateClick} selectedDate={selectedDate} />
       <div className='flex gap-4'>
         <LotoAchievementByWarehouse 
             selectedDate={selectedDate}
