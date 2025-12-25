@@ -98,3 +98,105 @@ BEGIN
   ORDER BY 1 ASC;
 END;
 $$;
+
+-- RPC for Daily Warehouse Achievement By Shift
+CREATE OR REPLACE FUNCTION get_loto_warehouse_daily_achievement_by_shift(target_date date)
+RETURNS TABLE (
+  warehouse_code text,
+  shift int,
+  total_loto bigint,
+  total_verification bigint,
+  percentage numeric
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH loto_counts AS (
+    SELECT
+      ls.warehouse_code as w,
+      ls.create_shift as s,
+      count(lr.id) as cnt
+    FROM loto_sessions ls
+    JOIN loto_records lr ON lr.session_id = ls.session_code
+    WHERE to_date(substring(ls.session_code from 1 for 6), 'YYMMDD') = target_date
+    GROUP BY 1, 2
+  ),
+  verification_counts AS (
+    SELECT
+      lv.warehouse_code as w,
+      lv.shift as s,
+      count(*) as cnt
+    FROM loto_verification lv
+    WHERE issued_date = target_date
+    GROUP BY 1, 2
+  )
+  SELECT
+    COALESCE(lc.w, vc.w) as warehouse_code,
+    COALESCE(lc.s, vc.s)::int as shift,
+    COALESCE(lc.cnt, 0) as total_loto,
+    COALESCE(vc.cnt, 0) as total_verification,
+    CASE WHEN COALESCE(vc.cnt, 0) > 0 THEN
+      ROUND((COALESCE(lc.cnt, 0)::numeric / vc.cnt) * 100, 2)
+    ELSE 0 END as percentage
+  FROM loto_counts lc
+  FULL OUTER JOIN verification_counts vc ON lc.w = vc.w AND lc.s = vc.s
+  ORDER BY 1, 2;
+END;
+$$;
+
+-- RPC for Warehouse History By Shift (Mini Chart)
+CREATE OR REPLACE FUNCTION get_loto_warehouse_history_by_shift(target_warehouse text, days_back int DEFAULT 30)
+RETURNS TABLE (
+  date date,
+  shift int,
+  total_loto bigint,
+  total_verification bigint,
+  percentage numeric
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH cutoff_date AS (
+    SELECT (COALESCE(MAX(issued_date), (now() AT TIME ZONE 'Asia/Makassar')::date) + 1)::date as d
+    FROM loto_verification
+  ),
+  loto_counts AS (
+    SELECT
+      to_date(substring(ls.session_code from 1 for 6), 'YYMMDD') as d,
+      ls.create_shift as s,
+      count(lr.id) as cnt
+    FROM loto_sessions ls
+    JOIN cutoff_date cd ON true
+    JOIN loto_records lr ON lr.session_id = ls.session_code
+    WHERE ls.warehouse_code = target_warehouse
+      AND to_date(substring(ls.session_code from 1 for 6), 'YYMMDD') >= (cd.d - days_back)
+      AND to_date(substring(ls.session_code from 1 for 6), 'YYMMDD') < cd.d
+    GROUP BY 1, 2
+  ),
+  verification_counts AS (
+    SELECT
+      lv.issued_date as d,
+      lv.shift as s,
+      count(*) as cnt
+    FROM loto_verification lv
+    JOIN cutoff_date cd ON true
+    WHERE lv.warehouse_code = target_warehouse
+      AND lv.issued_date >= (cd.d - days_back)
+      AND lv.issued_date < cd.d
+    GROUP BY 1, 2
+  )
+  SELECT
+    COALESCE(lc.d, vc.d) as date,
+    COALESCE(lc.s, vc.s)::int as shift,
+    COALESCE(lc.cnt, 0) as total_loto,
+    COALESCE(vc.cnt, 0) as total_verification,
+    CASE WHEN COALESCE(vc.cnt, 0) > 0 THEN
+      ROUND((COALESCE(lc.cnt, 0)::numeric / vc.cnt) * 100, 2)
+    ELSE 0 END as percentage
+  FROM loto_counts lc
+  FULL OUTER JOIN verification_counts vc ON lc.d = vc.d AND lc.s = vc.s
+  ORDER BY 1 ASC, 2 ASC;
+END;
+$$;
