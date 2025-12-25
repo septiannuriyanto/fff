@@ -175,10 +175,17 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       const isSelected = selectedWarehouse === item.warehouse_code;
       const pct = parseFloat(item.percentage);
 
-      // Gradient Colors
+      // Gradient Colors & Text Color
       let gradientColors = ['#22c55e', '#86efac']; // Green
-      if (pct < 70) gradientColors = ['#ef4444', '#fca5a5']; // Red
-      else if (pct < 90) gradientColors = ['#f97316', '#fdba74']; // Orange
+      let textColor = '#22c55e';
+
+      if (pct < 70) {
+          gradientColors = ['#ef4444', '#fca5a5']; // Red
+          textColor = '#ef4444';
+      } else if (pct < 90) {
+          gradientColors = ['#f59e0b', '#fcd34d']; // Amber (was Orange)
+          textColor = '#f59e0b';
+      }
 
       const radialOptions: ApexOptions = {
           chart: { type: 'radialBar', height: 160, sparkline: { enabled: true } },
@@ -190,8 +197,8 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
               track: { background: '#f3f4f6', strokeWidth: '100%' },
               dataLabels: {
                 show: true,
-                name: { offsetY: 20, show: true, color: '#9ca3af', fontSize: '10px', fontWeight: 500 },
-                value: { offsetY: -5, color: '#1f2937', fontSize: '16px', show: true, fontWeight: 'bold' }
+                name: { offsetY: 30, show: true, color: '#9ca3af', fontSize: '10px', fontWeight: 500 },
+                value: { offsetY: -8, color: textColor, fontSize: '16px', show: true, fontWeight: 'bold' }
               }
             }
           },
@@ -232,7 +239,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                 {/* Gauge Area */}
                 <div className={`flex w-full ${isSelected ? 'items-start justify-between' : 'items-center justify-center'}`}>
                     <div className="relative pointer-events-none flex-shrink-0">
-                         <ReactApexChart options={radialOptions} series={[pct]} type="radialBar" height={140} width={140} />
+                         <ReactApexChart key={item.warehouse_code + pct} options={radialOptions} series={[pct]} type="radialBar" height={140} width={140} />
                     </div>
 
                      {/* Info Stats (Shown only when expanded) */}
