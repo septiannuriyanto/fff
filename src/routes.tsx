@@ -59,6 +59,7 @@ import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
 import GardaLoto from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoSessionDetails from './pages/Dashboard/GardaLoto/GardaLotoSessionDetails';
+import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
 
 
 const routes = [
@@ -154,7 +155,7 @@ const routes = [
 
   {
     path: '/gardaloto',
-    component: <GardaLotoSessionDetails />,
+    component: <GardaLotoDashboard />,
     allowedRoles: ALL_ROLES
   },
 

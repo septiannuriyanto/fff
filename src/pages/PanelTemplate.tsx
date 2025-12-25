@@ -2,7 +2,7 @@ import React, { ReactNode, useEffect } from 'react';
 
 interface PanelTemplateProps {
   title?: string;
-  children: ReactNode;
+  children?: ReactNode;
 
   /** Optional class overrides */
   containerClassName?: string;

@@ -10,6 +10,8 @@ import 'flatpickr/dist/flatpickr.min.css';
 import store from './store';
 import { Provider } from 'react-redux';
 import AuthProvider from './pages/Authentication/AuthContext';
+import 'leaflet/dist/leaflet.css'
+
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <Router>
