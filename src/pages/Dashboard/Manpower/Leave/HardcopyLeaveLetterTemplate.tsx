@@ -29,7 +29,7 @@ interface HardcopyLeaveLetterTemplateProps {
 }
 
 class HardcopyLeaveLetterTemplate extends React.PureComponent<HardcopyLeaveLetterTemplateProps> {
-  parseTimestamp = (time) => {
+  parseTimestamp = (time:any) => {
     const timeObj = new Date(time.toDate());
     const year = timeObj.getFullYear();
     return year;
