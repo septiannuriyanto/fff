@@ -88,7 +88,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
             if (error) throw error;
             rawData = data;
         } else {
-            // Use the 'by shift' RPC for 30 days as well
+            // Use the NEW derived 'by shift' RPC for 30 days as well
             const { data, error } = await supabase.rpc('get_loto_achievement_warehouse_by_shift', { days_back: 30 });
             if (error) throw error;
             rawData = data;
@@ -280,13 +280,13 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                           const s1Achv = s1Plan > 0 ? (item.shift1?.pct || 0).toFixed(0) + '%' : 'N/A';
                           const s1Class = s1Plan > 0 
                                 ? ((item.shift1?.pct || 0) >= 100 ? 'text-green-500' : 'text-amber-500')
-                                : 'text-gray-400 font-normal';
+                                : 'text-slate-400 font-normal';
 
                           const s2Plan = item.shift2?.plan || 0;
                           const s2Achv = s2Plan > 0 ? (item.shift2?.pct || 0).toFixed(0) + '%' : 'N/A';
                           const s2Class = s2Plan > 0 
                                 ? ((item.shift2?.pct || 0) >= 100 ? 'text-green-500' : 'text-amber-500')
-                                : 'text-gray-400 font-normal';
+                                : 'text-slate-400 font-normal';
 
                           return (
                             <tr key={item.warehouse_code} className="bg-white border-b dark:bg-boxdark dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/30 transition-colors">
@@ -295,16 +295,24 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                                 </td>
                                 
                                 {/* S1 Data */}
-                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{s1Plan}</td>
-                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{item.shift1?.loto || 0}</td>
-                                <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark font-bold ${s1Class}`}>
+                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                    {s1Plan}
+                                </td>
+                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                    {item.shift1?.loto || 0}
+                                </td>
+                                <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark font-bold ${s1Class} ${s1Plan === 0 ? 'bg-slate-100 dark:bg-meta-4/20' : ''}`}>
                                     {s1Achv}
                                 </td>
 
                                 {/* S2 Data */}
-                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{s2Plan}</td>
-                                <td className="px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark">{item.shift2?.loto || 0}</td>
-                                <td className={`px-4 py-4 text-center font-bold ${s2Class}`}>
+                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                    {s2Plan}
+                                </td>
+                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                    {item.shift2?.loto || 0}
+                                </td>
+                                <td className={`px-4 py-4 text-center font-bold ${s2Class} ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20' : ''}`}>
                                     {s2Achv}
                                 </td>
                             </tr>
@@ -335,6 +343,8 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
           </div>
       )
   };
+
+
 
   // ------------------------------------
   // Render Gauge Item

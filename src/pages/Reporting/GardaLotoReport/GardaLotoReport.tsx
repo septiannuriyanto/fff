@@ -38,5 +38,5 @@ const GardaLotoReport: React.FC = () => {
     </PanelTemplate>
   );
 };
-
+  
 export default GardaLotoReport;

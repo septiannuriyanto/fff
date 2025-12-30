@@ -140,6 +140,7 @@ const ReconcileLotoImages: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionFilterMode, setSessionFilterMode] = useState<'ALL' | 'WITH_SESSION' | 'NO_SESSION'>('ALL');
   const [filterMode, setFilterMode] = useState<'ALL' | 'VERIFIED' | 'UNVERIFIED'>('ALL');
+  const [selectedFilterDate, setSelectedFilterDate] = useState<string>(''); // Date Filter
   
   // --- Image Grid State ---
   const [imageFilterMode, setImageFilterMode] = useState<'ALL' | 'ASSIGNED' | 'UNASSIGNED'>('ALL');
@@ -180,11 +181,22 @@ const ReconcileLotoImages: React.FC = () => {
 
   // --- Filtered Sessions ---
   const filteredSessions = useMemo(() => {
-      if (sessionFilterMode === 'ALL') return rowData;
-      if (sessionFilterMode === 'WITH_SESSION') return rowData.filter(r => r.session_created);
-      if (sessionFilterMode === 'NO_SESSION') return rowData.filter(r => !r.session_created);
-      return rowData;
-  }, [rowData, sessionFilterMode]);
+      let data = rowData;
+
+      // 1. Session Status Filter
+      if (sessionFilterMode === 'WITH_SESSION') {
+          data = data.filter(r => r.session_created);
+      } else if (sessionFilterMode === 'NO_SESSION') {
+          data = data.filter(r => !r.session_created);
+      }
+
+      // 2. Date Filter
+      if (selectedFilterDate) {
+          data = data.filter(r => r.issued_date === selectedFilterDate);
+      }
+
+      return data;
+  }, [rowData, sessionFilterMode, selectedFilterDate]);
 
   // --- Fetch Verification Rows & Images ---
   useEffect(() => {
@@ -258,7 +270,7 @@ const ReconcileLotoImages: React.FC = () => {
         const dd = String(dateObj.getDate()).padStart(2, '0');
         const datePart = `${yy}${mm}${dd}`;
 
-        const shiftPart = String(s).padStart(4, '0');
+        const shiftPart = String(s).padStart(4, '0').slice(-4);
         
         // Take last 4 chars of warehouse (e.g. FT01 -> FT01, or WarehouseFT01 -> FT01)
         // Pad start if somehow shorter.
@@ -550,6 +562,7 @@ const ReconcileLotoImages: React.FC = () => {
         field: 'issued_date',
         headerName: 'Date',
         sortable: true,
+        filter: true,
         width: 130, // Increased
         valueFormatter: (p) => p.value ? p.value : '-'
       },
@@ -596,6 +609,8 @@ const ReconcileLotoImages: React.FC = () => {
         field: 'fuelman',
         headerName: 'Fuelman',
         sortable: true,
+        filter: true,
+        filterValueGetter: (p: any) => getNameByNrp(p.data.fuelman, fuelmanOptions),
         valueFormatter: (p) => getNameByNrp(p.value, fuelmanOptions)
       },
       {
@@ -674,21 +689,32 @@ const ReconcileLotoImages: React.FC = () => {
          <div className="flex justify-between items-center mb-4">
              <h2 className="text-xl font-bold">Verification List</h2>
              
-             {/* Session Filter */}
-             <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-                {(['ALL', 'WITH_SESSION', 'NO_SESSION'] as const).map(mode => (
-                    <button
-                        key={mode}
-                        onClick={() => setSessionFilterMode(mode)}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                            sessionFilterMode === mode 
-                            ? 'bg-white text-blue-600 shadow-sm' 
-                            : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    >
-                        {mode === 'ALL' ? 'All' : mode === 'WITH_SESSION' ? 'With Session' : 'No Session'}
-                    </button>
-                ))}
+             <div className="flex items-center space-x-4">
+                {/* Date Filter */}
+                <input 
+                    type="date"
+                    value={selectedFilterDate}
+                    onChange={(e) => setSelectedFilterDate(e.target.value)}
+                    className="border rounded px-3 py-1 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                    placeholder="Filter Date"
+                />
+
+                {/* Session Filter */}
+                <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                    {(['ALL', 'WITH_SESSION', 'NO_SESSION'] as const).map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => setSessionFilterMode(mode)}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                                sessionFilterMode === mode 
+                                ? 'bg-white text-blue-600 shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            {mode === 'ALL' ? 'All' : mode === 'WITH_SESSION' ? 'With Session' : 'No Session'}
+                        </button>
+                    ))}
+                </div>
              </div>
          </div>
          

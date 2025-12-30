@@ -3,6 +3,7 @@ import PanelTemplate from '../../PanelTemplate'
 import LotoAchievementByWarehouse from './LotoAchievementByWarehouse'
 import LotoTrendChart from './LotoTrendChart'
 import LotoCountByFuelman from './components/LotoCountByFuelman';
+import LotoDayByDayAchievement from './LotoDayByDayAchievement';
 
 
 
@@ -38,6 +39,9 @@ const GardaLotoDashboard = () => {
              </button>
         )}
       <LotoTrendChart onDataPointClick={handleDateClick} selectedDate={selectedDate} />
+      
+      {!selectedDate && <LotoDayByDayAchievement />}
+
       <div className='flex gap-4'>
         <LotoAchievementByWarehouse 
             selectedDate={selectedDate}
@@ -45,7 +49,7 @@ const GardaLotoDashboard = () => {
             onSelectWarehouse={setSelectedWarehouse}
         />
       </div>
-      <div className=''>
+      <div className='hidden'>
         <LotoCountByFuelman />
       </div>
       </div>
