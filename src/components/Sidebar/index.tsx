@@ -178,6 +178,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 basePath="/reporting"
               >
                 <SidebarLink to="/reporting/dailyreport" label="Daily Report" />
+                <SidebarLink to="/reporting/adminreport" label="Admin Report" />
                 <SidebarLink to="/reporting/logsheet" label="Logsheet" />
                 <SidebarLink to="/reporting/stock" label="Stock" />
                 <SidebarLink to="/reporting/ritation" label="Ritation" />

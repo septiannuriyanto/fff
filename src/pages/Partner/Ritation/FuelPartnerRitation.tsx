@@ -36,6 +36,8 @@ import { RitasiFuel } from '../component/ritasiFuel';
 import { format } from 'date-fns-tz';
 import ImagePreviewModal from '../Dashboard/ImagePreviewModal';
 
+const WORKER_URL = 'https://gardaloto.septian-nuryanto.workers.dev';
+
 const FuelPartnerRitation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(getMakassarShiftlyDate());
   const { currentUser } = useAuth();
@@ -445,8 +447,15 @@ const FuelPartnerRitation: React.FC = () => {
       return;
     }
 
+    const selectedWarehouse = units.find((u) => u.unit_id === unit)?.warehouse_id;
+    if (!selectedWarehouse) {
+        alert('Unit/Warehouse belum dipilih.');
+        return;
+    }
+
     setIsLoadingPhoto(true);
     try {
+      // 1. Prepare Image
       const img = new Image();
       img.crossOrigin = 'anonymous';
 
@@ -495,10 +504,8 @@ const FuelPartnerRitation: React.FC = () => {
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       ctx.save();
-
       ctx.translate(canvasWidth / 2, canvasHeight / 2);
       ctx.rotate((rotationAngle * Math.PI) / 180);
-
       ctx.drawImage(
         img,
         -drawWidth / 2,
@@ -506,7 +513,6 @@ const FuelPartnerRitation: React.FC = () => {
         drawWidth,
         drawHeight,
       );
-
       ctx.restore();
 
       console.log(
@@ -516,7 +522,7 @@ const FuelPartnerRitation: React.FC = () => {
         canvasHeight,
       );
 
-      const compressedBlob = await compressImage(canvas, 100);
+      const compressedBlob = await compressImage(canvas, 150);
 
       console.log(
         'Compressed image size:',
@@ -524,40 +530,71 @@ const FuelPartnerRitation: React.FC = () => {
         'KB',
       );
 
-      if (compressedBlob.size > 102400) {
-        console.warn('Warning: Compressed image still larger than 100KB');
+      if (compressedBlob.size > 150 * 1024) {
+        console.warn('Warning: Compressed image still larger than 150KB');
       }
 
-      const filename = `${noSuratJalan}.jpg`;
+      // 2. Prepare Upload Payload
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+          throw new Error("No active session token found.");
+      }
+
+      // Convert Blob to Base64
+      const base64String = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const res = reader.result as string;
+              // Remove "data:image/jpeg;base64," prefix
+              resolve(res.split(',')[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(compressedBlob);
+      });
+
       const date = getMakassarDateObject();
-      const year = date.getFullYear();
+      const year = date.getFullYear().toString();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      const path = `ritasi/${year}/${month}/${day}/${filename}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(path, compressedBlob, {
-          upsert: true,
-          contentType: 'image/jpeg',
-          cacheControl: '3600',
-        });
+      const payload = {
+          bucket: 'ritation',
+          year,
+          month,
+          day,
+          shift,
+          wh: selectedWarehouse,
+          unitName: noSuratJalan, // Worker will append .jpg
+          image_data: base64String
+      };
 
-      if (uploadError) {
-        throw uploadError;
+      // 3. Upload to Worker
+      const response = await fetch(`${WORKER_URL}/upload`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+          const errMsg = await response.text();
+          throw new Error(`Upload Failed: ${response.status} - ${errMsg}`);
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(path);
+      const result = await response.json();
+      console.log("Upload success:", result);
 
-      if (publicUrlData) {
+      if (result.url) {
         if (photoPreview && photoPreview.startsWith('blob:')) {
           URL.revokeObjectURL(photoPreview);
         }
 
-        setPhotoUrl(publicUrlData.publicUrl);
-        setPhotoPreview(publicUrlData.publicUrl + '?t=' + Date.now());
+        setPhotoUrl(result.url);
+        setPhotoPreview(result.url); // Worker URL is public/proxied
         setIsPhotoUploaded(true);
         setPhotoFile(null);
         alert(

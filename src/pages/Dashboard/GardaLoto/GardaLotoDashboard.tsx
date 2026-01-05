@@ -49,7 +49,7 @@ const GardaLotoDashboard = () => {
             onSelectWarehouse={setSelectedWarehouse}
         />
       </div>
-      <div className='hidden'>
+      <div className=''>
         <LotoCountByFuelman />
       </div>
       </div>

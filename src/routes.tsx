@@ -60,6 +60,7 @@ import GardaLoto from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoSessionDetails from './pages/Dashboard/GardaLoto/GardaLotoSessionDetails';
 import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
+import AdminReport from './pages/Reporting/AdminReport/AdminReport';
 
 
 const routes = [
@@ -225,6 +226,12 @@ const routes = [
     component: <DailyReport />,
     title: 'FFF | Daily Report',
     allowedRoles: FUEL_ROLES
+  },
+  {
+    path: '/reporting/adminreport',
+    component: <AdminReport />,
+    title: 'FFF | Admin Report',
+    allowedRoles: ADMIN
   },
   {
     path: '/reporting/logsheet',
