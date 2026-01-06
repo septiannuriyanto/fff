@@ -255,24 +255,24 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       const s2TotalPct = totals.s2Plan > 0 ? (totals.s2Loto / totals.s2Plan) * 100 : 0;
 
       return (
-          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-strokedark animate-in fade-in zoom-in-95 duration-300">
+          <div className="overflow-x-auto rounded-lg border border-black dark:border-strokedark animate-in fade-in zoom-in-95 duration-300">
               <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
                   <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-meta-4 dark:text-slate-400">
                       <tr>
-                          <th rowSpan={2} className="px-6 py-3 border-r border-b border-slate-200 dark:border-strokedark text-center align-middle">Warehouse</th>
-                          <th colSpan={3} className="px-6 py-2 border-b border-r border-slate-200 dark:border-strokedark text-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Shift 1</th>
-                          <th colSpan={3} className="px-6 py-2 border-b border-slate-200 dark:border-strokedark text-center bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">Shift 2</th>
+                          <th rowSpan={2} className="px-6 py-3 border-r border-b border-black dark:border-strokedark text-center align-middle">Warehouse</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-r border-black dark:border-strokedark text-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Shift 1</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-black dark:border-strokedark text-center bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">Shift 2</th>
                       </tr>
                       <tr>
                           {/* S1 Headers */}
-                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Plan</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Actual</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Achv</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-black dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-black dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-black dark:border-strokedark">Achv</th>
                           
                           {/* S2 Headers */}
-                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Plan</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Actual</th>
-                          <th className="px-4 py-2 text-center border-b border-slate-200 dark:border-strokedark">Achv</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-black dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-black dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-b border-black dark:border-strokedark">Achv</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -290,8 +290,8 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                                 : 'text-slate-400 font-normal';
 
                           return (
-                            <tr key={item.warehouse_code} className="bg-white border-b dark:bg-boxdark dark:border-strokedark hover:bg-slate-50 dark:hover:bg-meta-4/30 transition-colors">
-                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white whitespace-nowrap border-r border-slate-200 dark:border-strokedark">
+                            <tr key={item.warehouse_code} className="bg-white border-b border-black dark:bg-boxdark dark:border-strokedark hover:bg-slate-50 dark:hover:bg-meta-4/30 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white whitespace-nowrap border-r border-black dark:border-strokedark">
                                     {selectedDate ? (
                                         <button 
                                             onClick={() => handleWarehouseClick(item.warehouse_code)}
@@ -306,21 +306,21 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                                 </td>
                                 
                                 {/* S1 Data */}
-                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {s1Plan}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {item.shift1?.loto || 0}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark font-bold ${s1Class} ${s1Plan === 0 ? 'bg-slate-100 dark:bg-meta-4/20' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark font-bold ${s1Class} ${s1Plan === 0 ? 'bg-slate-100 dark:bg-meta-4/20' : ''}`}>
                                     {s1Achv}
                                 </td>
 
                                 {/* S2 Data */}
-                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {s2Plan}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {item.shift2?.loto || 0}
                                 </td>
                                 <td className={`px-4 py-4 text-center font-bold ${s2Class} ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20' : ''}`}>
@@ -330,21 +330,21 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                           );
                       })}
                       {/* Total Row */}
-                       <tr className="bg-slate-200 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-strokedark shadow-sm">
-                              <td className="px-6 py-4 text-slate-900 dark:text-white border-r border-slate-300 dark:border-strokedark">
+                       <tr className="bg-slate-200 dark:bg-slate-800 font-bold border-t-2 border-black dark:border-strokedark shadow-sm">
+                              <td className="px-6 py-4 text-slate-900 dark:text-white border-r border-black dark:border-strokedark">
                                   TOTAL
                               </td>
                               
                               {/* S1 Totals */}
-                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s1Plan}</td>
-                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s1Loto}</td>
-                              <td className={`px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark ${s1TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                              <td className="px-4 py-4 text-center border-r border-black dark:border-strokedark">{totals.s1Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-black dark:border-strokedark">{totals.s1Loto}</td>
+                              <td className={`px-4 py-4 text-center border-r border-black dark:border-strokedark ${s1TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
                                   {totals.s1Plan > 0 ? s1TotalPct.toFixed(0) + '%' : 'N/A'}
                               </td>
 
                               {/* S2 Totals */}
-                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s2Plan}</td>
-                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s2Loto}</td>
+                              <td className="px-4 py-4 text-center border-r border-black dark:border-strokedark">{totals.s2Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-black dark:border-strokedark">{totals.s2Loto}</td>
                               <td className={`px-4 py-4 text-center ${s2TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
                                   {totals.s2Plan > 0 ? s2TotalPct.toFixed(0) + '%' : 'N/A'}
                               </td>
@@ -413,7 +413,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       return (
         <div key={item.warehouse_code} className={`
              relative bg-white dark:bg-boxdark rounded-xl border transition-all duration-300 overflow-hidden
-             ${isExpanded ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-slate-100 dark:border-strokedark'}
+             ${isExpanded ? (viewMode === 'detail' ? 'col-span-1 sm:col-span-2 row-span-1 ring-2 ring-black dark:ring-white shadow-lg z-10' : 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 2xl:col-span-4 row-span-1 ring-2 ring-black dark:ring-white shadow-lg z-10') : 'col-span-1 shadow-sm hover:shadow border-slate-100 dark:border-strokedark'}
         `}>
              <div 
                 onClick={(e) => {

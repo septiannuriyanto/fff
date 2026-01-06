@@ -42,7 +42,7 @@ const GardaLotoDashboard = () => {
       
       {!selectedDate && <LotoDayByDayAchievement />}
 
-      <div className='flex gap-4'>
+      <div className='w-full'>
         <LotoAchievementByWarehouse 
             selectedDate={selectedDate}
             selectedWarehouse={selectedWarehouse}
