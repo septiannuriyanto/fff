@@ -2,7 +2,7 @@
   import { useParams } from 'react-router-dom'
   import PanelTemplate from '../../PanelTemplate'
   import { supabase } from '../../../db/SupabaseClient'
-import Header from '../../../components/Header'
+  import LotoVerificationDialog from '../../../common/LotoVerificationDialog'
 
   interface SessionData {
     session_code: string
@@ -31,9 +31,27 @@ import Header from '../../../components/Header'
     code_number: string
   }
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('id-ID')
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-'
+    return date.toLocaleDateString('id-ID', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    })
+  }
+
+  // Parse date from yyMMdd prefix
+  const getSessionDateFromCode = (code: string | undefined): Date | null => {
+    if (!code || code.length < 6) return null;
+    try {
+        const yy = parseInt(code.substring(0, 2), 10);
+        const mm = parseInt(code.substring(2, 4), 10);
+        const dd = parseInt(code.substring(4, 6), 10);
+        return new Date(2000 + yy, mm - 1, dd);
+    } catch (e) {
+        console.error("Error parsing date from code", e);
+        return null;
+    }
   }
 
   // Generate optimized image URL
@@ -104,8 +122,16 @@ import Header from '../../../components/Header'
     }
   }
 
+
+
+  // ... imports ...
+
   const GardaLotoSessionDetails = () => {
     const { session_id } = useParams<{ session_id: string }>()
+    const [dialogOpen, setDialogOpen] = useState(false)
+    
+    // Derived date from URL param (source of truth for this page's context)
+    const sessionDate = getSessionDateFromCode(session_id);
 
     const [session, setSession] = useState<SessionData | null>(null)
     const [records, setRecords] = useState<LotoRecord[]>([])
@@ -228,7 +254,6 @@ import Header from '../../../components/Header'
       setDownloading(false)
     }
 
-    /* ================= UI ================= */
     return (
       <PanelTemplate title="Garda Loto Session Details">
         {loading && (
@@ -241,8 +266,16 @@ import Header from '../../../components/Header'
           <div className="space-y-4">
             {/* ================= HEADER ================= */}
             <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
-              <div className="text-xl font-bold text-gray-800 pb-2 border-b">
-                Session {session.session_code}
+              <div className="flex justify-between items-center border-b pb-2">
+                 <div className="text-xl font-bold text-gray-800">
+                    Session {session.session_code}
+                 </div>
+                 <button 
+                    onClick={() => setDialogOpen(true)}
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-sm font-medium transition-colors"
+                 >
+                    View Verification
+                 </button>
               </div>
 
               {/* Info Grid */}
@@ -253,7 +286,7 @@ import Header from '../../../components/Header'
                     Tanggal
                   </div>
                   <div className="text-base font-semibold text-gray-800">
-                    {formatDate(session.created_at)}
+                    {formatDate(sessionDate)}
                   </div>
                 </div>
 
@@ -351,7 +384,7 @@ import Header from '../../../components/Header'
 
         {/* ================= FULLSCREEN VIEWER ================= */}
         {activeIndex !== null && (
-          <div className="fixed inset-0 z-9999">
+          <div className="fixed inset-0 z-9999 text-left">
             {/* BACKDROP */}
             <div
               className="absolute inset-0 bg-black/95"
@@ -467,6 +500,14 @@ import Header from '../../../components/Header'
             </div>
           </div>
         )}
+
+        <LotoVerificationDialog 
+            isOpen={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            warehouseCode={session?.warehouse_code ?? null}
+            date={sessionDate}
+            targetShift={session?.create_shift}
+        />
       </PanelTemplate>
     )
   }

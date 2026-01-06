@@ -3,6 +3,7 @@ import ReactApexChart from 'react-apexcharts';
 import { supabase } from '../../../db/SupabaseClient';
 import { format } from 'date-fns';
 import { ApexOptions } from 'apexcharts';
+import LotoVerificationDialog from '../../../common/LotoVerificationDialog';
 
 interface Props {
   selectedDate: Date | null;
@@ -156,7 +157,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
   const renderMiniChart = (history: HistoryItem[]) => {
       if (!history || !history.length) {
           return (
-             <div className="h-[130px] flex items-center justify-center text-xs text-gray-400 italic">
+             <div className="h-[130px] flex items-center justify-center text-xs text-slate-400 italic">
                  {loading ? 'Loading history...' : 'No history data'}
              </div>
           );
@@ -233,7 +234,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
 
       return (
           <div className="w-full">
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 pl-2 border-l-2 border-primary">
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 pl-2 border-l-2 border-primary">
                   Shift History (30 Days)
               </div>
               <ReactApexChart options={chartOptions} series={series} type="bar" height={130} />
@@ -254,24 +255,24 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       const s2TotalPct = totals.s2Plan > 0 ? (totals.s2Loto / totals.s2Plan) * 100 : 0;
 
       return (
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-strokedark animate-in fade-in zoom-in-95 duration-300">
-              <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-meta-4 dark:text-gray-400">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-strokedark animate-in fade-in zoom-in-95 duration-300">
+              <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
+                  <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-meta-4 dark:text-slate-400">
                       <tr>
-                          <th rowSpan={2} className="px-6 py-3 border-r border-b border-gray-200 dark:border-strokedark text-center align-middle">Warehouse</th>
-                          <th colSpan={3} className="px-6 py-2 border-b border-r border-gray-200 dark:border-strokedark text-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Shift 1</th>
-                          <th colSpan={3} className="px-6 py-2 border-b border-gray-200 dark:border-strokedark text-center bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">Shift 2</th>
+                          <th rowSpan={2} className="px-6 py-3 border-r border-b border-slate-200 dark:border-strokedark text-center align-middle">Warehouse</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-r border-slate-200 dark:border-strokedark text-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">Shift 1</th>
+                          <th colSpan={3} className="px-6 py-2 border-b border-slate-200 dark:border-strokedark text-center bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">Shift 2</th>
                       </tr>
                       <tr>
                           {/* S1 Headers */}
-                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Plan</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Actual</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Achv</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Achv</th>
                           
                           {/* S2 Headers */}
-                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Plan</th>
-                          <th className="px-4 py-2 text-center border-r border-b border-gray-200 dark:border-strokedark">Actual</th>
-                          <th className="px-4 py-2 text-center border-b border-gray-200 dark:border-strokedark">Achv</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Plan</th>
+                          <th className="px-4 py-2 text-center border-r border-b border-slate-200 dark:border-strokedark">Actual</th>
+                          <th className="px-4 py-2 text-center border-b border-slate-200 dark:border-strokedark">Achv</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -289,27 +290,37 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                                 : 'text-slate-400 font-normal';
 
                           return (
-                            <tr key={item.warehouse_code} className="bg-white border-b dark:bg-boxdark dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/30 transition-colors">
-                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap border-r border-gray-200 dark:border-strokedark">
-                                    {item.warehouse_code}
+                            <tr key={item.warehouse_code} className="bg-white border-b dark:bg-boxdark dark:border-strokedark hover:bg-slate-50 dark:hover:bg-meta-4/30 transition-colors">
+                                <td className="px-6 py-4 font-medium text-slate-900 dark:text-white whitespace-nowrap border-r border-slate-200 dark:border-strokedark">
+                                    {selectedDate ? (
+                                        <button 
+                                            onClick={() => handleWarehouseClick(item.warehouse_code)}
+                                            className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                                            title="Click to view unit verification status"
+                                        >
+                                            {item.warehouse_code}
+                                        </button>
+                                    ) : (
+                                        item.warehouse_code
+                                    )}
                                 </td>
                                 
                                 {/* S1 Data */}
-                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {s1Plan}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s1Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {item.shift1?.loto || 0}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark font-bold ${s1Class} ${s1Plan === 0 ? 'bg-slate-100 dark:bg-meta-4/20' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark font-bold ${s1Class} ${s1Plan === 0 ? 'bg-slate-100 dark:bg-meta-4/20' : ''}`}>
                                     {s1Achv}
                                 </td>
 
                                 {/* S2 Data */}
-                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {s2Plan}
                                 </td>
-                                <td className={`px-4 py-4 text-center border-r border-gray-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
+                                <td className={`px-4 py-4 text-center border-r border-slate-100 dark:border-strokedark ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20 text-slate-400' : ''}`}>
                                     {item.shift2?.loto || 0}
                                 </td>
                                 <td className={`px-4 py-4 text-center font-bold ${s2Class} ${s2Plan === 0 ? 'bg-slate-200 dark:bg-meta-4/20' : ''}`}>
@@ -325,15 +336,15 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                               </td>
                               
                               {/* S1 Totals */}
-                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s1Plan}</td>
-                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s1Loto}</td>
-                              <td className={`px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark ${s1TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s1Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s1Loto}</td>
+                              <td className={`px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark ${s1TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
                                   {totals.s1Plan > 0 ? s1TotalPct.toFixed(0) + '%' : 'N/A'}
                               </td>
 
                               {/* S2 Totals */}
-                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s2Plan}</td>
-                              <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-strokedark">{totals.s2Loto}</td>
+                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s2Plan}</td>
+                              <td className="px-4 py-4 text-center border-r border-slate-200 dark:border-strokedark">{totals.s2Loto}</td>
                               <td className={`px-4 py-4 text-center ${s2TotalPct >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
                                   {totals.s2Plan > 0 ? s2TotalPct.toFixed(0) + '%' : 'N/A'}
                               </td>
@@ -402,7 +413,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       return (
         <div key={item.warehouse_code} className={`
              relative bg-white dark:bg-boxdark rounded-xl border transition-all duration-300 overflow-hidden
-             ${isExpanded ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-gray-100 dark:border-strokedark'}
+             ${isExpanded ? 'col-span-2 row-span-1 ring-1 ring-blue-500 shadow-lg z-10' : 'col-span-1 shadow-sm hover:shadow border-slate-100 dark:border-strokedark'}
         `}>
              <div 
                 onClick={(e) => {
@@ -428,25 +439,25 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                          <div className="flex-grow px-2 self-center">
                             <table className="w-full text-xs text-center border-collapse">
                                 <thead>
-                                    <tr className="text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                                    <tr className="text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-700">
                                         <th className="pb-1 font-medium text-left">Metric</th>
                                         <th className="pb-1 font-medium text-blue-500">S1</th>
                                         <th className="pb-1 font-medium text-purple-500">S2</th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-gray-700 dark:text-gray-300">
-                                    <tr className="border-b border-gray-50 dark:border-gray-800">
-                                        <td className="py-1.5 text-left font-semibold text-gray-500">LOTO</td>
+                                <tbody className="text-slate-700 dark:text-slate-300">
+                                    <tr className="border-b border-slate-50 dark:border-slate-800">
+                                        <td className="py-1.5 text-left font-semibold text-slate-500">LOTO</td>
                                         <td className="py-1.5 font-bold">{item.shift1?.loto || 0}</td>
                                         <td className="py-1.5 font-bold">{item.shift2?.loto || 0}</td>
                                     </tr>
-                                    <tr className="border-b border-gray-50 dark:border-gray-800">
-                                        <td className="py-1.5 text-left font-semibold text-gray-500">PLAN</td>
+                                    <tr className="border-b border-slate-50 dark:border-slate-800">
+                                        <td className="py-1.5 text-left font-semibold text-slate-500">PLAN</td>
                                         <td className="py-1.5 font-bold">{item.shift1?.plan || 0}</td>
                                         <td className="py-1.5 font-bold">{item.shift2?.plan || 0}</td>
                                     </tr>
                                     <tr>
-                                        <td className="py-1.5 text-left font-semibold text-gray-500">ACHV</td>
+                                        <td className="py-1.5 text-left font-semibold text-slate-500">ACHV</td>
                                         <td className={`py-1.5 font-bold ${(item.shift1?.pct || 0) >= 100 ? 'text-green-500' : 'text-amber-500'}`}>
                                             {(item.shift1?.pct || 0).toFixed(0)}%
                                         </td>
@@ -458,14 +469,14 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                             </table>
                          </div>
                      ) : isExpanded && (
-                        <div className="flex flex-col gap-2 mt-4 text-xs text-gray-500 flex-grow px-4">
+                        <div className="flex flex-col gap-2 mt-4 text-xs text-slate-500 flex-grow px-4">
                               <div className="flex justify-between items-center border-b pb-1">
-                                  <span className="text-gray-400 font-medium">LOTO</span>
-                                  <span className="text-sm font-bold text-gray-700">{item.total_loto}</span>
+                                  <span className="text-slate-400 font-medium">LOTO</span>
+                                  <span className="text-sm font-bold text-slate-700">{item.total_loto}</span>
                               </div>
                               <div className="flex justify-between items-center border-b pb-1">
-                                  <span className="text-gray-400 font-medium">PLAN</span>
-                                  <span className="text-sm font-bold text-gray-700">{item.total_verification}</span>
+                                  <span className="text-slate-400 font-medium">PLAN</span>
+                                  <span className="text-sm font-bold text-slate-700">{item.total_verification}</span>
                               </div>
                           </div>
                      )}
@@ -473,7 +484,7 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
 
                 {/* Mini Chart Injection */}
                 {isExpanded && (
-                    <div className="w-full mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="w-full mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-300">
                          {renderMiniChart(historyDataMap[item.warehouse_code])}
                     </div>
                 )}
@@ -486,14 +497,14 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       const isDetail = viewMode === 'detail';
       return (
         <div key={`skeleton-${index}`} className={`
-             relative bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-strokedark overflow-hidden
+             relative bg-white dark:bg-boxdark rounded-xl border border-slate-100 dark:border-strokedark overflow-hidden
              ${isDetail ? 'col-span-1 min-h-[350px]' : 'col-span-1 min-h-[160px]'}
              animate-pulse
         `}>
              <div className="p-4 flex flex-col items-center h-full gap-4">
                  {/* Gauge Placeholder */}
-                 <div className="relative w-32 h-32 rounded-full border-8 border-gray-100 dark:border-strokedark flex items-center justify-center">
-                     <div className="w-24 h-24 rounded-full bg-gray-50 dark:bg-meta-4/30"></div>
+                 <div className="relative w-32 h-32 rounded-full border-8 border-slate-100 dark:border-strokedark flex items-center justify-center">
+                     <div className="w-24 h-24 rounded-full bg-slate-50 dark:bg-meta-4/30"></div>
                  </div>
                  
                  {isDetail && (
@@ -501,28 +512,28 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
                         {/* Table Placeholder */}
                         <div className="w-full space-y-2 px-2 mt-2">
                             <div className="grid grid-cols-3 gap-2">
-                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
-                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
-                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-slate-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-slate-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-slate-100 dark:bg-strokedark rounded col-span-1"/>
                             </div>
-                            <div className="h-px bg-gray-100 dark:bg-strokedark w-full my-2"/>
+                            <div className="h-px bg-slate-100 dark:bg-strokedark w-full my-2"/>
                             <div className="grid grid-cols-3 gap-2">
-                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
-                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
-                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-slate-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-slate-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-slate-200 dark:bg-meta-4 rounded col-span-1"/>
                             </div>
                              <div className="grid grid-cols-3 gap-2 mt-1">
-                                <div className="h-3 bg-gray-100 dark:bg-strokedark rounded col-span-1"/>
-                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
-                                <div className="h-3 bg-gray-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-slate-100 dark:bg-strokedark rounded col-span-1"/>
+                                <div className="h-3 bg-slate-200 dark:bg-meta-4 rounded col-span-1"/>
+                                <div className="h-3 bg-slate-200 dark:bg-meta-4 rounded col-span-1"/>
                             </div>
                         </div>
                         {/* Mini Chart Placeholder */}
-                        <div className="w-full mt-auto pt-4 border-t border-gray-100 dark:border-strokedark">
-                            <div className="h-3 w-1/3 bg-gray-100 dark:bg-strokedark rounded mb-2"/>
-                            <div className="h-[100px] w-full bg-gray-50 dark:bg-meta-4/20 rounded-lg flex items-end gap-1 p-2 justify-between">
+                        <div className="w-full mt-auto pt-4 border-t border-slate-100 dark:border-strokedark">
+                            <div className="h-3 w-1/3 bg-slate-100 dark:bg-strokedark rounded mb-2"/>
+                            <div className="h-[100px] w-full bg-slate-50 dark:bg-meta-4/20 rounded-lg flex items-end gap-1 p-2 justify-between">
                                 {[...Array(10)].map((_, i) => (
-                                    <div key={i} style={{ height: `${Math.random() * 100}%` }} className="w-full bg-gray-200 dark:bg-strokedark rounded-t-sm"></div>
+                                    <div key={i} style={{ height: `${Math.random() * 100}%` }} className="w-full bg-slate-200 dark:bg-strokedark rounded-t-sm"></div>
                                 ))}
                             </div>
                         </div>
@@ -533,98 +544,76 @@ const LotoAchievementByWarehouse: React.FC<Props> = ({ selectedDate, selectedWar
       );
   };
 
+  /* -------------------------------------------------------------------------- */
+  /*                            UNIT STATUS DIALOG LOGIC                        */
+  /* -------------------------------------------------------------------------- */
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogWarehouse, setDialogWarehouse] = useState<string | null>(null);
+
+  const handleWarehouseClick = (warehouse: string) => {
+      if (!selectedDate) return; 
+      setDialogWarehouse(warehouse);
+      setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+      setDialogOpen(false);
+      setDialogWarehouse(null);
+  };
+
   return (
-    <div ref={wrapperRef} className="w-full bg-white dark:bg-boxdark rounded-xl shadow-sm border border-bodydark p-6">
-      <div className="mb-6 flex flex-col md:flex-row justify-between md:items-end gap-2">
-          <div>
-            <h3 className="text-lg font-bold text-black dark:text-white">Warehouse Performance</h3>
-            <p className="text-xs text-gray-500">
-                {selectedDate 
-                    ? `Achievement for ${format(selectedDate, 'dd MMM yyyy')}` 
-                    : 'Average Achievement (Last 30 Days)'
-                }
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-              {/* View Mode Toggle */}
-              <div className="flex bg-gray-100 dark:bg-meta-4 rounded-lg p-1">
-                    <button
-                        onClick={() => setViewMode('overview')}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                            viewMode === 'overview' 
-                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
-                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
-                        }`}
-                    >
-                        Overview
-                    </button>
-                    <button
-                        onClick={() => setViewMode('detail')}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                            viewMode === 'detail' 
-                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
-                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
-                        }`}
-                    >
-                        Detail
-                    </button>
-                    <button
-                        onClick={() => setViewMode('table')}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                            viewMode === 'table' 
-                            ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' 
-                            : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
-                        }`}
-                    >
-                        Table
-                    </button>
-              </div>
-
-              {/* Close Details Button (Contextual) */}
-              {selectedWarehouse && viewMode === 'overview' && (
-                <button 
-                    onClick={() => onSelectWarehouse(null)} 
-                    className="text-xs text-red-500 hover:text-red-700 underline ml-2"
-                >
-                    Close
-                </button>
-              )}
-          </div>
-      </div>
-
-      <div className="relative min-h-[200px]">
-          {/* View Mode: Table */}
-          {viewMode === 'table' ? (
-              loading ? (
-                <div className="grid grid-cols-1 gap-2">
-                    {Array.from({length: 5}).map((_, i) => (
-                        <div key={i} className="h-16 w-full bg-gray-100 dark:bg-strokedark rounded animate-pulse"/>
-                    ))}
-                </div>
-              ) : (
-                renderTable()
-              )
-          ) : (
-              /* View Mode: Grid (Overview/Detail) */
-              <div className={`
-                  grid gap-3 transition-opacity duration-300 
-                  ${viewMode === 'detail' 
-                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-                    : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-                  }
-              `}>
-                    {loading 
-                        ? Array.from({ length: viewMode === 'detail' ? 4 : 12 }).map((_, i) => renderSkeleton(i))
-                        : data.length > 0 
-                            ? data.map(renderGauge) 
-                            : <div className="col-span-full text-center py-8 text-gray-400 text-sm">No data available</div>
+      <div ref={wrapperRef} className="space-y-4">
+          {/* Header Control */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-boxdark p-4 rounded-xl border border-slate-200 dark:border-strokedark shadow-sm">
+            <div>
+                <h3 className="text-lg font-bold text-black dark:text-white">Warehouse Performance</h3>
+                <p className="text-xs text-slate-500">
+                    {selectedDate 
+                        ? `Achievement for ${format(selectedDate, 'dd MMM yyyy')}` 
+                        : 'Average Achievement (Last 30 Days)'
                     }
+                </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+                {/* View Mode Toggle */}
+                <div className="flex bg-slate-100 dark:bg-meta-4 rounded-lg p-1">
+                        <button onClick={() => setViewMode('overview')} className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'overview' ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white'}`}>Overview</button>
+                        <button onClick={() => setViewMode('detail')} className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'detail' ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white'}`}>Detail</button>
+                        <button onClick={() => setViewMode('table')} className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'table' ? 'bg-white dark:bg-boxdark text-black dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white'}`}>Table</button>
+                </div>
+
+                {selectedWarehouse && viewMode === 'overview' && (
+                    <button onClick={() => onSelectWarehouse(null)} className="text-xs text-red-500 hover:underline">
+                        Clear Selection
+                    </button>
+                )}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          {viewMode === 'table' ? (
+              renderTable()
+          ) : (
+              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${viewMode === 'detail' ? 'lg:grid-cols-2 xl:grid-cols-2' : ''}`}>
+                  {loading ? (
+                      Array.from({ length: viewMode === 'detail' ? 4 : 8 }).map((_, i) => renderSkeleton(i))
+                  ) : data.length > 0 ? (
+                      data.map(renderGauge)
+                  ) : (
+                      <div className="col-span-full text-center py-8 text-slate-400 text-sm">No data available</div>
+                  )}
               </div>
           )}
+
+          <LotoVerificationDialog 
+            isOpen={dialogOpen}
+            onClose={handleCloseDialog}
+            warehouseCode={dialogWarehouse}
+            date={selectedDate}
+          />
       </div>
-    </div>
-  )
-}
+  );
+};
 
 export default LotoAchievementByWarehouse;
