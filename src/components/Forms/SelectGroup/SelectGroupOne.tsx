@@ -6,9 +6,10 @@ interface ComboBoxProps {
   caption: string;
   placeholder: string;
   onChange: (selectedValue: string) => void; // Callback function to send value to parent
+  className?: string;
 }
 
-const SelectGroupOne: React.FC<ComboBoxProps> = ({ items, caption, placeholder, onChange }) => {
+const SelectGroupOne: React.FC<ComboBoxProps> = ({ items, caption, placeholder, onChange, className = 'mb-4.5' }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -18,7 +19,7 @@ const SelectGroupOne: React.FC<ComboBoxProps> = ({ items, caption, placeholder, 
   };
 
   return (
-    <div className="mb-4.5">
+    <div className={className}>
       <label className="mb-2.5 block text-black dark:text-white">{caption}</label>
 
       <div className="relative z-20 bg-transparent dark:bg-form-input">

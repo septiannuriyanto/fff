@@ -34,7 +34,7 @@ import BaReconcile from './pages/Export/BaReconcile/BaReconcile';
 import MasterManpower from './pages/MasterData/MasterManpower/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
-import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from './store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
@@ -61,6 +61,8 @@ import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoSessionDetails from './pages/Dashboard/GardaLoto/GardaLotoSessionDetails';
 import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
 import AdminReport from './pages/Reporting/AdminReport/AdminReport';
+import FilterChange from './pages/Plant/FilterChange/FilterChange';
+import FilterChangeDb from './pages/Plant/FilterChangeDb/FilterChangeDb';
 
 
 const routes = [
@@ -331,7 +333,7 @@ const routes = [
   path: '/oil/dst/:alias',   // ← warehouse jadi path param
   component: <DailyStockTakingOil />,
   allowedRoles: ALL_ROLES,
-},
+  },
    {
     path: '/oil/dstreport',
     component: <DstOilReport />,
@@ -350,6 +352,21 @@ const routes = [
     component: <HousekeepingOil />,
     title: 'FFF | Housekeeping Oil',
     allowedRoles: OIL_ROLES
+  },
+
+
+  // Plant Reporting Routes
+   {
+    path: '/plant/filterchange',
+    component: <FilterChange />,
+    title: 'FFF | Filter Change',
+    allowedRoles: PLANT
+  },
+   {
+    path: '/plant/filterchangedb',
+    component: <FilterChangeDb />,
+    title: 'FFF | Filter Change Dashboard',
+    allowedRoles: PLANT
   },
 
 

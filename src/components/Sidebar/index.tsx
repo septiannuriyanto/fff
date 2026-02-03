@@ -15,7 +15,7 @@ import {
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
 import ExclusiveWidget from '../../common/TrialWrapper/ExclusiveWidget';
 
 interface SidebarProps {
@@ -247,6 +247,19 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/oil/dstreport" label="DST Report" />
                 <SidebarLink to="/oil/grease" label="Grease" />
                 <SidebarLink to="/oil/housekeeping" label="Housekeeping" />
+              </SidebarGroup>
+
+              {/* <!-- Menu Item Oil Reporting Pages --> */}
+              <SidebarGroup
+              currentRole={role!}
+              roles={PLANT}
+                title="Plant Menu"
+                icon={<TbReport />}
+                pathname={pathname}
+                basePath="/plant"
+              >
+                <SidebarLink to="/plant/filterchangedb" label="Dashboard" />
+                <SidebarLink to="/plant/filterchange" label="Filter Change" />
               </SidebarGroup>
 
 

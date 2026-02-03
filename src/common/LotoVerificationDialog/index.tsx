@@ -88,10 +88,10 @@ const LotoVerificationDialog: React.FC<Props> = ({ isOpen, onClose, warehouseCod
 
       // 3. Process Per Shift
       const processShift = (sessionCode: string, shiftNum: number): UnitStatusItem[] => {
-        const records = lotoRes.data?.filter(r => r.session_id === sessionCode).map(r => r.code_number) || [];
+        const records = lotoRes.data?.filter((r:any) => r.session_id === sessionCode).map(r => r.code_number) || [];
 
         // Filter verification by SHIFT column (more reliable vs session_code string)
-        const verifs = verifRes.data?.filter(r => r.shift === shiftNum).map(r => r.cn_unit) || [];
+        const verifs = verifRes.data?.filter((r:any) => r.shift === shiftNum).map(r => r.cn_unit) || [];
 
         const allUnits = new Set([...records, ...verifs]);
         const result: UnitStatusItem[] = [];

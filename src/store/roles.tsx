@@ -36,8 +36,13 @@ const ALL_ROLES = [
   ];
 
   const PLANT = [
-    'PLANT'
+     'CREATOR',
+    'PLANT',
+    'PLANNER',
+    'PLANT GL',
+    'PLANT TE'
   ]
+
 
   const FUEL_PARTNER = [
     'CREATOR',
