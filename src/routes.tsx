@@ -63,6 +63,7 @@ import AdminReport from './pages/Reporting/AdminReport/AdminReport';
 import FilterChange from './pages/Plant/FilterChange/FilterChange';
 import FilterChangeDb from './pages/Plant/FilterChangeDb/FilterChangeDb';
 import LandingPage from './pages/LandingPage';
+import BaCleanliness from './pages/Plant/Cleanliness/BaCleanliness';
 
 
 const routes = [
@@ -371,6 +372,12 @@ const routes = [
     path: '/plant/filterchangedb',
     component: <FilterChangeDb />,
     title: 'FFF | Filter Change Dashboard',
+    allowedRoles: PLANT
+  },
+  {
+    path: '/plant/bacleanliness',
+    component: <BaCleanliness />,
+    title: 'FFF | Berita Acara Cleanliness',
     allowedRoles: PLANT
   },
 

@@ -259,6 +259,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/plant/filterchangedb" label="Dashboard" />
                 <SidebarLink to="/plant/filterchange" label="Filter Change" />
+                <SidebarLink to="/plant/bacleanliness" label="Cleanliness" />
               </SidebarGroup>
 
 
