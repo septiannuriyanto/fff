@@ -3,10 +3,13 @@ import Header from '../components/Header/index';
 import Sidebar from '../components/Sidebar/index';
 import { useAuth } from '../pages/Authentication/AuthContext';
 import getRole from '../functions/get.role';
+import { useLocation } from 'react-router-dom';
 
 const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { authToken, loading } = useAuth(); // Directly access `authToken` and `loading`
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
 
   const [stateRole, setStateRole] = useState<string | null>();
 
@@ -59,7 +62,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
           {/* Main Content */}
           <main>
-            <div className="mx-auto max-w-full p-4 md:p-6 2xl:p-2">
+            <div className={`mx-auto max-w-full ${isLandingPage ? '' : 'p-4 md:p-6 2xl:p-2'}`}>
               {children}
             </div>
           </main>

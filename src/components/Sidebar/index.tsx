@@ -32,14 +32,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
   const sidebar = useRef<any>(null);
 
   const storedSidebarExpanded = localStorage.getItem('sidebar-expanded');
-  const [sidebarExpanded, setSidebarExpanded] = useState(
+  const [sidebarExpanded] = useState(
     storedSidebarExpanded === null ? false : storedSidebarExpanded === 'true',
   );
 
   const [isShown] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { signOut } = useAuth();
-  const { currentUser } = useAuth();
 
   // close on click outside
   useEffect(() => {
@@ -106,7 +105,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
     >
       {/* <!-- SIDEBAR HEADER --> */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
-        <NavLink to="/">
+        <NavLink to="/dashboard">
           <img src={Logo} alt="Logo" className="h-6 fill block dark:hidden" />
           <img
             src={LogoDark}
@@ -156,9 +155,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 title="Dashboard"
                 icon={<TbDashboard />}
                 pathname={pathname}
-                basePath="/"
+                basePath="/dashboard"
               >
-                <SidebarLink to="/" label="Home" />
+                <SidebarLink to="/dashboard" label="Home" />
                 <SidebarLink to="/fuelcons" label="Fuel Consumption" />
                 <SidebarLink to="/stockmanagement" label="Stock Management" />
                 <SidebarLink to="/operational" label="Operational" />

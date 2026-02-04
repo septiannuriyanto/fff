@@ -10,7 +10,6 @@ const SignIn: React.FC = () => {
   const navigate = useNavigate();
   
   const [nrp, setNrp] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [password, setPassword] = useState<string>('');
   const [email, setEmail] = useState<string | null>(null);
@@ -98,7 +97,7 @@ const SignIn: React.FC = () => {
     try {
       await signIn(email, password, nrp);
       navigate(0);
-      window.location.href = '/';
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {

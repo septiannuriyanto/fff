@@ -56,18 +56,23 @@ import FleetManagement from './pages/Operational/FleetManagement/FleetManagement
 import RefuelingDistribution from './pages/Operational/RefuelingDistribution/RefuelingDistribution';
 import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMeterManagement';
 import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
-import GardaLoto from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoReport from './pages/Reporting/GardaLotoReport/GardaLotoReport';
 import GardaLotoSessionDetails from './pages/Dashboard/GardaLoto/GardaLotoSessionDetails';
 import GardaLotoDashboard from './pages/Dashboard/GardaLoto/GardaLotoDashboard';
 import AdminReport from './pages/Reporting/AdminReport/AdminReport';
 import FilterChange from './pages/Plant/FilterChange/FilterChange';
 import FilterChangeDb from './pages/Plant/FilterChangeDb/FilterChangeDb';
+import LandingPage from './pages/LandingPage';
 
 
 const routes = [
   {
     path: '/',
+    component: <LandingPage />,
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/dashboard',
     component: <Dashboard />,
     title: 'FFF | Fuel Feasibility for Fleet',
     allowedRoles: ALL_ROLES
