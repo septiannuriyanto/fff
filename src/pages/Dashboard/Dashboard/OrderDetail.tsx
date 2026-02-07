@@ -171,7 +171,7 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                     </div>
                     <div>
                         <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Order ID</span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase">#{String(order.id).substring(0, 8)}...</span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase">#{String(order.id)}</span>
                     </div>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
@@ -273,9 +273,8 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                                 if (status === 'WAITING RESERVATION' && order.reservation_number) isPassed = true;
 
                                 const dynamicLabel = getDynamicLabel(status);
-                                
-                                return (
-                                    <div key={status} className="flex flex-col items-center relative w-32 cursor-pointer group" onClick={() => handleStatusClick(status, index)}>
+                                                                return (
+                                    <div key={status} className={`flex flex-col items-center relative w-32 group ${isCurrent ? 'cursor-pointer' : 'cursor-default'}`} onClick={() => handleStatusClick(status, index)}>
                                          {/* Active Path Segment - Pointing Forward, centered at 18.5px within bullet container */}
                                          {index < ORDER_STATUSES.length - 1 && isPassed && (
                                               <div className="absolute top-[18.5px] left-[50%] w-[128px] h-[3px] bg-emerald-500 z-10 rounded-full" style={{ left: '50%', width: '128px' }}></div>
@@ -283,8 +282,8 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
 
                                          <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white dark:bg-slate-900 mb-3 relative z-20
                                             ${isCurrent ? 'border-blue-600 text-blue-600 ring-4 ring-blue-50 dark:ring-blue-900/20 scale-110 shadow-lg' : 
-                                              isPassed ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500 hover:scale-105' : 
-                                              'border-slate-200 dark:border-slate-700 text-slate-300 group-hover:border-slate-400 hover:scale-105'}`}>
+                                              isPassed ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500' : 
+                                              'border-slate-200 dark:border-slate-700 text-slate-300'}`}>
                                             {isPassed ? <FaCheck size={14} /> : <span className="text-xs font-bold">{index + 1}</span>}
                                          </div>
                                          <span className={`text-[9px] text-center font-bold px-1 leading-tight max-w-[110px] transition-colors duration-300 uppercase tracking-tighter

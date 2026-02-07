@@ -229,6 +229,27 @@ const BoardDetail = () => {
     };
   }, []);
 
+  const statusCounts = useMemo(() => {
+    const counts: any = {
+      All: orders.length,
+      INCOMPLETE: orders.filter(o => o.item_count === 0).length,
+    };
+    
+    [
+      'WAITING APPROVAL MR',
+      'WAITING PR NUMBER',
+      'WAITING APPROVAL PR',
+      'WAITING RESERVATION',
+      'WAITING APPROVAL RESERVATION',
+      'WAITING SUPPLY',
+      'CLOSED'
+    ].forEach(status => {
+      counts[status] = orders.filter(o => o.status === status).length;
+    });
+    
+    return counts;
+  }, [orders]);
+
   const filteredOrders = useMemo(() => {
     if (statusFilter === 'All') return orders;
     if (statusFilter === 'INCOMPLETE') return orders.filter(o => o.item_count === 0);
@@ -360,7 +381,7 @@ const BoardDetail = () => {
           onClick={() => setActiveTab('pending')}
         >
           Pending Jobs
-           <span className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs font-semibold px-2 py-0.5 rounded-full">
+          <span className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs font-semibold px-2 py-0.5 rounded-full">
             {pendingJobs.length}
           </span>
         </button>
@@ -373,7 +394,7 @@ const BoardDetail = () => {
           onClick={() => setActiveTab('orders')}
         >
           Outstanding Order
-           <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-semibold px-2 py-0.5 rounded-full">
+          <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-semibold px-2 py-0.5 rounded-full">
             {orders.length}
           </span>
         </button>
@@ -487,15 +508,15 @@ const BoardDetail = () => {
                             onChange={(e) => setStatusFilter(e.target.value)}
                             className="appearance-none bg-white dark:bg-boxdark border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                         >
-                            <option value="All">All Status</option>
-                            <option value="INCOMPLETE">Incomplete (No Items)</option>
-                            <option value="WAITING APPROVAL MR">Waiting Approval MR</option>
-                            <option value="WAITING PR NUMBER">Waiting PR Number</option>
-                            <option value="WAITING APPROVAL PR">Waiting Approval PR</option>
-                            <option value="WAITING RESERVATION">Waiting Reservation</option>
-                            <option value="WAITING APPROVAL RESERVATION">Waiting Approval Reservation</option>
-                            <option value="WAITING SUPPLY">Waiting Supply</option>
-                            <option value="CLOSED">Closed</option>
+                            <option value="All">All Status ({statusCounts.All})</option>
+                            <option value="INCOMPLETE">Incomplete ({statusCounts.INCOMPLETE})</option>
+                            <option value="WAITING APPROVAL MR">Waiting Approval MR ({statusCounts['WAITING APPROVAL MR']})</option>
+                            <option value="WAITING PR NUMBER">Waiting PR Number ({statusCounts['WAITING PR NUMBER']})</option>
+                            <option value="WAITING APPROVAL PR">Waiting Approval PR ({statusCounts['WAITING APPROVAL PR']})</option>
+                            <option value="WAITING RESERVATION">Waiting Reservation ({statusCounts['WAITING RESERVATION']})</option>
+                            <option value="WAITING APPROVAL RESERVATION">Waiting Approval Reservation ({statusCounts['WAITING APPROVAL RESERVATION']})</option>
+                            <option value="WAITING SUPPLY">Waiting Supply ({statusCounts['WAITING SUPPLY']})</option>
+                            <option value="CLOSED">Closed ({statusCounts.CLOSED})</option>
                         </select>
                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
                             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
