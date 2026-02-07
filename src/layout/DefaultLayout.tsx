@@ -43,7 +43,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <div className="dark:bg-boxdark-2 dark:text-bodydark">
       {/* Page Wrapper */}
-      <div className="flex h-full overflow-hidden">
+      <div className="flex h-full overflow-visible">
         {/* Sidebar */}
         {authToken && stateRole && !isLandingPage && (
           <Sidebar
@@ -54,7 +54,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
         )}
 
         {/* Content Area */}
-        <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <div className="relative flex flex-1 flex-col overflow-y-auto">
           {/* Header */}
           {authToken && !isLandingPage && (
             <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />

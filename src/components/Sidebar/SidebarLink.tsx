@@ -4,9 +4,10 @@ import { NavLink } from "react-router-dom";
 interface SidebarLinkProps {
   to: string;
   label: string;
+  mini?: boolean;
 }
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ to, label }) => {
+const SidebarLink: React.FC<SidebarLinkProps> = ({ to, label, mini }) => {
   return (
     <li>
       <NavLink
@@ -16,7 +17,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, label }) => {
           (isActive && "!text-body")
         }
       >
-        {label}
+        {!mini && <span className="animate-in fade-in slide-in-from-left-2 duration-300 whitespace-nowrap">{label}</span>}
       </NavLink>
     </li>
   );
