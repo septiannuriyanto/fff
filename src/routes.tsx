@@ -66,10 +66,16 @@ import LandingPage from './pages/LandingPage';
 import BaCleanliness from './pages/Plant/Cleanliness/BaCleanliness';
 
 
+import PublicRoute from './components/PublicRoute';
+
 const routes = [
   {
     path: '/',
-    component: <LandingPage />,
+    component: (
+      <PublicRoute>
+        <LandingPage />
+      </PublicRoute>
+    ),
     allowedRoles: ALL_ROLES
   },
   {

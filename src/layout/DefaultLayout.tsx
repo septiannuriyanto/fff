@@ -45,7 +45,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
       {/* Page Wrapper */}
       <div className="flex h-full overflow-hidden">
         {/* Sidebar */}
-        {authToken && stateRole && (
+        {authToken && stateRole && !isLandingPage && (
           <Sidebar
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
@@ -56,7 +56,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
         {/* Content Area */}
         <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
           {/* Header */}
-          {authToken && (
+          {authToken && !isLandingPage && (
             <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
           )}
 
