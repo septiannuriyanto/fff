@@ -53,11 +53,12 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
     };
 
     const getDynamicLabel = (status: string) => {
-        if (status === 'WAITING APPROVAL MR') return order.mr_approved ? 'MR APPROVED' : 'WAITING APPROVAL MR';
-        if (status === 'WAITING PR NUMBER') return order.pr_number ? `PR: ${order.pr_number}` : 'WAITING PR NUMBER';
-        if (status === 'WAITING APPROVAL PR') return order.pr_approved ? 'PR APPROVED' : 'WAITING APPROVAL PR';
-        if (status === 'WAITING RESERVATION') return order.reservation_number ? `RES: ${order.reservation_number}` : 'WAITING RESERVATION';
-        if (status === 'WAITING APPROVAL RESERVATION') return order.res_approved ? 'RES APPROVED' : 'WAITING APPROVAL RESERVATION';
+        if (status === 'WAITING APPROVAL MR') return order.mr_approved ? 'MR Approved' : 'Wait Approval MR';
+        if (status === 'WAITING PR NUMBER') return order.pr_number ? `PR: ${order.pr_number}` : 'Wait PR Number';
+        if (status === 'WAITING APPROVAL PR') return order.pr_approved ? 'PR Approved' : 'Wait Approval PR';
+        if (status === 'WAITING RESERVATION') return order.reservation_number ? `RES: ${order.reservation_number}` : 'Wait Reservation';
+        if (status === 'WAITING APPROVAL RESERVATION') return order.res_approved ? 'RES Approved' : 'Wait Approval RES';
+        if (status === 'WAITING SUPPLY') return 'Wait Supply';
         
         return status;
     };
@@ -162,10 +163,10 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
     const noItems = !loading && items.length === 0;
 
     return (
-        <div className="flex flex-col h-full gap-8 relative bg-white dark:bg-slate-900 overflow-y-auto">
+        <div className="flex flex-col h-full gap-3 relative bg-white dark:bg-slate-900 overflow-hidden">
             {/* Elegant Modern Header Info - Streamlined for Mobile */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-2">
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 px-2">
+                <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
                         <FaInbox size={14} />
                     </div>
@@ -174,7 +175,7 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                         <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase">#{String(order.id)}</span>
                     </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 flex-shrink-0">
                         <FaCalendarAlt size={14} />
                     </div>
@@ -251,9 +252,9 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                     />
                  </div>
             ) : (
-                <div className="flex flex-col flex-1 gap-6 px-2 overflow-y-auto">
+                <div className="flex flex-col flex-1 gap-3 px-2 overflow-hidden">
                     {/* Modern Timeline - Fixed for visibility */}
-                    <div className="w-full py-4 px-2 overflow-x-auto scrollbar-show touch-pan-x">
+                    <div className="w-full py-2 px-2 overflow-x-auto scrollbar-show touch-pan-x">
                         <div className="flex items-start justify-between min-w-[900px] relative py-4 mr-10">
                              {/* Background Progress Path - Centered at 36px (16px padding + 20px half-circle) */}
                              <div className="absolute top-[34.5px] left-[60px] right-[60px] h-[3px] bg-slate-100 dark:bg-slate-800 -z-10 rounded-full"></div>
@@ -297,7 +298,7 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                     </div>
 
                     {/* Elegant Row Items Table (Custom Replace AG Grid for Aesthetic control) */}
-                    <div className="flex-1 overflow-hidden flex flex-col min-h-[300px] border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm bg-white dark:bg-slate-900/50">
+                    <div className="flex-1 overflow-hidden flex flex-col min-h-0 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm bg-white dark:bg-slate-900/50">
                         <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex justify-between items-center">
                             <h4 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                 <FaLayerGroup className="text-slate-400" /> Order Items List
@@ -310,46 +311,46 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-100 dark:bg-slate-800 z-10">
-                                        <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider w-16">No</th>
-                                        {order.stocked_item && <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Material Code</th>}
-                                        <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Item Description</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Allocation</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Qty Order</th>
-                                        <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Received</th>
-                                        {items.length === 0 && <th className="px-6 py-4 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center w-20">Action</th>}
+                                        <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider w-16">No</th>
+                                        {order.stocked_item && <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Material Code</th>}
+                                        <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Item Description</th>
+                                        <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Allocation</th>
+                                        <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Qty Order</th>
+                                        <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-right">Received</th>
+                                        {items.length === 0 && <th className="px-4 py-2.5 font-bold text-[11px] text-slate-600 dark:text-slate-400 uppercase tracking-wider text-center w-20">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                     {items.map((item) => (
                                         <tr key={item.id} className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors duration-150 even:bg-slate-50/30 dark:even:bg-slate-800/10 leading-relaxed">
-                                            <td className="px-6 py-4 text-slate-400 font-mono text-xs">{item.item_no}</td>
+                                            <td className="px-4 py-2.5 text-slate-400 font-mono text-xs">{item.item_no}</td>
                                             {order.stocked_item && (
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 py-2.5">
                                                     <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-xs uppercase letter-spacing-wide">
                                                         {item.material_code}
                                                     </span>
                                                 </td>
                                             )}
-                                            <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200 uppercase letter-spacing-tight">
+                                            <td className="px-4 py-2.5 font-semibold text-slate-700 dark:text-slate-200 uppercase letter-spacing-tight">
                                                 {item.item_description}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-4 py-2.5">
                                                 <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded">
                                                     {item.allocation || '-'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-4 py-2.5 text-right">
                                                 <span className="font-ex-bold text-slate-900 dark:text-white text-base">
                                                     {item.qty_orders}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-4 py-2.5 text-right">
                                                 <span className={`font-bold ${item.qty_received >= item.qty_orders ? 'text-emerald-500' : 'text-slate-400'}`}>
                                                     {item.qty_received}
                                                 </span>
                                             </td>
                                             {items.length === 0 && (
-                                                <td className="px-6 py-4 text-center">
+                                                <td className="px-4 py-2.5 text-center">
                                                     <button 
                                                         onClick={() => handleDeleteItem(item.id)}
                                                         className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all duration-200"
