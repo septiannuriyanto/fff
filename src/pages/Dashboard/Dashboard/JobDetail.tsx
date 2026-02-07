@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
 import { 
     FaPlus, FaTimes, FaInbox, FaCalendarAlt, FaUser, 
@@ -29,8 +29,21 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
     // Form state for new progress item
     const [showAddForm, setShowAddForm] = useState(false);
     const [newDesc, setNewDesc] = useState('');
-    const [newPic, setNewPic] = useState('');
+    const [newPic, setNewPic] = useState(''); // Holds the display name
+    const [selectedPicNrp, setSelectedPicNrp] = useState(''); // Holds the actual NRP
     const [newDueDate, setNewDueDate] = useState(new Date().toISOString().split('T')[0]);
+    const [showPicSuggestions, setShowPicSuggestions] = useState(false);
+    const picRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (picRef.current && !picRef.current.contains(event.target as Node)) {
+                setShowPicSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         fetchProgress();
@@ -82,7 +95,7 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
             .insert([{
                 job_id: job.id,
                 progress_description: newDesc,
-                pic: newPic || null,
+                pic: selectedPicNrp || newPic, // Use NRP if selected, fallback to text
                 due_date: newDueDate || null,
                 queue_num: nextQueue,
                 status: 'open'
@@ -94,7 +107,8 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
         } else {
             setNewDesc('');
             setNewPic('');
-            setNewDueDate('');
+            setSelectedPicNrp('');
+            setNewDueDate(new Date().toISOString().split('T')[0]);
             setShowAddForm(false);
             fetchProgress();
             onUpdate();
@@ -264,18 +278,48 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                                     onChange={e => setNewDueDate(e.target.value)}
                                 />
                             </div>
-                            <div className="md:col-span-1">
+                            <div className="md:col-span-1" ref={picRef}>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Field PIC</label>
-                                <select 
-                                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 focus:border-blue-500 outline-none transition-all"
-                                    value={newPic}
-                                    onChange={e => setNewPic(e.target.value)}
-                                >
-                                    <option value="">Select Personnel...</option>
-                                    {manpowerList.map(m => (
-                                        <option key={m.nrp} value={m.nrp}>{m.nama}</option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-900 focus:border-blue-500 outline-none transition-all"
+                                        placeholder="Search Personnel..."
+                                        value={newPic}
+                                        onChange={(e) => {
+                                            setNewPic(e.target.value);
+                                            setShowPicSuggestions(true);
+                                            if(!e.target.value) setSelectedPicNrp('');
+                                        }}
+                                        onFocus={() => setShowPicSuggestions(true)}
+                                    />
+                                    {showPicSuggestions && newPic && (
+                                        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto p-1.5 scrollbar-hide">
+                                            {manpowerList
+                                                .filter(m => m.nama?.toLowerCase().includes(newPic.toLowerCase()))
+                                                .map(m => (
+                                                    <div 
+                                                        key={m.nrp} 
+                                                        className="px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-[12px] transition-all flex items-center justify-between group/pic"
+                                                        onClick={() => {
+                                                            setNewPic(m.nama);
+                                                            setSelectedPicNrp(m.nrp);
+                                                            setShowPicSuggestions(false);
+                                                        }}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-700 dark:text-slate-200">{m.nama}</span>
+                                                            <span className="text-[8px] text-slate-400 uppercase tracking-tighter">NRP {m.nrp}</span>
+                                                        </div>
+                                                        <FaCheckCircle className="text-[10px] text-blue-500 opacity-0 group-hover/pic:opacity-100" />
+                                                    </div>
+                                                ))}
+                                            {manpowerList.filter(m => m.nama?.toLowerCase().includes(newPic.toLowerCase())).length === 0 && (
+                                                <div className="p-4 text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest">No results</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="md:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Work Description / Progress Detail</label>
