@@ -37,7 +37,8 @@ const OutstandingOrder = ({ onSuccess, existingOrder }: OutstandingOrderProps) =
   // Header State
   const [supplyTo, setSupplyTo] = useState('');
   const [selectedSupplyToNrp, setSelectedSupplyToNrp] = useState<string | null>(null);
-  const [isStocked, setIsStocked] = useState(false);
+  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isStocked, setIsStocked] = useState(true);
   const [isHeaderCreated, setIsHeaderCreated] = useState(false);
   
   // Headers State
@@ -125,7 +126,7 @@ const OutstandingOrder = ({ onSuccess, existingOrder }: OutstandingOrderProps) =
           supply_to: selectedSupplyToNrp,
           stocked_item: isStocked,
           status: 'WAITING APPROVAL MR',
-          order_date: new Date().toISOString(),
+          order_date: orderDate,
         }
       ])
       .select('id')
@@ -248,10 +249,11 @@ const OutstandingOrder = ({ onSuccess, existingOrder }: OutstandingOrderProps) =
           <div>
             <label className="block text-sm font-medium mb-1">Date</label>
             <input 
-                type="text" 
-                value={new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })} 
-                disabled 
-                className="w-full px-3 py-2 border rounded bg-gray-100 dark:bg-gray-700 dark:border-gray-600 cursor-not-allowed"
+                type="date" 
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+                disabled={isHeaderCreated}
+                className={`w-full px-3 py-2 border rounded outline-none focus:border-blue-500 dark:bg-slate-800 dark:border-gray-600 ${isHeaderCreated ? 'bg-gray-100 cursor-not-allowed' : ''}`}
             />
           </div>
           <div>
