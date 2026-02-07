@@ -59,8 +59,8 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-        <div className="p-4 sm:p-6 pb-2">
+      <div className="border-b border-stroke bg-white dark:border-strokedark dark:bg-boxdark">
+        <div className="p-4 md:p-6 pb-2">
           {/* ... existing dashboard content ... */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <h1 className="text-2xl font-bold text-black dark:text-white">

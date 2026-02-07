@@ -41,7 +41,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   }
 
   return (
-    <div className="dark:bg-boxdark-2 dark:text-bodydark">
+    <div className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen w-full">
       {/* Page Wrapper */}
       <div className="flex h-full overflow-visible">
         {/* Sidebar */}
@@ -61,10 +61,8 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
           )}
 
           {/* Main Content */}
-          <main>
-            <div className={`mx-auto max-w-full ${isLandingPage ? '' : 'p-4 md:p-6 2xl:p-2'}`}>
-              {children}
-            </div>
+          <main className="w-full p-4 md:p-6">
+            {children}
           </main>
         </div>
       </div>

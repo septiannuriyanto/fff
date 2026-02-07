@@ -110,7 +110,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
       }`}
     >
       {/* <!-- SIDEBAR HEADER --> */}
-      <div className={`relative px-4 py-5 lg:py-6 flex items-center ${isMini ? 'justify-center' : 'justify-between'}`}>
+      <div className={`relative px-6 py-5.5 lg:py-6.5 flex flex-col lg:flex-row items-center gap-4 lg:gap-2 ${isMini ? 'justify-center px-4 ' : 'justify-between'}`}>
         <div className="group/header relative inline-block">
             <NavLink to="/dashboard" className="flex items-center gap-3">
                 <div className="relative">
@@ -190,7 +190,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
 
       <div className="flex flex-col overflow-visible duration-300 ease-linear">
         {/* <!-- Sidebar Menu --> */}
-        <nav className={`mt-5 py-4 ${isMini ? 'px-2' : 'px-4 lg:mt-9 lg:px-6'}`}>
+        <nav className={`mt-1 py-4 ${isMini ? 'px-2' : 'px-6 lg:mt-2'}`}>
           {/* <!-- Menu Group --> */}
           <div>
             {!isMini && (
