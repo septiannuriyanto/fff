@@ -458,14 +458,28 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
                   </div>
                )}
                
-               <div className="pt-2">
-                  <button
-                     onClick={handleSubmit}
-                     className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-all duration-300"
-                  >
-                     Submit Attendance
-                  </button>
-               </div>
+                <div className="pt-2">
+                   {/* Form Validation Logic */}
+                   {(() => {
+                      const isFormValid = !!selectedManpower && !!status && 
+                        (status === 'S' || status === 'I' ? note.trim() !== '' : true) &&
+                        (status === 'T' || status === 'P' ? timeValue !== '' : true);
+                      
+                      return (
+                        <button
+                           disabled={!isFormValid}
+                           onClick={handleSubmit}
+                           className={`w-full font-bold py-3 px-6 rounded-xl shadow-lg active:scale-95 transition-all duration-300 border-2 ${
+                              isFormValid 
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-blue-200 dark:shadow-none border-transparent' 
+                                : 'bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
+                           }`}
+                        >
+                           Submit Attendance
+                        </button>
+                      );
+                   })()}
+                </div>
             </div>
          </div>
       </div>
