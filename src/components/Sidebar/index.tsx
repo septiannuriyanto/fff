@@ -105,7 +105,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
       ref={sidebar}
       onMouseEnter={() => sidebarConfig === 'auto' && setIsHovered(true)}
       onMouseLeave={() => sidebarConfig === 'auto' && setIsHovered(false)}
-      className={`sidebar-main absolute left-0 top-0 z-[9999] flex h-screen ${asideWidth} flex-col overflow-visible no-scrollbar bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+      className={`sidebar-main absolute left-0 top-0 z-[9999] flex min-h-screen ${asideWidth} flex-col overflow-visible no-scrollbar bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >

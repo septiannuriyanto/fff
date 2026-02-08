@@ -8,6 +8,34 @@ import CreateJobForm from './CreateJobForm';
 import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
+
+// Custom CSS for AG Grid pagination responsive
+const agGridMobileStyle = `
+  @media (max-width: 600px) {
+    .ag-theme-quartz .ag-paging-panel {
+      font-size: 12px;
+      padding: 4px 2px;
+      flex-wrap: wrap;
+      gap: 4px;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 100% !important;
+      text-align: center !important;
+    }
+    .ag-theme-quartz .ag-paging-page-size, 
+    .ag-theme-quartz .ag-paging-row-summary-panel {
+      display: none !important;
+    }
+    .ag-theme-quartz .ag-paging-button {
+      min-width: 24px;
+      height: 24px;
+      font-size: 12px;
+      padding: 0 4px;
+    }
+  }
+`;
+
 import { ColDef } from 'ag-grid-community';
 
 interface Job {
@@ -41,6 +69,18 @@ interface Order {
 }
 
 const BoardDetail = () => {
+  // Inject custom style for AG Grid mobile pagination
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let styleTag = document.getElementById('agGridMobileStyle');
+      if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'agGridMobileStyle';
+        styleTag.innerHTML = agGridMobileStyle;
+        document.head.appendChild(styleTag);
+      }
+    }
+  }, []);
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
@@ -56,6 +96,9 @@ const BoardDetail = () => {
   
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Context Menu States
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; order: Order } | null>(null);
 
   // Job Column Definitions
   const jobColDefs = useMemo<ColDef[]>(() => [
@@ -236,6 +279,47 @@ const BoardDetail = () => {
     fetchOrders();
   }, []);
 
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
+
+  // Prevent default browser context menu on the grid
+  useEffect(() => {
+    const gridElement = document.querySelector('.ag-theme-quartz');
+    const preventContextMenu = (e: Event) => e.preventDefault();
+    if (gridElement) {
+      gridElement.addEventListener('contextmenu', preventContextMenu);
+      return () => gridElement.removeEventListener('contextmenu', preventContextMenu);
+    }
+  }, []);
+
+  const handleDeleteOrder = async (orderId: number) => {
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+    
+    if (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to delete order');
+    } else {
+      // Immediately update UI
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setContextMenu(null);
+    }
+  };
+
+
+
   const statusCounts = useMemo(() => {
     const counts: any = {
       All: orders.length,
@@ -371,7 +455,23 @@ const BoardDetail = () => {
                             defaultColDef={{ flex: 1, minWidth: 100 }}
                             pagination={true}
                             paginationPageSize={10}
-                            onRowClicked={(event) => setSelectedOrder(event.data)}
+                            onRowClicked={(event) => {
+                              const order = event.data;
+                              // Show action menu for incomplete orders
+                              if (order.item_count === 0) {
+                                const mouseEvent = event.event as MouseEvent;
+                                const target = mouseEvent?.target as HTMLElement;
+                                const rect = target?.getBoundingClientRect();
+                                setContextMenu({
+                                  x: rect ? rect.left + rect.width / 2 : mouseEvent?.clientX || 0,
+                                  y: rect ? rect.bottom + 5 : mouseEvent?.clientY || 0,
+                                  order: order
+                                });
+                              } else {
+                                // Open modal for orders with items
+                                setSelectedOrder(order);
+                              }
+                            }}
                             rowClass="cursor-pointer transition-colors"
                             getRowStyle={(params) => {
                                 if (params.data.item_count === 0) {
@@ -486,6 +586,39 @@ const BoardDetail = () => {
                    </div>
                </div>
           </div>
+      )}
+
+      {/* Context Menu for Incomplete Orders */}
+      {contextMenu && (
+        <div 
+          className="fixed z-[999999] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-2 min-w-[160px] animate-in fade-in zoom-in-95 duration-150"
+          style={{ 
+            left: `${contextMenu.x}px`, 
+            top: `${contextMenu.y}px` 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              setSelectedOrder(contextMenu.order);
+              setContextMenu(null);
+            }}
+            className="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-3"
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            Process Order
+          </button>
+          <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
+          <button
+            onClick={() => {
+              handleDeleteOrder(contextMenu.order.id);
+            }}
+            className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3"
+          >
+            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            Delete Order
+          </button>
+        </div>
       )}
     </div>
   );

@@ -217,3 +217,66 @@ span.flatpickr-weekday,
 [x-cloak] {
   display: none !important;
 }
+
+/* AG Grid Mobile Pagination Fixes */
+@media (max-width: 640px) {
+  .ag-paging-panel {
+    justify-content: center !important;
+  }
+  .ag-paging-page-size,
+  .ag-paging-row-summary-panel {
+    display: none !important;
+  }
+}
+
+/* AG Grid Glass Theme Overrides */
+.glass-grid .ag-root-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.glass-grid .ag-header {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .glass-grid .ag-header {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.glass-grid .ag-row {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #1f2937; /* Gray-800 */
+}
+
+.dark .glass-grid .ag-row {
+  color: #e5e7eb; /* Gray-200 */
+}
+
+.glass-grid .ag-row-hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.dark .glass-grid .ag-row-hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.glass-grid .ag-header-cell-text {
+  font-weight: 700 !important;
+  color: #374151; /* Gray-700 */
+}
+
+.dark .glass-grid .ag-header-cell-text {
+  color: #d1d5db; /* Gray-300 */
+}
+
+/* Ensure Grid has height if flex fails */
+/* AG Grid Border Removal and Rounding */
+.ag-theme-alpine .ag-root-wrapper,
+.ag-theme-alpine-dark .ag-root-wrapper {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}

@@ -158,6 +158,15 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
 
     return (
         <div className="flex flex-col h-full gap-6 relative bg-white dark:bg-slate-900 overflow-hidden">
+            {loading ? (
+                <div className="flex items-center justify-center h-full min-h-[400px]">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-500 border-t-transparent"></div>
+                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Loading job details...</p>
+                    </div>
+                </div>
+            ) : (
+                <>
             {/* Elegant Modern Header Info */}
             <div className="flex flex-col gap-3 px-2">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -433,6 +442,8 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                     </div>
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 };

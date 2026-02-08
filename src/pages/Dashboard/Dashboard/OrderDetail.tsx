@@ -164,6 +164,15 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
 
     return (
         <div className="flex flex-col h-full gap-3 relative bg-white dark:bg-slate-900 overflow-hidden">
+            {loading ? (
+                <div className="flex items-center justify-center h-full min-h-[400px]">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-500 border-t-transparent"></div>
+                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Loading order details...</p>
+                    </div>
+                </div>
+            ) : (
+                <>
             {/* Elegant Modern Header Info - Streamlined for Mobile */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 px-2">
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
@@ -432,6 +441,8 @@ const OrderDetail = ({ order, manpowerList, onClose, onUpdate }: OrderDetailProp
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );
