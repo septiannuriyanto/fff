@@ -19,7 +19,10 @@ interface ManpowerDetailProps {
 interface Manpower {
   nrp: string;
   nama: string;
-  position: number; // Assuming numeric, will verify
+  position: number;
+  incumbent?: {
+    incumbent: string;
+  };
 }
 
 interface AttendanceRecord {
@@ -75,13 +78,17 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
     const fetchManpower = async () => {
       const { data, error } = await supabase
         .from('manpower')
-        .select('nrp, nama, position')
+        .select('nrp, nama, position, incumbent!manpower_position_fkey ( incumbent )')
         .in('position', [2, 3, 4, 5]);
 
       if (error) {
         console.error('Error fetching manpower:', error);
       } else {
-        setManpowerList(data || []);
+        const mappedData = (data || []).map((item: any) => ({
+          ...item,
+          incumbent: Array.isArray(item.incumbent) ? item.incumbent[0] : item.incumbent
+        }));
+        setManpowerList(mappedData);
       }
     };
     fetchManpower();
@@ -95,7 +102,6 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
 
     try {
         const formattedDate = formatDateToISO(date); // YYYY-MM-DD
-        const shiftVal = shift ? 1 : 2;
 
         const { data, error } = await supabase
           .from('attendance')
@@ -106,7 +112,6 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
             )
           `)
           .eq('work_date', formattedDate)
-          .eq('shift', shiftVal)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -174,7 +179,9 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
   const renderSuggestion = (suggestion: Manpower) => (
     <div className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0">
       <div className="font-semibold text-black dark:text-white">{suggestion.nama}</div>
-      <div className="text-xs text-gray-500">{suggestion.nrp} - Pos: {suggestion.position}</div>
+      <div className="text-xs text-gray-500">
+        {suggestion.nrp} - {suggestion.incumbent?.incumbent || (suggestion.position ? `Pos: ${suggestion.position}` : '-')}
+      </div>
     </div>
   );
 
@@ -336,8 +343,8 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
             {/* Left Column: Manpower & Note */}
             <div className="space-y-4">
                {/* Auto-detected Date & Shift */}
-               <div className="flex gap-4">
-                  <div className="w-1/2">
+               <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="w-full sm:w-1/2">
                     <label className="block text-sm font-bold text-black dark:text-white mb-2">Date</label>
                     <div className="relative">
                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 z-10">
@@ -353,7 +360,7 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
                        />
                     </div>
                   </div>
-                  <div className="w-1/2">
+                  <div className="w-full sm:w-1/2">
                     <label className="block text-sm font-bold text-black dark:text-white mb-2">Shift</label>
                     <div className="relative">
                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">

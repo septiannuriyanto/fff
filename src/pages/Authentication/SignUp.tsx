@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../db/SupabaseClient';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 const SignUp: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && currentUser) {
+      navigate('/dashboard');
+    }
+  }, [currentUser, loading, navigate]);
   const [nrp, setNrp] = useState('');
   const [namaLengkap, setNamaLengkap] = useState('');
   const [email, setEmail] = useState('');

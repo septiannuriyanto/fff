@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LogoDark from '../../images/logo/logo-dark.svg';
 import Logo from '../../images/logo/logo.svg';
@@ -6,8 +6,14 @@ import { supabase } from '../../db/SupabaseClient';
 import { useAuth } from './AuthContext';
 
 const SignIn: React.FC = () => {
-  const { signIn } = useAuth();
+  const { signIn, currentUser, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && currentUser) {
+      navigate('/dashboard');
+    }
+  }, [currentUser, loading, navigate]);
   
   const [nrp, setNrp] = useState<string>('');
   const [activeDate, setActiveDate] = useState<Date | null>(null);
