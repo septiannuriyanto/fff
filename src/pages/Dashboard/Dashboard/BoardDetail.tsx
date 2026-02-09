@@ -298,6 +298,22 @@ const BoardDetail = () => {
     }
   }, []);
 
+  // Global Escape key listener to close all modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedOrder(null);
+        setSelectedJob(null);
+        setShowOrderModal(false);
+        setShowJobModal(false);
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleDeleteOrder = async (orderId: number) => {
     if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
       return;
