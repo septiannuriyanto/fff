@@ -366,20 +366,35 @@ const OutstandingOrder = ({ onSuccess, existingOrder }: OutstandingOrderProps) =
                         className="w-full px-2 py-1 border rounded text-sm dark:bg-slate-700"
                     />
                      {showMaterialSuggestions && isStocked && newItemCode && (
-                        <div className="absolute z-10 w-full bg-white dark:bg-boxdark border border-gray-200 dark:border-gray-600 rounded shadow-lg max-h-40 overflow-y-auto mt-1">
-                            {filteredMaterials.map(mat => (
-                                <div 
-                                    key={mat.id} 
-                                    className="px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                    onClick={() => {
-                                        setNewItemCode(mat.material_code);
-                                        setNewItemDesc(mat.item_description || '');
-                                        setShowMaterialSuggestions(false);
-                                    }}
-                                >
-                                    <span className="font-bold">{mat.material_code}</span> - {mat.item_description}
+                        <div className="absolute z-[9999] w-full bg-white dark:bg-boxdark border border-gray-200 dark:border-gray-600 rounded shadow-2xl max-h-60 overflow-y-auto mt-1 p-1">
+                            {filteredMaterials.length > 0 ? (
+                                filteredMaterials.map(mat => (
+                                    <div 
+                                        key={mat.id} 
+                                        className="px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer rounded transition-colors"
+                                        onClick={() => {
+                                            setNewItemCode(mat.material_code);
+                                            setNewItemDesc(mat.item_description || '');
+                                            setShowMaterialSuggestions(false);
+                                        }}
+                                    >
+                                        <div className="font-bold text-blue-600 dark:text-blue-400">{mat.material_code}</div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{mat.item_description}</div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 text-center">
+                                    <p className="text-xs text-slate-500 mb-2 font-medium">No material found</p>
+                                    <a 
+                                        href="/master/materials/add" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                                    >
+                                        <FaPlus size={10} /> New Material
+                                    </a>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
                 </div>

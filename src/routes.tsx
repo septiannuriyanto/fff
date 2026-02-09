@@ -42,7 +42,7 @@ import ManpowerRegistration from './pages/MasterData/components/ManpowerRegistra
 import DailyStockTakingOil from './pages/Oil/DailyStockTakingOil/DailyStockTakingOil';
 import HousekeepingOil from './pages/Oil/HousekeepingOil/HousekeepingOil';
 import StorageManagement from './pages/Oil/StorageManagement/StorageManagement';
-import AddMaterialPage from './pages/MasterData/Materials/AddMaterialPage';
+import Materials from './pages/MasterData/Materials/Materials';
 import DstOilReport from './pages/Oil/DailyStockTakingReport/DstOilReport';
 import FuelPartnerDashboard from './pages/Partner/Dashboard/FuelPartnerDashboard';
 import FuelPartnerRitation from './pages/Partner/Ritation/FuelPartnerRitation';
@@ -428,8 +428,14 @@ const routes = [
     allowedRoles: SUPERVISOR
   },
   {
-    path: '/master/addmaterial',
-    component: <AddMaterialPage />,
+    path: '/master/materials',
+    component: <Materials />,
+    title: 'FFF | Materials',
+    allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/master/materials/add',
+    component: <Materials />,
     title: 'FFF | Add Material',
     allowedRoles: SUPERVISOR
   },

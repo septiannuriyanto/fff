@@ -376,7 +376,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 basePath="/master"
                 mini={isMini}
               >
-                <SidebarLink to="/master/addmaterial" label="Add Material" mini={isMini} />
+                <SidebarLink to="/master/materials" label="Materials" mini={isMini} />
                 <SidebarLink to="/master/manpower" label="Manpower" mini={isMini} />
                 <SidebarLink to="/master/equipment" label="Equipment" mini={isMini} />
                 <SidebarLink to="/master/storage/fuel" label="Storage Fuel" mini={isMini} />
