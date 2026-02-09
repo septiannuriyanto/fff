@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import DatePickerOne from '../../components/Forms/DatePicker/DatePickerOne';
 import { formatDateToString } from '../../Utils/DateUtility';
 import ReusableSwitcher from '../../components/Switchers/SwitcherFour';
-import ManpowerDetail from './Dashboard/ManpowerDetail';
 import ATRDetail from './Dashboard/ATRDetail';
 import RosterDetail from './Dashboard/RosterDetail';
 import ContractDetail from './Dashboard/ContractDetail';
@@ -33,6 +32,7 @@ const Dashboard = () => {
   const [modalContent, setModalContent] = useState<JSX.Element | null>(null);
   const [modalTitle, setModalTitle] = useState('');
   const [rosterStatus, setRosterStatus] = useState({ ok: false, loading: true });
+  const [atrStats, setAtrStats] = useState({ ratio: 0, loading: true });
 
   const fetchRosterStatus = async () => {
     try {
@@ -58,6 +58,39 @@ const Dashboard = () => {
     }
   };
 
+  const fetchATRStats = async () => {
+    try {
+      setAtrStats(prev => ({ ...prev, loading: true }));
+      const now = date || new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const lastDay = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+      const mpNrps = (await supabase.from('manpower').select('nrp').in('position', [2, 3, 4, 5])).data?.map(m => m.nrp) || [];
+      
+      // 2. Get non-present records for this month
+      const { data: attData, error: attError } = await supabase
+        .from('attendance')
+        .select('is_sick, is_leave, is_alpha, is_late, is_early_leave')
+        .gte('work_date', firstDay)
+        .lte('work_date', lastDay)
+        .in('nrp', mpNrps);
+
+      if (attError) throw attError;
+
+      const totalPlanned = mpNrps.length * (now.getDate());
+      const nonPresent = attData?.length || 0;
+      
+      const ratio = totalPlanned > 0 ? ((totalPlanned - nonPresent) / totalPlanned) * 100 : 100;
+      setAtrStats({ ratio: ratio, loading: false });
+    } catch (err) {
+      console.error('Error fetching ATR stats:', err);
+      setAtrStats({ ratio: 0, loading: false });
+    }
+  };
+
   const handleDateChange = (date: Date | null) => {
     setDate(date);
   };
@@ -72,10 +105,12 @@ const Dashboard = () => {
     setModalOpen(false);
     setModalContent(null);
     fetchRosterStatus();
+    fetchATRStats();
   };
 
   useEffect(() => {
     fetchRosterStatus();
+    fetchATRStats();
   }, []);
 
   useEffect(() => {
@@ -153,8 +188,8 @@ const Dashboard = () => {
                   className="w-full flex items-center justify-between p-3 bg-white/40 dark:bg-black/20 backdrop-blur-sm rounded-xl shadow-sm border border-white/40 dark:border-white/5 hover:bg-white/80 dark:hover:bg-black/40 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-500 transition-all duration-300 group"
                   onClick={() =>
                     openModal(
-                      'Manpower Details',
-                      <ManpowerDetail date={date} shift={shift} />,
+                      'Attendance Management',
+                      <ATRDetail date={date} shift={shift} initialTab="recording" />,
                     )
                   }
                 >
@@ -171,9 +206,13 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800">
-                    98%
-                  </div>
+                  {atrStats.loading ? (
+                    <div className="w-8 h-4 animate-pulse bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  ) : (
+                    <div className="px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800">
+                      {atrStats.ratio.toFixed(2)}%
+                    </div>
+                  )}
                 </button>
 
                 {/* Roster Item */}
@@ -210,7 +249,7 @@ const Dashboard = () => {
                 {/* Compliance Item (formerly ATR) */}
                 <button
                   className="w-full flex items-center justify-between p-3 bg-white/40 dark:bg-black/20 backdrop-blur-sm rounded-xl shadow-sm border border-white/40 dark:border-white/5 hover:bg-white/80 dark:hover:bg-black/40 hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-300 group"
-                  onClick={() => openModal('Compliance Details', <ATRDetail />)}
+                  onClick={() => openModal('Compliance Details', <ATRDetail date={date} shift={shift} />)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
@@ -225,9 +264,13 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800">
-                    100%
-                  </div>
+                  {atrStats.loading ? (
+                    <div className="w-8 h-4 animate-pulse bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  ) : (
+                    <div className="px-2.5 py-1 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800">
+                      {atrStats.ratio.toFixed(2)}%
+                    </div>
+                  )}
                 </button>
 
                 {/* Contract Item */}

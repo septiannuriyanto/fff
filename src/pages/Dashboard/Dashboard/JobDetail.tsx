@@ -170,8 +170,8 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
             {/* Elegant Modern Header Info */}
             <div className="flex flex-col gap-3 px-2">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                    <div className="md:col-span-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <div className="md:col-span-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
                             <FaInbox size={14} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -179,13 +179,13 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block break-words">{job.title}</span>
                         </div>
                     </div>
-                    <div className="md:col-span-8 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                    <div className="md:col-span-8 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
                             <FaStickyNote size={14} />
                         </div>
                         <div className="min-w-0 flex-1">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Work Scope / Description</span>
-                            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block leading-relaxed">{job.description || 'No additional work scope defined for this job.'}</span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block leading-relaxed">{job.description || 'No additional work scope defined for this job.'}</span>
                         </div>
                     </div>
                 </div>

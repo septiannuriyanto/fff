@@ -119,11 +119,11 @@ const BoardDetail = () => {
         width: 100,
         cellRenderer: (params: any) => (
             <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase
-                ${params.value === 'urgent' ? 'bg-red-100 text-red-600' : 
-                  params.value === 'high' ? 'bg-orange-100 text-orange-600' : 
-                  params.value === 'low' ? 'bg-slate-100 text-slate-500' :
+                ${params.value?.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-600' : 
+                  params.value?.toLowerCase() === 'high' ? 'bg-orange-100 text-orange-600' : 
+                  params.value?.toLowerCase() === 'low' ? 'bg-slate-100 text-slate-500' :
                   'bg-blue-100 text-blue-600'}`}>
-                {params.value || 'normal'}
+                {params.value || 'NORMAL'}
             </span>
         )
     },

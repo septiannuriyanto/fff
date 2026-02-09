@@ -21,7 +21,7 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
   const [assignee, setAssignee] = useState('');
   const [selectedAssigneeNrp, setSelectedAssigneeNrp] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'>('NORMAL');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // UI State
@@ -52,7 +52,6 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
     }
 
     setIsSubmitting(true);
-    const dbStatus = jobType === 'scheduled' ? 'open' : 'progress';
     
     const { error } = await supabase
       .from('board_jobs')
@@ -60,7 +59,6 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
         {
           title: title,
           description: description,
-          status: dbStatus,
           assignee_id: selectedAssigneeNrp,
           due_date: dueDate || null,
           priority: priority,
@@ -104,6 +102,7 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
                 type="text" 
                 value={title}
                 onChange={e => setTitle(e.target.value)}
+                autoFocus
                 placeholder="E.g. Engine Overhaul HD785-7 (Unit 701)"
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all font-medium text-xs"
             />
@@ -174,15 +173,15 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
           <div className="md:col-span-2">
             <label className="block text-[9px] font-bold text-slate-400 uppercase mb-2 ml-1 tracking-wider">Priority Level</label>
             <div className="flex gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                {(['low', 'normal', 'high', 'urgent'] as const).map((p) => (
+                {(['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const).map((p) => (
                     <button
                         key={p}
                         onClick={() => setPriority(p)}
                         className={`flex-1 py-2 rounded-xl text-[9px] font-extrabold uppercase tracking-widest transition-all duration-300
                             ${priority === p 
-                                ? p === 'urgent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 
-                                  p === 'high' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 
-                                  p === 'low' ? 'bg-slate-400 text-white shadow-lg shadow-slate-400/20' :
+                                ? p === 'URGENT' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 
+                                  p === 'HIGH' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 
+                                  p === 'LOW' ? 'bg-slate-400 text-white shadow-lg shadow-slate-400/20' :
                                   'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
                     >
