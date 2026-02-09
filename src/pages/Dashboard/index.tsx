@@ -23,6 +23,7 @@ import {
   FaCalendarCheck,
   FaFileContract,
 } from 'react-icons/fa';
+import { supabase } from '../../db/SupabaseClient';
 import { getShift } from '../../Utils/TimeUtility';
 
 const Dashboard = () => {
@@ -31,6 +32,31 @@ const Dashboard = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState<JSX.Element | null>(null);
   const [modalTitle, setModalTitle] = useState('');
+  const [rosterStatus, setRosterStatus] = useState({ ok: false, loading: true });
+
+  const fetchRosterStatus = async () => {
+    try {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      const { data, error } = await supabase
+        .from('rosters')
+        .select('type')
+        .eq('year', currentYear)
+        .eq('month', currentMonth);
+
+      if (error) throw error;
+
+      const hasOperator = data?.some((r: any) => r.type === 'operator');
+      const hasFuelman = data?.some((r: any) => r.type === 'fuelman');
+      
+      setRosterStatus({ ok: hasOperator && hasFuelman, loading: false });
+    } catch (err) {
+      console.error('Error fetching roster status:', err);
+      setRosterStatus({ ok: false, loading: false });
+    }
+  };
 
   const handleDateChange = (date: Date | null) => {
     setDate(date);
@@ -45,7 +71,12 @@ const Dashboard = () => {
   const closeModal = () => {
     setModalOpen(false);
     setModalContent(null);
+    fetchRosterStatus();
   };
+
+  useEffect(() => {
+    fetchRosterStatus();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -163,9 +194,17 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="px-2.5 py-1 rounded-md bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 text-xs font-bold border border-orange-200 dark:border-orange-800">
-                    OK
+                {rosterStatus.loading ? (
+                  <div className="w-8 h-4 animate-pulse bg-gray-200 dark:bg-gray-700 rounded"></div>
+                ) : (
+                  <div className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-colors ${
+                    rosterStatus.ok 
+                      ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800' 
+                      : 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 border-red-100 dark:border-red-900/50'
+                  }`}>
+                    {rosterStatus.ok ? 'OK' : 'NOK'}
                   </div>
+                )}
                 </button>
 
                 {/* Compliance Item (formerly ATR) */}
