@@ -18,7 +18,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Helper to map Supabase user to local user type
-  const mapSupabaseUserToLocalUser = (supabaseUser: SupabaseUser | null, nrp: string | null , role: string | null, position: number | null): User | null => {
+  const mapSupabaseUserToLocalUser = (supabaseUser: SupabaseUser | null, nrp: string | null , role: string | null, position: number | null, dept: string | null): User | null => {
     if (!supabaseUser) return null;
     return {
       nrp: nrp!,
@@ -26,6 +26,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       email: supabaseUser.email ?? null,
       role: role ?? null,
       position: position ?? null,
+      dept: dept ?? null,
     };
   };
 
@@ -55,10 +56,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
           setLoading(false);
           return;
         }
-        const { role, position } = await getRole({ nrp })
+        const { role, position, dept } = await getRole({ nrp })
 
         setAuthToken(data.session.access_token);
-        setCurrentUser(mapSupabaseUserToLocalUser(data.session.user, nrp, role, position));
+        setCurrentUser(mapSupabaseUserToLocalUser(data.session.user, nrp, role, position, dept));
       } catch (err) {
         console.error("Unexpected error fetching session:", err);
         setAuthToken(null);
@@ -90,9 +91,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         throw error;
       }
 
-      const { role, position } = await getRole({ nrp });
+      const { role, position, dept } = await getRole({ nrp });
       localStorage.setItem('nrp', nrp!)
-      setCurrentUser(mapSupabaseUserToLocalUser(data.user, nrp, role, position));
+      setCurrentUser(mapSupabaseUserToLocalUser(data.user, nrp, role, position, dept));
       toast.success("Signed in successfully!");
     } catch (err) {
       console.error("Error during sign-in:", err);

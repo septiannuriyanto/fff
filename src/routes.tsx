@@ -64,7 +64,7 @@ import FilterChange from './pages/Plant/FilterChange/FilterChange';
 import FilterChangeDb from './pages/Plant/FilterChangeDb/FilterChangeDb';
 import LandingPage from './pages/LandingPage';
 import BaCleanliness from './pages/Plant/Cleanliness/BaCleanliness';
-
+import PlantDashboard from './pages/PlantDashboard';
 
 import PublicRoute from './components/PublicRoute';
 
@@ -500,6 +500,12 @@ const routes = [
     component: <Buttons />,
     title: 'FFF | Fuel Feasibility for Fleet',
     allowedRoles: SUPERVISOR
+  },
+  {
+    path: '/plant-dashboard',
+    component: <PlantDashboard />,
+    title: 'FFF | PLANT Dashboard',
+    allowedRoles: ALL_ROLES
   },
 ];
 

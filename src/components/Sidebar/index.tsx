@@ -322,7 +322,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 basePath="/plant"
                 mini={isMini}
               >
-                <SidebarLink to="/plant/filterchangedb" label="Dashboard" mini={isMini} />
+                <SidebarLink to="/plant-dashboard" label="PLANT Dashboard" mini={isMini} />
+                <SidebarLink to="/plant/filterchangedb" label="Filter Change DB" mini={isMini} />
                 <SidebarLink to="/plant/filterchange" label="Filter Change" mini={isMini} />
                 <SidebarLink to="/plant/bacleanliness" label="Cleanliness" mini={isMini} />
               </SidebarGroup>

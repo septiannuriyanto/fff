@@ -11,7 +11,13 @@ const SignIn: React.FC = () => {
 
   useEffect(() => {
     if (!loading && currentUser) {
-      navigate('/dashboard');
+      if (currentUser.dept === 'SM') {
+        navigate('/dashboard');
+      } else if (currentUser.dept === 'PLANT') {
+        navigate('/plant-dashboard');
+      } else {
+        navigate('/dashboard'); // fallback
+      }
     }
   }, [currentUser, loading, navigate]);
   
@@ -90,8 +96,7 @@ const SignIn: React.FC = () => {
     setIsLoading(true);
     try {
       await signIn(email, password, nrp);
-      navigate(0);
-      window.location.href = '/dashboard';
+      // Redirect handled by useEffect above
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
