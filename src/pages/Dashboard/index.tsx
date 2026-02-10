@@ -22,8 +22,12 @@ import {
   FaCalendarCheck,
   FaFileContract,
 } from 'react-icons/fa';
+import ExcavatorIcon from '../../images/icon/excavator-colored.svg';
+import DumpTruckIcon from '../../images/icon/dumptruck-colored.svg';
+import BulldozerIcon from '../../images/icon/bulldozer-colored.svg';
 import { supabase } from '../../db/SupabaseClient';
 import { getShift } from '../../Utils/TimeUtility';
+import ReactApexChart from 'react-apexcharts';
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | null>(new Date());
@@ -33,6 +37,43 @@ const Dashboard = () => {
   const [modalTitle, setModalTitle] = useState('');
   const [rosterStatus, setRosterStatus] = useState({ ok: false, loading: true });
   const [atrStats, setAtrStats] = useState({ ratio: 0, loading: true });
+  /* Unit Counts State */
+  const [unitCounts, setUnitCounts] = useState({
+    total: 0,
+    loader: 0,
+    hauler: 0,
+    support: 0,
+    loading: true
+  });
+
+  const fetchTotalUnits = async () => {
+    try {
+      setUnitCounts(prev => ({ ...prev, loading: true }));
+      
+      const { data, error } = await supabase.rpc('get_unit_counts');
+
+      if (error) throw error;
+
+      // Type assertion for the RPC response
+      const counts = data as {
+        total: number;
+        loader: number;
+        hauler: number;
+        support: number;
+      };
+
+      setUnitCounts({
+        total: counts.total || 0,
+        loader: counts.loader || 0,
+        hauler: counts.hauler || 0,
+        support: counts.support || 0,
+        loading: false
+      });
+    } catch (err) {
+      console.error('Error fetching total units:', err);
+      setUnitCounts(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchRosterStatus = async () => {
     try {
@@ -63,49 +104,17 @@ const Dashboard = () => {
       setAtrStats(prev => ({ ...prev, loading: true }));
       const now = date || new Date();
       const year = now.getFullYear();
-      const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-      const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-
-      // 1. Get all relevant manpower NRPs
-      const { data: mpData } = await supabase
-        .from('manpower')
-        .select('nrp')
-        .in('position', [2, 3, 4, 5])
-        .eq('active', true);
+      const month = now.getMonth() + 1; // RPC expects 1-based month
       
-      const mpNrps = mpData?.map(m => m.nrp) || [];
-      
-      if (mpNrps.length === 0) {
-        setAtrStats({ ratio: 100, loading: false });
-        return;
-      }
+      const { data, error } = await supabase.rpc('calculate_atr', {
+        target_year: year,
+        target_month: month,
+        target_day: null // null means auto-detect if current month
+      });
 
-      // 2. Get attendance records for this month
-      const { data: attData, error: attError } = await supabase
-        .from('attendance')
-        .select('is_sick, is_leave, is_alpha, is_late, is_early_leave, is_present')
-        .gte('work_date', firstDay)
-        .lte('work_date', lastDayStr)
-        .in('nrp', mpNrps);
+      if (error) throw error;
 
-      if (attError) throw attError;
-
-      // 3. Logic for days to count:
-      // If it's the current month, count until today. Otherwise count the whole month.
-      const today = new Date();
-      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-      const daysToCount = isCurrentMonth ? today.getDate() : daysInMonth;
-
-      const totalPlanned = mpNrps.length * daysToCount;
-      
-      // Deduct only specific statuses
-      const deductions = attData?.filter(a => 
-        a.is_sick || a.is_leave || a.is_alpha || a.is_late || a.is_early_leave
-      ).length || 0;
-      
-      const ratio = totalPlanned > 0 ? ((totalPlanned - deductions) / totalPlanned) * 100 : 100;
+      const ratio = data?.ratio || 100;
       setAtrStats({ ratio: ratio, loading: false });
     } catch (err) {
       console.error('Error fetching ATR stats:', err);
@@ -133,6 +142,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchRosterStatus();
     fetchATRStats();
+    fetchTotalUnits();
   }, []);
 
   useEffect(() => {
@@ -324,17 +334,14 @@ const Dashboard = () => {
 
             {/* Unit Cluster */}
             <div
-              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-green-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
-              onClick={() =>
-                openModal('Unit Status', <UnitDetail date={date} />)
-              }
+              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-green-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500"
             >
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-transform duration-500 group-hover/card:scale-110">
                 <FaTruck size={120} />
               </div>
               
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="relative z-10 flex flex-col h-full gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-3 bg-green-500 rounded-xl text-white shadow-lg shadow-green-200 dark:shadow-none">
                     <FaTruck size={24} />
                   </div>
@@ -348,14 +355,112 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
-                <div className="mt-4">
-                   <div className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800">
-                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">Total Units</div>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">42</div>
+                <div className="flex flex-col gap-3">
+                   {/* FT Readiness Graph */}
+                   <div 
+                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                      onClick={() => openModal('FT Readiness', <UnitDetail date={date} />)}
+                    >
+                      <div className="flex justify-between items-end mb-2">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">FT Readiness MTD</div>
+                          <div className="text-lg font-bold text-green-600 dark:text-green-400">85%</div>
+                        </div>
+                        <div className="text-[10px] text-green-500 font-medium">+2.5%</div>
+                      </div>
+                      <div className="h-10 w-full overflow-hidden">
+                         <ReactApexChart
+                            options={{
+                              chart: {
+                                type: 'line',
+                                sparkline: { enabled: true },
+                                toolbar: { show: false },
+                                zoom: { enabled: false },
+                                height: 40,
+                                parentHeightOffset: 0
+                              },
+                              stroke: {
+                                curve: 'smooth',
+                                width: 2,
+                                colors: ['#10B981'] // Green-500
+                              },
+                              tooltip: {
+                                enabled: false
+                              },
+                              title: {
+                                text: undefined
+                              },
+                              grid: {
+                                padding: {
+                                  top: 5,
+                                  bottom: 5,
+                                  left: 0,
+                                  right: 0
+                                }
+                              },
+                              fill: {
+                                opacity: 0.3
+                              }
+                            }}
+                            series={[{
+                              name: 'Readiness',
+                              data: [65, 75, 70, 80, 82, 85, 85]
+                            }]}
+                            type="line"
+                            height={40}
+                            width="100%"
+                         />
+                      </div>
                    </div>
-                   <div className="mt-2 text-xs text-center text-green-600 dark:text-green-400 font-medium flex items-center justify-center gap-1">
-                      View Details 
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+
+                   <div 
+                      className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                      onClick={() => openModal('Total Units', <UnitDetail date={date} />)}
+                   >
+                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">Total Units</div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {unitCounts.loading ? '...' : unitCounts.total}
+                      </div>
+                   </div>
+
+                   {/* Unit Key Metrics */}
+                   <div className="grid grid-cols-3 gap-2">
+                      <div 
+                        className="flex flex-col items-center justify-center p-2 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                        onClick={() => openModal('Loader Units', <UnitDetail date={date} />)}
+                      >
+                          <div className="mb-1">
+                              <img src={ExcavatorIcon} alt="Loader" className="w-8 h-8" />
+                          </div>
+                          <div className="text-lg font-bold text-gray-800 dark:text-white leading-none">
+                            {unitCounts.loading ? '-' : unitCounts.loader}
+                          </div>
+                          <div className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mt-1">Loader</div>
+                      </div>
+                      <div 
+                        className="flex flex-col items-center justify-center p-2 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                        onClick={() => openModal('Hauler Units', <UnitDetail date={date} />)}
+                      >
+                          <div className="mb-1">
+                              <img src={DumpTruckIcon} alt="Hauler" className="w-8 h-8" />
+                          </div>
+                          <div className="text-lg font-bold text-gray-800 dark:text-white leading-none">
+                             {unitCounts.loading ? '-' : unitCounts.hauler}
+                          </div>
+                          <div className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mt-1">Hauler</div>
+                      </div>
+                      <div 
+                        className="flex flex-col items-center justify-center p-2 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-green-100 dark:border-green-800 cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                        onClick={() => openModal('Support Units', <UnitDetail date={date} />)}
+                      >
+                          <div className="mb-1">
+                              <img src={BulldozerIcon} alt="Support" className="w-8 h-8" />
+                          </div>
+                          <div className="text-lg font-bold text-gray-800 dark:text-white leading-none">
+                             {unitCounts.loading ? '-' : unitCounts.support}
+                          </div>
+                          <div className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mt-1">Support</div>
+                      </div>
                    </div>
                 </div>
               </div>
@@ -363,20 +468,14 @@ const Dashboard = () => {
 
             {/* Stock Cluster */}
             <div
-              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-yellow-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
-              onClick={() =>
-                openModal(
-                  'Stock Overview',
-                  <StockDetail date={date} shift={shift} />,
-                )
-              }
+              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-yellow-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500"
             >
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-transform duration-500 group-hover/card:scale-110">
                 <FaLayerGroup size={120} />
               </div>
 
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="relative z-10 flex flex-col h-full gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-3 bg-yellow-500 rounded-xl text-white shadow-lg shadow-yellow-200 dark:shadow-none">
                     <FaLayerGroup size={24} />
                   </div>
@@ -390,14 +489,83 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
-                <div className="mt-4">
-                   <div className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800">
-                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">Status</div>
-                      <div className="px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-bold">Safe</div>
+                <div className="flex flex-col gap-3">
+                   {/* Total Stock vs Space Gauge */}
+                   <div 
+                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                      onClick={() => openModal('Total Stock', <StockDetail date={date} shift={shift} />)}
+                   >
+                      <div className="flex justify-between items-end mb-2">
+                        <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">Total Stock vs Space</div>
+                        <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400">75%</div>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                        <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: '75%' }}></div>
+                      </div>
+                      <div className="flex justify-between mt-1 text-[10px] text-gray-500">
+                        <span>Used: 75,000 L</span>
+                        <span>Cap: 100,000 L</span>
+                      </div>
                    </div>
-                    <div className="mt-2 text-xs text-center text-yellow-600 dark:text-yellow-400 font-medium flex items-center justify-center gap-1">
-                      View Inventory 
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+
+                   {/* Usage Graph */}
+                   <div 
+                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                      onClick={() => openModal('Stock Usage', <StockDetail date={date} shift={shift} />)}
+                    >
+                      <div className="flex justify-between items-end mb-2">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Usage</div>
+                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">12,500 L</div>
+                        </div>
+                        <div className="text-[10px] text-red-500 font-medium">+5% vs plan</div>
+                      </div>
+                      <div className="h-10 w-full overflow-hidden">
+                         <ReactApexChart
+                            options={{
+                              chart: { type: 'line', sparkline: { enabled: true }, toolbar: { show: false }, zoom: { enabled: false }, height: 40, parentHeightOffset: 0 },
+                              stroke: { curve: 'smooth', width: 2, colors: ['#EAB308'] }, // Yellow-500
+                              tooltip: { enabled: false },
+                              title: { text: undefined },
+                              grid: { padding: { top: 5, bottom: 5, left: 0, right: 0 } },
+                              fill: { opacity: 0.3 }
+                            }}
+                            series={[{ name: 'Usage', data: [45, 52, 38, 24, 33, 26, 21] }]}
+                            type="line"
+                            height={40}
+                            width="100%"
+                         />
+                      </div>
+                   </div>
+
+                   {/* Ritasi Graph */}
+                   <div 
+                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                      onClick={() => openModal('Stock Ritasi', <StockDetail date={date} shift={shift} />)}
+                    >
+                      <div className="flex justify-between items-end mb-2">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Ritasi</div>
+                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">24</div>
+                        </div>
+                        <div className="text-[10px] text-green-500 font-medium">+2 trips</div>
+                      </div>
+                      <div className="h-10 w-full overflow-hidden">
+                         <ReactApexChart
+                            options={{
+                              chart: { type: 'bar', sparkline: { enabled: true }, toolbar: { show: false }, zoom: { enabled: false }, height: 40, parentHeightOffset: 0 },
+                              plotOptions: { bar: { borderRadius: 2, columnWidth: '60%' } },
+                              colors: ['#EAB308'],
+                              tooltip: { enabled: false },
+                              title: { text: undefined },
+                              grid: { padding: { top: 5, bottom: 5, left: 0, right: 0 } },
+                            }}
+                            series={[{ name: 'Ritasi', data: [4, 3, 5, 2, 4, 3, 3] }]}
+                            type="bar"
+                            height={40}
+                            width="100%"
+                         />
+                      </div>
                    </div>
                 </div>
               </div>

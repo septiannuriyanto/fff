@@ -7,29 +7,43 @@ import { Toaster } from 'react-hot-toast';
 
 const App = () => {
   return (
-    <DefaultLayout>
+    <>
       <Toaster position="top-center" reverseOrder={false} />
       <Routes>
-        {routes.map(({ path, component, title, allowedRoles }) => (
-          <Route
-            key={path}
-            path={path}
-            element={
-              title ? (
-                <ProtectedRoute allowedRoles={allowedRoles}>
-                  <>
-                    <PageTitle title={title} />
-                    {component}
-                  </>
-                </ProtectedRoute>
-              ) : (
-                component
-              )
-            }
-          />
-        ))}
+        {routes.map(({ path, component, title, allowedRoles }) => {
+          // Pisahkan landing page agar tidak dibungkus DefaultLayout
+          if (path === '/') {
+            return (
+              <Route
+                key={path}
+                path={path}
+                element={component}
+              />
+            );
+          }
+          return (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <DefaultLayout>
+                  {title ? (
+                    <ProtectedRoute allowedRoles={allowedRoles}>
+                      <>
+                        <PageTitle title={title} />
+                        {component}
+                      </>
+                    </ProtectedRoute>
+                  ) : (
+                    component
+                  )}
+                </DefaultLayout>
+              }
+            />
+          );
+        })}
       </Routes>
-    </DefaultLayout>
+    </>
   );
 };
 

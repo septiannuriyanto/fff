@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../images/logo/logo.svg';
+import LogoDark from '../images/logo/logo-dark.svg';
 import { 
   Fuel, 
   BarChart3, 
@@ -59,13 +61,11 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-boxdark text-black dark:text-white font-satoshi overflow-x-hidden">
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 dark:bg-boxdark/90 backdrop-blur-md shadow-md py-4' : 'bg-transparent py-6'}`}>
-        <div className="container mx-auto px-6 flex justify-between items-center">
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 dark:bg-boxdark/90 backdrop-blur-md shadow-md py-2 md:py-3' : 'bg-transparent py-4 md:py-6'}`}>
+        <div className="w-full max-w-7xl mx-auto flex justify-between items-center px-2 md:px-6">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Fuel className="text-white w-6 h-6" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight">FFF <span className="text-primary">Project</span></span>
+            <img className="h-10 block dark:hidden" src={Logo} alt="FFF Logo" />
+            <img className="h-10 hidden dark:block" src={LogoDark} alt="FFF Logo" />
           </div>
 
           {/* Desktop Menu */}
@@ -86,7 +86,7 @@ const LandingPage = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white dark:bg-boxdark shadow-xl border-t border-stroke dark:border-strokedark p-6 flex flex-col gap-4 animate-fade-in-down">
+          <div className="md:hidden absolute top-full left-0 w-full bg-white dark:bg-boxdark shadow-xl border-t border-stroke dark:border-strokedark p-4 flex flex-col gap-4 animate-fade-in-down">
             <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium">About</a>
             <a href="#features" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium">Features</a>
             <a href="#stats" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium">Impact</a>
@@ -96,13 +96,12 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+      <section className="relative pt-28 pb-16 md:pt-40 md:pb-28 overflow-hidden">
         {/* Premium Blue Gradient Background */}
         <div className="absolute top-0 left-0 w-full h-full -z-10 bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-boxdark dark:via-boxdark-2 dark:to-primary/10 transition-colors duration-500"></div>
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 -left-24 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl"></div>
-        
-        <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center relative z-10">
+        <div className="w-full max-w-7xl mx-auto grid md:grid-cols-2 gap-8 md:gap-12 items-center relative z-10 px-2 md:px-6">
           <div className="space-y-8 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-bold text-sm tracking-wide uppercase">
               <Zap className="w-4 h-4" /> Powering Fleet Efficiency
@@ -127,7 +126,7 @@ const LandingPage = () => {
             <div className="absolute -inset-4 bg-primary/20 blur-3xl opacity-30 rounded-full"></div>
             <div className="relative bg-white dark:bg-boxdark-2 p-4 rounded-3xl shadow-2xl border border-stroke dark:border-strokedark overflow-hidden">
               <img 
-                src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=1200" 
+                src="https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/images/images/hero-img.jpg" 
                 alt="Fleet Dashboard Mockup" 
                 className="rounded-2xl transition-transform hover:scale-105 duration-700"
               />
@@ -141,7 +140,7 @@ const LandingPage = () => {
 
       {/* Features Section */}
       <section id="features" className="py-24 bg-gray-50 dark:bg-meta-4">
-        <div className="container mx-auto px-6">
+        <div className="w-full max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
             <h2 className="text-primary font-bold tracking-widest uppercase text-sm">Features</h2>
             <h3 className="text-4xl md:text-5xl font-extrabold">Next-Gen Management Tools</h3>
@@ -164,7 +163,7 @@ const LandingPage = () => {
       {/* Stats Section */}
       <section id="stats" className="py-24 bg-primary text-white overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.3),transparent)]"></div>
-        <div className="container mx-auto px-6 text-center">
+        <div className="w-full text-center">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
             {stats.map((stat, index) => (
               <div key={index} className="space-y-2">
@@ -178,7 +177,7 @@ const LandingPage = () => {
 
       {/* Services Grid */}
       <section className="py-24">
-        <div className="container mx-auto px-6">
+        <div className="w-full max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-6 pt-12">
@@ -233,8 +232,8 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6">
-        <div className="container mx-auto max-w-6xl bg-boxdark dark:bg-primary rounded-[40px] p-12 md:p-24 text-center text-white relative overflow-hidden">
+      <section className="py-20">
+        <div className="w-full max-w-6xl mx-auto bg-boxdark dark:bg-primary rounded-[40px] p-12 md:p-24 text-center text-white relative overflow-hidden">
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-white/10 rounded-full -mb-32 -mr-32"></div>
           <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -mt-16 -ml-16"></div>
           
@@ -255,12 +254,10 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer className="py-12 border-t border-stroke dark:border-strokedark">
-        <div className="container mx-auto px-6 flex flex-col md:row justify-between items-center gap-8">
+        <div className="w-full max-w-7xl mx-auto flex flex-col md:row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Fuel className="text-white w-5 h-5" />
-            </div>
-            <span className="text-xl font-bold">FFF <span className="text-primary">Project</span></span>
+            <img className="h-8 block dark:hidden" src={Logo} alt="FFF Logo" />
+            <img className="h-8 hidden dark:block" src={LogoDark} alt="FFF Logo" />
           </div>
           <div className="flex gap-8 text-body dark:text-bodydark-2 font-medium">
             <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
