@@ -364,7 +364,8 @@ const BoardDetail = () => {
   }, [orders, statusFilter]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-boxdark rounded-lg shadow-default border border-stroke dark:border-strokedark p-4">
+    <>
+    <div className="flex flex-col h-full backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 transition-all duration-500">
        <h2 className="text-xl font-bold mb-4 text-black dark:text-white uppercase tracking-widest">Board Overview</h2>
       
       {/* Tab Navigation */}
@@ -502,6 +503,8 @@ const BoardDetail = () => {
         )}
       </div>
 
+      </div>
+
       {/* New Order Modal */}
       {showOrderModal && (
           <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={() => setShowOrderModal(false)}>
@@ -636,7 +639,7 @@ const BoardDetail = () => {
           </button>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
