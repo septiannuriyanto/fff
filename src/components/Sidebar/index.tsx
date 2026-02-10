@@ -9,12 +9,16 @@ import {
   TbDashboard,
   TbDatabase,
   TbDownload,
-  TbReport,
   TbUserCheck,
   TbLayoutSidebarLeftCollapse,
   TbPinned,
   TbEye,
+  TbGasStation,
+  TbSettings,
+  TbDroplet,
+  TbTools
 } from 'react-icons/tb';
+import { FaRegHandshake } from 'react-icons/fa';
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
@@ -225,7 +229,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               currentRole={role!}
               roles={FUEL_ROLES}
                 title="Fuel Reporting"
-                icon={<TbReport />}
+                icon={<TbGasStation />}
                 pathname={pathname}
                 basePath="/reporting"
                 mini={isMini}
@@ -262,7 +266,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               currentRole={role!}
               roles={SUPERVISOR}
                 title="Operational"
-                icon={<TbReport />}
+                icon={<TbSettings />}
                 pathname={pathname}
                 basePath="/operational"
                 mini={isMini}
@@ -279,7 +283,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 currentRole={role!}
                 roles={FUEL_PARTNER}
                 title="Fuel Partner Menu"
-                icon={<TbReport />}
+                icon={<FaRegHandshake />}
                 pathname={pathname}
                 basePath="/partner/fuel"
                 mini={isMini}
@@ -296,7 +300,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               currentRole={role!}
               roles={OIL_ROLES}
                 title="Oil Reporting"
-                icon={<TbReport />}
+                icon={<TbDroplet />}
                 pathname={pathname}
                 basePath="/oil"
                 mini={isMini}
@@ -313,7 +317,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               currentRole={role!}
               roles={PLANT}
                 title="Plant Menu"
-                icon={<TbReport />}
+                icon={<TbTools />}
                 pathname={pathname}
                 basePath="/plant"
                 mini={isMini}
