@@ -18,13 +18,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Helper to map Supabase user to local user type
-  const mapSupabaseUserToLocalUser = (supabaseUser: SupabaseUser | null, nrp: string | null , role: string | null): User | null => {
+  const mapSupabaseUserToLocalUser = (supabaseUser: SupabaseUser | null, nrp: string | null , role: string | null, position: number | null): User | null => {
     if (!supabaseUser) return null;
     return {
       nrp: nrp!,
       id: supabaseUser.id,
       email: supabaseUser.email ?? null,
       role: role ?? null,
+      position: position ?? null,
     };
   };
 
@@ -49,13 +50,15 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
         const nrp = localStorage.getItem('nrp')
         if(!nrp){
-          throw error;
+          console.warn("AuthContext: NRP not found in localStorage");
+          setAuthToken(data.session.access_token);
+          setLoading(false);
+          return;
         }
-        const role = await getRole({ nrp })
+        const { role, position } = await getRole({ nrp })
 
-        console.log("Session Data:", data);
         setAuthToken(data.session.access_token);
-        setCurrentUser(mapSupabaseUserToLocalUser(data.session.user, nrp, role));
+        setCurrentUser(mapSupabaseUserToLocalUser(data.session.user, nrp, role, position));
       } catch (err) {
         console.error("Unexpected error fetching session:", err);
         setAuthToken(null);
@@ -87,9 +90,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         throw error;
       }
 
-      const role = await getRole({ nrp });
+      const { role, position } = await getRole({ nrp });
       localStorage.setItem('nrp', nrp!)
-      setCurrentUser(mapSupabaseUserToLocalUser(data.user, nrp, role));
+      setCurrentUser(mapSupabaseUserToLocalUser(data.user, nrp, role, position));
       toast.success("Signed in successfully!");
     } catch (err) {
       console.error("Error during sign-in:", err);

@@ -62,7 +62,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
   });
 
   useEffect(()=>{
-    console.log(role);
+    console.log("Sidebar: Received role prop", { role, type: typeof role });
   },[role])
 
   // close if the esc key is pressed
@@ -195,7 +195,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
           <div>
             {!isMini && (
                 <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark3 uppercase tracking-widest animate-in fade-in duration-300">
-                {role}
+                {typeof role === 'object' ? 'Access Granted' : String(role || 'No Role')}
                 </h3>
             )}
 

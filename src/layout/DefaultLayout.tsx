@@ -17,10 +17,10 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const fetchRole = async()=>{
     const nrp = localStorage.getItem('nrp');
     if(nrp){
-      const role = await getRole({ nrp });
-      console.log(role);
+      const { role } = await getRole({ nrp });
+      console.log("DefaultLayout: Destructured role", { role, type: typeof role });
       
-      setStateRole(role!);
+      setStateRole(role);
     }
    
   }

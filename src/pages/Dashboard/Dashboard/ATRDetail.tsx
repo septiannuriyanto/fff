@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
 import ManpowerDetail from './ManpowerDetail';
 import { FaChartBar, FaEdit, FaCalendarAlt } from 'react-icons/fa';
+import { useAuth } from '../../Authentication/AuthContext';
 
 interface ATRDetailProps {
   date: Date | null;
@@ -10,11 +11,18 @@ interface ATRDetailProps {
 }
 
 const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
+  const { currentUser } = useAuth();
+  
+  // Use explicit check to avoid Number(null) === 0 pitfall
+  const canRecord = currentUser?.position !== null && currentUser?.position !== undefined && 
+                    (Number(currentUser.position) === 0 || Number(currentUser.position) === 1);
+  
   const [activeTab, setActiveTab] = useState<'detail' | 'recording'>(initialTab);
   const [manpower, setManpower] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tooltip, setTooltip] = useState<{ note: string; x: number; y: number } | null>(null);
+  const [prefillData, setPrefillData] = useState<{ manpower: any; date: Date } | null>(null);
 
   const currentYear = date ? date.getFullYear() : new Date().getFullYear();
   const currentMonth = date ? date.getMonth() : new Date().getMonth();
@@ -91,6 +99,29 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
     return groups;
   }, [manpower]);
 
+  const handleGridDoubleClick = (mp: any, day: number) => {
+    if (!canRecord) {
+      import('sweetalert2').then(Swal => {
+        Swal.default.fire({
+          icon: 'error',
+          title: 'Access Denied',
+          text: 'You do not have permission to record attendance. (Position: ' + (currentUser?.position ?? 'N/A') + ')',
+          toast: true,
+          position: 'top-right',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      });
+      return;
+    }
+    const selectedDate = new Date(currentYear, currentMonth, day);
+    setPrefillData({
+      manpower: mp,
+      date: selectedDate
+    });
+    setActiveTab('recording');
+  };
+
   const stats = useMemo(() => {
     const allNrps = manpower.map(m => m.nrp);
     return {
@@ -116,21 +147,28 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
         >
           <FaChartBar size={12} /> ATR DETAIL
         </button>
-        <button
-          onClick={() => setActiveTab('recording')}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'recording' 
-              ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-          }`}
-        >
-          <FaEdit size={12} /> ATR RECORDING
-        </button>
+        {canRecord && (
+          <button
+            onClick={() => setActiveTab('recording')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'recording' 
+                ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <FaEdit size={12} /> ATR RECORDING
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-h-0">
         {activeTab === 'recording' ? (
-          <ManpowerDetail date={date} shift={shift} />
+          <ManpowerDetail 
+            date={date} 
+            shift={shift} 
+            initialPrefill={prefillData}
+            onClearPrefill={() => setPrefillData(null)}
+          />
         ) : (
           <div className="flex flex-col h-full space-y-4 overflow-y-auto pr-2 scrollbar-hide">
             {/* Quick Stats Grid */}
@@ -234,6 +272,7 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
                                       }
                                     }}
                                     onMouseLeave={() => setTooltip(null)}
+                                    onDoubleClick={() => handleGridDoubleClick(mp, d)}
                                     className={`px-1 py-1.5 text-center border-r border-slate-200 dark:border-slate-800 ${color} ${cellBg} w-8 transition-all cursor-pointer hover:ring-2 hover:ring-blue-500 hover:relative hover:z-10`}
                                   >
                                     {display}

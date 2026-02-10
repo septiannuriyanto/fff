@@ -14,6 +14,8 @@ import Loader from '../../../common/Loader/Loader';
 interface ManpowerDetailProps {
   date: Date | null;
   shift: boolean;
+  initialPrefill?: { manpower: any; date: Date } | null;
+  onClearPrefill?: () => void;
 }
 
 interface Manpower {
@@ -37,15 +39,15 @@ interface AttendanceRecord {
   created_at: string;
 }
 
-const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
-  const [showInput, setShowInput] = useState(false);
+const ManpowerDetail = ({ date, shift, initialPrefill, onClearPrefill }: ManpowerDetailProps) => {
+  const [showInput, setShowInput] = useState(!!initialPrefill);
   const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
   const [suggestions, setSuggestions] = useState<Manpower[]>([]);
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedManpower, setSelectedManpower] = useState<Manpower | null>(null);
+  const [searchValue, setSearchValue] = useState(initialPrefill?.manpower?.nama || '');
+  const [selectedManpower, setSelectedManpower] = useState<Manpower | null>(initialPrefill?.manpower || null);
   
   // Form State
-  const [formDate, setFormDate] = useState<Date>(new Date());
+  const [formDate, setFormDate] = useState<Date>(initialPrefill?.date || new Date());
   const [formShift, setFormShift] = useState<number>(1);
   const [status, setStatus] = useState<'S' | 'I' | 'A' | 'T' | 'P' | ''>('');
   const [note, setNote] = useState('');
@@ -55,7 +57,7 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
   const [rowData, setRowData] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<any>(null);
-
+ 
   // Autofocus search field when form opens
   useEffect(() => {
     if (showInput) {
@@ -65,11 +67,26 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
     }
   }, [showInput]);
 
-  // Initialize Form with Auto-detected Makassar Time
+  // 1. Handle Initial Prefill (Prop based - handle updates if already mounted)
   useEffect(() => {
-    if (showInput) {
-       setFormDate(getMakassarShiftlyDateObject());
-       setFormShift(getShift());
+    if (initialPrefill) {
+      setShowInput(true);
+      setSelectedManpower(initialPrefill.manpower);
+      setSearchValue(initialPrefill.manpower.nama);
+      setFormDate(initialPrefill.date);
+      // Clear parent state with a tiny delay to ensure child state has stabilized
+      setTimeout(() => onClearPrefill?.(), 50);
+    }
+  }, [initialPrefill]);
+
+  // 2. Handle Reset on Close
+  useEffect(() => {
+    if (!showInput) {
+      setSelectedManpower(null);
+      setSearchValue('');
+      setStatus('');
+      setNote('');
+      setTimeValue('');
     }
   }, [showInput]);
 
@@ -324,7 +341,15 @@ const ManpowerDetail = ({ date, shift }: ManpowerDetailProps) => {
            Attendance Record
         </h2>
         <button
-          onClick={() => setShowInput(!showInput)}
+          onClick={() => {
+            const nextShow = !showInput;
+            setShowInput(nextShow);
+            // If manually opening (not via prefill effect), auto-detect current time
+            if (nextShow) {
+              setFormDate(getMakassarShiftlyDateObject());
+              setFormShift(getShift());
+            }
+          }}
           className={`px-4 py-2 rounded-xl text-white text-sm font-bold transition-all shadow-lg flex items-center gap-2 ${
              showInput 
               ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' 

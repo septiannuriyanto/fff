@@ -66,24 +66,46 @@ const Dashboard = () => {
       const month = now.getMonth();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-      const lastDay = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+      const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-      const mpNrps = (await supabase.from('manpower').select('nrp').in('position', [2, 3, 4, 5])).data?.map(m => m.nrp) || [];
+      // 1. Get all relevant manpower NRPs
+      const { data: mpData } = await supabase
+        .from('manpower')
+        .select('nrp')
+        .in('position', [2, 3, 4, 5])
+        .eq('active', true);
       
-      // 2. Get non-present records for this month
+      const mpNrps = mpData?.map(m => m.nrp) || [];
+      
+      if (mpNrps.length === 0) {
+        setAtrStats({ ratio: 100, loading: false });
+        return;
+      }
+
+      // 2. Get attendance records for this month
       const { data: attData, error: attError } = await supabase
         .from('attendance')
-        .select('is_sick, is_leave, is_alpha, is_late, is_early_leave')
+        .select('is_sick, is_leave, is_alpha, is_late, is_early_leave, is_present')
         .gte('work_date', firstDay)
-        .lte('work_date', lastDay)
+        .lte('work_date', lastDayStr)
         .in('nrp', mpNrps);
 
       if (attError) throw attError;
 
-      const totalPlanned = mpNrps.length * (now.getDate());
-      const nonPresent = attData?.length || 0;
+      // 3. Logic for days to count:
+      // If it's the current month, count until today. Otherwise count the whole month.
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+      const daysToCount = isCurrentMonth ? today.getDate() : daysInMonth;
+
+      const totalPlanned = mpNrps.length * daysToCount;
       
-      const ratio = totalPlanned > 0 ? ((totalPlanned - nonPresent) / totalPlanned) * 100 : 100;
+      // Deduct only specific statuses
+      const deductions = attData?.filter(a => 
+        a.is_sick || a.is_leave || a.is_alpha || a.is_late || a.is_early_leave
+      ).length || 0;
+      
+      const ratio = totalPlanned > 0 ? ((totalPlanned - deductions) / totalPlanned) * 100 : 100;
       setAtrStats({ ratio: ratio, loading: false });
     } catch (err) {
       console.error('Error fetching ATR stats:', err);
@@ -162,7 +184,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Manpower Cluster */}
             {/* Manpower Cluster */}
-            <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500">
+            <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-500">
               {/* Decorative Background Element */}
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <FaUsers size={120} />
@@ -189,7 +211,7 @@ const Dashboard = () => {
                   onClick={() =>
                     openModal(
                       'Attendance Management',
-                      <ATRDetail date={date} shift={shift} initialTab="recording" />,
+                      <ATRDetail date={date} shift={shift} initialTab="detail" />,
                     )
                   }
                 >
@@ -302,7 +324,7 @@ const Dashboard = () => {
 
             {/* Unit Cluster */}
             <div
-              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
+              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-green-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
               onClick={() =>
                 openModal('Unit Status', <UnitDetail date={date} />)
               }
@@ -341,7 +363,7 @@ const Dashboard = () => {
 
             {/* Stock Cluster */}
             <div
-              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
+              className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group/card hover:shadow-2xl hover:shadow-yellow-500/40 hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500 cursor-pointer"
               onClick={() =>
                 openModal(
                   'Stock Overview',
@@ -383,7 +405,7 @@ const Dashboard = () => {
 
             {/* Schedule Cluster */}
             {/* Schedule Cluster */}
-            <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 transition-all duration-500">
+            <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-500">
               {/* Decorative Background Element */}
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <FaCalendarAlt size={120} />
