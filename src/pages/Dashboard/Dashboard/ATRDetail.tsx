@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
 import ManpowerDetail from './ManpowerDetail';
 import { FaChartBar, FaEdit, FaCalendarAlt } from 'react-icons/fa';
@@ -133,8 +133,20 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
     };
   }, [manpower, attendance, monthDates, currentYear, currentMonth]);
 
+  const topRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeTab === 'recording') {
+      // Scroll to top when switching to recording tab
+      // Small timeout to ensure render is complete
+      setTimeout(() => {
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [activeTab]);
+
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div ref={topRef} className="flex flex-col h-full space-y-4">
       {/* Tab Header */}
       <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
         <button
@@ -258,26 +270,32 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
                                   else if (record.is_present) { display = '•'; color = 'text-green-600 font-black text-xs'; }
                                 }
 
-                                return (
-                                  <td 
-                                    key={d} 
-                                    onMouseEnter={(e) => {
-                                      if (record?.note) {
-                                        setTooltip({ note: record.note, x: e.clientX, y: e.clientY });
-                                      }
-                                    }}
-                                    onMouseMove={(e) => {
-                                      if (record?.note) {
-                                        setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
-                                      }
-                                    }}
-                                    onMouseLeave={() => setTooltip(null)}
-                                    onDoubleClick={() => handleGridDoubleClick(mp, d)}
-                                    className={`px-1 py-1.5 text-center border-r border-slate-200 dark:border-slate-800 ${color} ${cellBg} w-8 transition-all cursor-pointer hover:ring-2 hover:ring-blue-500 hover:relative hover:z-10`}
-                                  >
-                                    {display}
-                                  </td>
-                                );
+                                  return (
+                                    <td 
+                                      key={d} 
+                                      onMouseEnter={(e) => {
+                                        if (record?.note) {
+                                          setTooltip({ note: record.note, x: e.clientX, y: e.clientY });
+                                        }
+                                      }}
+                                      onMouseMove={(e) => {
+                                        if (record?.note) {
+                                          setTooltip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+                                        }
+                                      }}
+                                      onMouseLeave={() => setTooltip(null)}
+                                      onDoubleClick={() => {
+                                        // Disable double click if record exists with specific statuses
+                                        const hasDeduction = record && (record.is_sick || record.is_leave || record.is_alpha || record.is_late || record.is_early_leave);
+                                        if (!hasDeduction) {
+                                          handleGridDoubleClick(mp, d);
+                                        }
+                                      }}
+                                      className={`px-1 py-1.5 text-center border-r border-slate-200 dark:border-slate-800 ${color} ${cellBg} w-8 transition-all cursor-pointer hover:ring-2 hover:ring-blue-500 hover:relative hover:z-10`}
+                                    >
+                                      {display}
+                                    </td>
+                                  );
                               })}
                             </tr>
                           ))}
