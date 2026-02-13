@@ -15,11 +15,11 @@ const RitationValidationChart: React.FC<CardPanelProps> = ({ data }) => {
     options: {
       labels: ['Validated', 'Not Validated'], // Labels for the donut chart
       chart: {
-        type: 'donut', // Change to donut chart
+        type: 'donut' as const, // Change to donut chart
       },
       colors: ['#aaffaa', '#ffaaaa'], // Set colors for the segments
       legend: {
-        position: 'bottom',
+        position: 'bottom' as const,
         margin: 10, // Add margin to the legend
       },
       dataLabels: {
@@ -45,9 +45,9 @@ const RitationValidationChart: React.FC<CardPanelProps> = ({ data }) => {
   };
 
   return (
-    <div className=" rounded-sm border bg-white py-2 px-2  shadow-default  border-stroke dark:border-strokedark dark:bg-boxdark items-left  ">
-      <h1 className="font-bold text-bodydark">Daily Ritation Validation</h1>
-      <div className="flex flex-col ">
+    <div className="w-full">
+      <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4 px-2">Daily Ritation Validation</h4>
+      <div className="flex flex-col">
         <Chart
           options={chartData.options}
           series={chartData.series}

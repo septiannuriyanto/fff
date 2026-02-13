@@ -20,13 +20,13 @@ const RitationSubtotalByFTChart: React.FC<CardPanelProps> = ({ data }) => {
     options: {
       labels: Object.keys(groupedData), // Unit names
       chart: {
-        type: 'donut',
+        type: 'donut' as const,
       },
       fill: {
         type: 'gradient',
       },
       legend: {
-        position: 'right',
+        position: 'right' as const,
         offsetY : 30,
       },
       plotOptions: {
@@ -60,11 +60,11 @@ const RitationSubtotalByFTChart: React.FC<CardPanelProps> = ({ data }) => {
   };
 
   return (
-    <div className=' rounded-sm border bg-white py-2 px-2  shadow-default  border-stroke dark:border-strokedark dark:bg-boxdark items-left  '>
-      <h1 className='font-bold text-bodydark'>Daily Ritation Qty By Unit</h1>
-      <div className="flex flex-col ">
-      <Chart options={chartData.options} series={chartData.series} type="donut"  />
-    </div>
+    <div className="w-full">
+      <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-4 px-2">Daily Ritation Qty By Unit</h4>
+      <div className="flex flex-col">
+        <Chart options={chartData.options} series={chartData.series} type="donut" />
+      </div>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DatePickerOne from '../../../../components/Forms/DatePicker/DatePickerOne';
 import {
-  convertDateToYYMM,
   convertDateToYYYYMM,
   formatDateForSupabase,
   formatDateToString,
@@ -18,6 +17,7 @@ import RitationSubtotalByFTChart from '../components/RitationSubtotalByFTChart';
 import LeftRightPanel from '../../../../components/LeftRightPanel';
 import RitationValidationChart from '../components/RitationValidationChart';
 import DailyRitationChart from '../components/DailyRitationChart';
+import DeviationChart from '../components/DeviationChart';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faFileExport,
@@ -39,6 +39,16 @@ import { useNavigate } from 'react-router-dom';
 import { ReconcileFuelData } from './ReconcileFuelData';
 import RitationStatsPanel from './components/RitationStatsPanel';
 
+const MetricCard = ({ title, value, unit = '' }: { title: string; value: string | number; unit?: string }) => (
+  <div className="p-2 rounded-xl bg-[#f0f2f5] dark:bg-[#1a1c1e] shadow-[4px_4px_8px_#d1d9e6,-4px_-4px_8px_#ffffff] dark:shadow-[4px_4px_8px_#000000,-4px_-4px_6px_#2a2c2e] border border-white/40 dark:border-white/5 flex flex-col gap-0.5 hover:scale-[1.02] transition-all group">
+    <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</span>
+    <div className="flex items-baseline gap-1">
+      <span className="text-base font-black dark:text-white tabular-nums group-hover:bg-clip-text group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-emerald-500 transition-all">{value}</span>
+      {unit && <span className="text-[8px] text-gray-400 font-medium">{unit}</span>}
+    </div>
+  </div>
+);
+
 const Ritation = () => {
   const [date, setDate] = useState<Date | null>(new Date());
   const [dataRitasi, setDataRitasi] = useState<RitasiFuelData[]>([]);
@@ -51,40 +61,36 @@ const Ritation = () => {
   const [ritationQtyPlan, setRitationQtyPlan] = useState<number>(0);
   const [ritationQtyTotal, setRitationQtyTotal] = useState<number>(0);
   const [ritationQtyToday, setRitationQtyToday] = useState<number>(0);
+  const [metrics, setMetrics] = useState({
+    avgRitasiPerDay: 0,
+    prediksiSisaQty: 0,
+    prediksiTotalQty: 0,
+    planVsActual: 0,
+    progressMtd: 0,
+    sisaPoMtd: 0,
+    qtyFuelPerRitasi: 0,
+    totalDevMtd: 0,
+    percentDevMtd: 0,
+    avgDailyDev: 0,
+    mostSingleDev: 0,
+    leastSingleDev: 0
+  });
   const [ritationDaily, setRitationDaily] = useState<Record<string, number>>(
     {},
   );
   const [reconcileDaily, setReconcileDaily] = useState<Record<string, number>>(
     {},
   );
+  const [deviationDaily, setDeviationDaily] = useState<Record<string, number>>({});
+  const [deviationCumulative, setDeviationCumulative] = useState<Record<string, number | null>>({});
+  const [cumulativeQtySj, setCumulativeQtySj] = useState<Record<string, number | null>>({});
+  const [poQtyRemaining, setPoQtyRemaining] = useState<Record<string, number | null>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  type DateValue = {
-    startDate: Date | null;
-    endDate: Date | null;
-  };
-
-  // Initialize the state with null values
-  const [dateValue, setDateValue] = useState<DateValue>({
-    startDate: null,
-    endDate: null,
-  });
-
-  const handleRangeDateChange = (newValue: DateValue) => {
-    // Check if the newValue contains valid dates
-    const isValidStartDate =
-      newValue.startDate instanceof Date &&
-      !isNaN(newValue.startDate.getTime());
-    const isValidEndDate =
-      newValue.endDate instanceof Date && !isNaN(newValue.endDate.getTime());
-
-    if (isValidStartDate && isValidEndDate) {
-      console.log('Selected dates: ', newValue);
-      setDateValue(newValue); // Update the state with the new date value
-    } else {
-      console.warn('Invalid date selected');
-    }
+  const getDaysInMonth = (d: Date) => {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   };
 
   const calculateTotalQtySj = (data: RitasiFuelData[]): number => {
@@ -118,265 +124,210 @@ const Ritation = () => {
     }));
 
     const totalRitasi = calculateTotalQtySj(enrichedData as RitasiFuelData[]);
-
     setRitationQtyToday(totalRitasi);
-
     setDataRitasi(enrichedData as RitasiFuelData[]);
-  };
 
-  const fetchRitationPlan = async () => {
-    const period = convertDateToYYYYMM(new Date());
-    const { data, error } = await supabase
-      .from('plan_order')
-      .select('plan_fuel_ob, plan_fuel_coal')
-      .eq('period', period);
-    if (error) {
-      console.log(error.message);
-      return;
-    }
-    const totalPlan = data[0].plan_fuel_ob + data[0].plan_fuel_coal;
-    setRitationQtyPlan(totalPlan);
-  };
-  const fetchRitationActual = async () => {
-    const period = convertDateToYYMM(new Date());
-    const sjFilter = `G${period}%`;
-
-    const { data, error } = await supabase.rpc(
-      'rpc_get_total_qty_sj_in_monthly',
-      { sj_prefix: sjFilter },
-    );
-
-    if (error) {
-      console.error('Error fetching data:', error);
-      return;
-    }
-
-    setRitationQtyTotal(data);
-  };
-
-  const fetchRitationActualByDate = async () => {
-    const period = convertDateToYYMM(new Date());
-    const sjFilter = `G${period}%`;
-
-    const { data: dataRitasi, error } = await supabase
-      .from('ritasi_fuel')
-      .select('qty_sj, ritation_date') // Include ritation_date in the select statement
-      .like('no_surat_jalan', sjFilter); // 'G2409%' filters records where sj_number starts with 'G2409'
-
-    if (error) {
-      console.error('Error fetching data:', error);
-      return;
-    }
-
-    // Get the number of days in the current month
-    const daysInMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      0,
-    ).getDate();
-
-    // Create an array for all dates in the current month
-    const allDates: string[] = [];
-    for (let day = 2; day <= daysInMonth + 1; day++) {
-      const date = new Date(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        day,
-      );
-      allDates.push(date.toISOString().split('T')[0]); // Format as YYYY-MM-DD
-    }
-
-    // Group data by ritation_date
-    const summaryDataRitasi = dataRitasi.reduce<Record<string, number>>(
-      (acc, item) => {
-        const date = item.ritation_date; // Ensure ritation_date is in a suitable format
-        acc[date] = (acc[date] || 0) + item.qty_sj; // Sum qty_sj for this date
-        return acc;
-      },
-      {},
-    );
-
-    // Prepare final data with 0 values for days without ritation
-    const totalByDate = allDates.map((date) => ({
-      date,
-      total: summaryDataRitasi[date] || 0, // Use 0 if no data for this date
-    }));
-
-    // Set your state with totalByDate
-    const totalByDateRecord = totalByDate.reduce<Record<string, number>>(
-      (acc, item) => {
-        acc[item.date] = item.total;
-        return acc;
-      },
-      {},
-    );
-    setRitationDaily(totalByDateRecord);
-  };
-
-  const fetchRitationReconcileByDate = async () => {
-    const period = convertDateToYYMM(new Date());
-    const sjFilter = `G${period}%`;
-    const today = new Date().toISOString().split('T')[0]; // format: 'YYYY-MM-DD'
-
-    const { data: dataRitasi, error } = await supabase
-      .from('ritasi_daily_reconcile')
-      .select('qty, report_date, unit_id') // include unit_id sesuai ReconcileFuelData
-      .like('do_number', sjFilter);
-
-    if (error) {
-      console.error('Error fetching data:', error);
-      return;
-    }
-
-    // --- Total harian (semua tanggal di bulan berjalan) ---
-    const daysInMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      0,
-    ).getDate();
-
-    const allDates: string[] = [];
-    for (let day = 2; day <= daysInMonth + 1; day++) {
-      const date = new Date(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        day,
-      );
-      allDates.push(date.toISOString().split('T')[0]);
-    }
-
-    const summaryDataRitasi = dataRitasi.reduce<Record<string, number>>(
-      (acc, item) => {
-        const date = item.report_date;
-        acc[date] = (acc[date] || 0) + item.qty;
-        return acc;
-      },
-      {},
-    );
-
-    const totalByDate = allDates.map((date) => ({
-      date,
-      total: summaryDataRitasi[date] || 0,
-    }));
-
-    const totalByDateRecord = totalByDate.reduce<Record<string, number>>(
-      (acc, item) => {
-        acc[item.date] = item.total;
-        return acc;
-      },
-      {},
-    );
-    setReconcileDaily(totalByDateRecord);
-
-    // --- Filter untuk hari ini dan simpan dalam dataReconcile ---
-    const todayReconcile = dataRitasi
-      .filter((item) => item.report_date === formatDateForSupabase(date!))
-      .map((item) => ({
-        report_date: item.report_date,
-        unit_id: item.unit_id,
-        qty: item.qty,
-      })) as ReconcileFuelData[];
-
+    const todayReconcile = enrichedData.map((item: any) => ({
+      report_date: item.ritation_date,
+      unit_id: item.warehouse_id,
+      qty: item.qty_sonding || 0,
+    })) as ReconcileFuelData[];
     setDataReconcile(todayReconcile);
-
-    console.log(todayReconcile);
   };
 
-  interface poData {
-    po_number: string;
-    doc_url: string;
-    po_qty: number;
-    remaining_qty: number;
-  }
+  const processAnalyticalDailyData = (analytics: any, currentPlan: number) => {
+    const { daily_actuals, daily_reconciles, last_ritation_date } = analytics;
+    
+    const selectedDate = date || new Date();
+    const dInMonth = getDaysInMonth(selectedDate);
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
 
-  const [poDoc, setPoDoc] = useState<poData | undefined>(undefined);
+    const allDates: string[] = [];
+    for (let d = 1; d <= dInMonth; d++) {
+      allDates.push(formatDateForSupabase(new Date(year, month, d)) || '');
+    }
+
+    const lastDateStr = last_ritation_date ? last_ritation_date.split('T')[0] : null;
+
+    const actualMap: Record<string, number> = {};
+    const reconcileMap: Record<string, number> = {};
+    
+    allDates.forEach(dStr => {
+      actualMap[dStr] = 0;
+      reconcileMap[dStr] = 0;
+    });
+
+    (daily_actuals || []).forEach((item: any) => {
+      const dStr = item.date.split('T')[0];
+      actualMap[dStr] = item.qty;
+    });
+    setRitationDaily(actualMap);
+
+    (daily_reconciles || []).forEach((item: any) => {
+      const dStr = item.date.split('T')[0];
+      reconcileMap[dStr] = item.qty;
+    });
+    setReconcileDaily(reconcileMap);
+
+    let cumulativeSum = 0;
+    let balance = currentPlan;
+    const cumulativeObj: Record<string, number | null> = {};
+    const poBalanceObj: Record<string, number | null> = {};
+    const deviationByDate: Record<string, number> = {};
+    let cumulativeDev = 0;
+    const deviationCumulativeObj: Record<string, number | null> = {};
+
+    allDates.forEach(dStr => {
+      const qtyAct = actualMap[dStr] || 0;
+      const qtyRec = reconcileMap[dStr] || 0;
+      const dailyDev = qtyRec - qtyAct;
+      deviationByDate[dStr] = dailyDev;
+
+      if (lastDateStr && dStr <= lastDateStr) {
+        cumulativeSum += qtyAct;
+        balance -= qtyAct;
+        cumulativeObj[dStr] = cumulativeSum;
+        poBalanceObj[dStr] = balance;
+
+        cumulativeDev += dailyDev;
+        deviationCumulativeObj[dStr] = cumulativeDev;
+      } else {
+        cumulativeObj[dStr] = null;
+        poBalanceObj[dStr] = null;
+        deviationCumulativeObj[dStr] = null;
+      }
+    });
+
+    setCumulativeQtySj(cumulativeObj);
+    setPoQtyRemaining(poBalanceObj);
+    setDeviationDaily(deviationByDate);
+    setDeviationCumulative(deviationCumulativeObj);
+
+    return { deviationByDate, lastDateStr };
+  };
+
+  const fetchRitationAnalytics = async () => {
+    if (!date) return null;
+    const periodStr = convertDateToYYYYMM(date);
+    const periodNum = parseInt(periodStr);
+    const periodPrefix = `G${(date.getFullYear() % 100).toString().padStart(2, '0')}${(date.getMonth() + 1).toString().padStart(2, '0')}%`;
+    
+    const { data, error } = await supabase.rpc('rpc_get_ritation_dashboard_analytics', {
+      p_prefix: periodPrefix,
+      p_period: periodNum
+    });
+
+    if (error) {
+      console.error('Error fetching consolidated analytics:', error.message);
+      return null;
+    }
+    return data;
+  };
+
+
+
+  const [poDoc, setPoDoc] = useState<any>(undefined);
   const [baRequest, setBaRequest] = useState<string | undefined>(undefined);
-
-  const fetchThisMonthPoDoc = async () => {
-    const period = convertDateToYYYYMM(new Date());
-    const { data, error } = await supabase
-      .from('po_fuel')
-      .select('po_number, doc_url, po_qty, remaining_qty')
-      .eq('period', period);
-    if (error) {
-      console.log(error.message);
-      return;
-    }
-    const poDoc = data[0];
-    console.log(poDoc);
-
-    setPoDoc(poDoc);
-  };
-
-  const fetchThisMonthBaRequest = async () => {
-    const period = convertDateToYYYYMM(new Date());
-    const { data, error } = await supabase
-      .from('plan_order')
-      .select('doc_url')
-      .eq('period', period);
-    if (error) {
-      console.log(error.message);
-      return;
-    }
-    const baRequest = data[0].doc_url;
-    console.log(baRequest);
-
-    setBaRequest(baRequest);
-  };
-
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         setIsModalOpen(false);
       }
     };
-
     if (isModalOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isModalOpen]);
 
   const showPoDetail = (url: string | undefined) => {
-    if (!url) {
-      alert('PO document URL not available.');
-      return;
-    }
+    if (!url) { alert('PO document URL not available.'); return; }
     setPdfUrl(url);
     setIsModalOpen(true);
   };
 
   const showBaRequestDetail = (url: string | undefined) => {
-    if (!url) {
-      alert('BA request document URL not available.');
-      return;
-    }
+    if (!url) { alert('BA request document URL not available.'); return; }
     setPdfUrl(url);
     setIsModalOpen(true);
   };
 
   useEffect(() => {
-    fetchRitationActualByDate();
-    fetchRitationReconcileByDate();
-    fetchThisMonthBaRequest();
-    fetchThisMonthPoDoc();
+    const fetchAllData = async () => {
+      if (!date) return;
+      setIsLoading(true);
+      const analytics = await fetchRitationAnalytics();
+      if (analytics) {
+        const {
+          last_ritation_date,
+          plan_qty,
+          ba_request_url,
+          po_number,
+          po_doc_url,
+          po_qty,
+          po_remaining_qty,
+          total_actual_qty,
+          total_actual_count,
+        } = analytics;
+
+        setRitationQtyPlan(plan_qty);
+        setRitationQtyTotal(total_actual_qty);
+        setBaRequest(ba_request_url);
+        setPoDoc({
+          po_number,
+          doc_url: po_doc_url,
+          po_qty,
+          remaining_qty: po_remaining_qty
+        });
+
+        const { deviationByDate: devDaily, lastDateStr: lds } = processAnalyticalDailyData(analytics, plan_qty);
+
+        const deviationValues = Object.entries(devDaily)
+          .filter(([dStr]) => lds && dStr <= lds)
+          .map(([_, val]) => val);
+        
+        const totalDevMtd = deviationValues.reduce((acc, v) => acc + v, 0);
+
+        const daysInMonth = getDaysInMonth(date);
+        const lastDateWithData = last_ritation_date ? new Date(last_ritation_date) : null;
+        const elapsed = lastDateWithData ? lastDateWithData.getDate() : 0;
+        const remaining = Math.max(0, daysInMonth - elapsed);
+
+        const avg = total_actual_qty / (elapsed || 1);
+        const sisaPred = avg * remaining;
+        const totalPred = total_actual_qty + sisaPred;
+        const vsPlan = plan_qty > 0 ? (totalPred / plan_qty) * 100 : 0;
+        const progressMtd = plan_qty > 0 ? (total_actual_qty / plan_qty) * 100 : 0;
+
+        setMetrics({
+          avgRitasiPerDay: avg,
+          prediksiSisaQty: sisaPred,
+          prediksiTotalQty: totalPred,
+          planVsActual: vsPlan,
+          progressMtd: progressMtd,
+          sisaPoMtd: Math.max(0, plan_qty - total_actual_qty),
+          qtyFuelPerRitasi: total_actual_count > 0 ? total_actual_qty / total_actual_count : 0,
+          totalDevMtd: totalDevMtd || 0,
+          percentDevMtd: total_actual_qty > 0 ? (totalDevMtd / total_actual_qty) * 100 : 0,
+          avgDailyDev: deviationValues.length > 0 ? totalDevMtd / deviationValues.length : 0,
+          mostSingleDev: deviationValues.length > 0 ? Math.max(...deviationValues) : 0,
+          leastSingleDev: deviationValues.length > 0 ? Math.min(...deviationValues) : 0
+        });
+
+        await fetchRitationReport();
+      }
+      setIsLoading(false);
+    };
+    fetchAllData();
   }, [date]);
 
-  useEffect(() => {
-    fetchRitationPlan();
-    fetchRitationActual();
-    fetchRitationReport();
-  }, [date]);
 
   const handleDateChange = async (date: Date | null) => {
     setDate(date);
@@ -505,10 +456,6 @@ const Ritation = () => {
     shareMessageToWhatsapp(info);
   };
 
-  const toggleEvidencePanel = (id: string) => {
-    setExpandedRow(expandedRow === id ? null : id);
-  };
-
   const handleImageClick = (id: string) => {
     setExpandedImageId(expandedImageId === id ? null : id);
     setRotationAngle((prev) => ({
@@ -556,7 +503,6 @@ const Ritation = () => {
   };
 
   const reuploadImage = async (id: string, urlType: string) => {
-    const imgPath = `${baseStorageUrl}/${extractFullYear(id)}/${id}`;
 
     // Create a file input element
     const fileInput = document.createElement('input');
@@ -619,384 +565,295 @@ const Ritation = () => {
   };
 
   return (
-    <>
-      <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-        <div className="flex flex-wrap items-center">
-          <div className="w-full border-stroke dark:border-strokedark xl:border-l-2">
-            <div className="w-full p-4 sm:p-12.5 xl:p-5">
-              <div className="header block sm:flex mb-2">
-                <h2 className="mb-2 font-bold text-black dark:text-white sm:text-title-sm w-full">
-                  Ritation Dashboard
-                </h2>
-                <Toaster />
-                <DatePickerOne
-                  enabled={true}
-                  handleChange={handleDateChange}
-                  setValue={date ? formatDateToString(new Date(date)) : ''}
+    <div className={`flex flex-col gap-4 transition-all duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className="w-full">
+        <div className="w-full">
+          <div className="header block sm:flex mb-4 items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+            <h2 className="mb-0 font-bold text-black dark:text-white text-xl">
+              Ritation Dashboard
+            </h2>
+            <Toaster />
+            <div className="flex items-center gap-4">
+              <DatePickerOne
+                enabled={true}
+                handleChange={handleDateChange}
+                setValue={date ? formatDateToString(new Date(date)) : ''}
+              />
+            </div>
+          </div>
+
+          <div className="ritation__table w-full space-y-4">
+            <div className="rounded-xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 p-4 shadow-lg">
+               <DailyRitationChart
+                chartDataInput={Object.entries(ritationDaily).map(
+                  ([date, total]) => ({ date, total }),
+                )}
+                chartDataReconcile={Object.entries(reconcileDaily).map(
+                  ([date, total]) => ({ date, total }),
+                )}
+                chartDataCumulative={Object.entries(cumulativeQtySj).map(
+                  ([date, total]) => ({ date, total }),
+                )}
+                chartDataPoBalance={Object.entries(poQtyRemaining).map(
+                  ([date, total]) => ({ date, total }),
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4 pt-1">
+              <MetricCard title="Plan Qty" value={formatNumberWithSeparator(ritationQtyPlan)} unit="Liter" />
+              <MetricCard title="Total Ritasi MTD" value={formatNumberWithSeparator(ritationQtyTotal)} unit="Liter" />
+              <MetricCard title="Avg Ritasi / Day" value={formatNumberWithSeparator(parseFloat(metrics.avgRitasiPerDay.toFixed(1)))} unit="Liter" />
+              <MetricCard title="Qty Fuel / Rit" value={formatNumberWithSeparator(parseFloat(metrics.qtyFuelPerRitasi.toFixed(1)))} unit="L/Rit" />
+              <MetricCard title="Sisa PO MTD" value={formatNumberWithSeparator(parseFloat(metrics.sisaPoMtd.toFixed(0)))} unit="Liter" />
+              <MetricCard title="PO Qty" value={formatNumberWithSeparator(poDoc?.po_qty || 0)} unit="Liter" />
+              <MetricCard title="Progress Ritasi" value={metrics.progressMtd.toFixed(2)} unit="%" />
+              <MetricCard title="Prediksi Sisa Qty" value={formatNumberWithSeparator(parseFloat(metrics.prediksiSisaQty.toFixed(0)))} unit="Liter" />
+              <MetricCard title="Prediksi Total Qty" value={formatNumberWithSeparator(parseFloat(metrics.prediksiTotalQty.toFixed(0)))} unit="Liter" />
+              <MetricCard title="Plan vs Actual" value={metrics.planVsActual.toFixed(2)} unit="%" />
+            </div>
+
+            <div className="rounded-xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 p-4 shadow-lg mb-4">
+              <DeviationChart
+                chartDataDaily={Object.entries(deviationDaily).map(
+                  ([date, total]) => ({ date, total: total ?? 0 }),
+                )}
+                chartDataCumulative={Object.entries(deviationCumulative).map(
+                  ([date, total]) => ({ date, total }),
+                )}
+              />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
+                <MetricCard title="Total Deviasi MTD" value={formatNumberWithSeparator(parseFloat(metrics.totalDevMtd.toFixed(0)))} unit="Liter" />
+                <MetricCard title="Percent MTD Deviation" value={metrics.percentDevMtd.toFixed(2)} unit="%" />
+                <MetricCard title="Avg Daily Deviation" value={formatNumberWithSeparator(parseFloat(metrics.avgDailyDev.toFixed(1)))} unit="Liter" />
+                <MetricCard title="Most Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.mostSingleDev.toFixed(0)))} unit="Liter" />
+                <MetricCard title="Least Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.leastSingleDev.toFixed(0)))} unit="Liter" />
+              </div>
+            </div>
+
+            {ritationQtyPlan <= 0 && (
+              <AlertError
+                title="Plan Ritasi Belum Terinput"
+                subtitle="Upload berita acara plan ritasi bulan ini"
+                onClickEvent={() => navigate('/plan/fuelritationplan')}
+              />
+            )}
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <RitationStatsPanel
+                  panelTitle="Monthly Progress (Liter)"
+                  titleLeft="Progress Fulfill"
+                  ritationProgress={
+                    formatNumberWithSeparator(
+                      parseFloat(
+                        (
+                          (ritationQtyTotal / ritationQtyPlan) *
+                          100
+                        ).toFixed(2),
+                      ),
+                    ) + '%'
+                  }
+                  receiveProgress={
+                    formatNumberWithSeparator(
+                      parseFloat(
+                        (
+                          (((poDoc?.po_qty || 0) - (poDoc?.remaining_qty || 0)) / (ritationQtyTotal || 1)) *
+                          100
+                        ).toFixed(2),
+                      ),
+                    ) + '%'
+                  }
+                  ritationQty={ritationQtyTotal}
+                  planQty={ritationQtyPlan}
+                  receivedQty={(poDoc?.po_qty || 0) - (poDoc?.remaining_qty || 0)}
+                  poDoc={poDoc?.po_number}
+                  onShowPoDoc={() => {
+                    showPoDetail(poDoc?.doc_url);
+                  }}
+                  onShowBaRequest={() => {
+                    showBaRequestDetail(baRequest);
+                  }}
                 />
               </div>
-
-              <div className="ritation__table h-23 w-full">
-                <DailyRitationChart
-                  chartDataInput={Object.entries(ritationDaily).map(
-                    ([date, total]) => ({ date, total }),
-                  )}
-                  chartDataReconcile={Object.entries(reconcileDaily).map(
-                    ([date, total]) => ({ date, total }),
-                  )}
+              <div className="flex flex-col gap-6">
+                <LeftRightPanel
+                  panelTitle="Daily Ritation Stats (Liter)"
+                  title1="Ritation Qty (liter)"
+                  total1={formatNumberWithSeparator(ritationQtyToday)}
+                  title2="Ritation Count"
+                  total2={dataRitasi.length.toString()}
+                  titleColor="text-orange-600 dark:text-orange-400"
+                  panelColor="bg-orange-50/50 dark:bg-orange-900/20"
                 />
+                <LeftRightPanel
+                  panelTitle="Daily Reconcile Stats (Liter)"
+                  title1="Reconcile Qty (liter)"
+                  total1={formatNumberWithSeparator(
+                    dataReconcile.reduce((acc, item) => acc + item.qty, 0),
+                  )}
+                  title2="Reconcile Count"
+                  total2={dataReconcile.length.toString()}
+                  titleColor="text-blue-600 dark:text-blue-400"
+                  panelColor="bg-blue-50/50 dark:bg-blue-900/20"
+                />
+              </div>
+            </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-3 2xl:gap-7.5 mt-2">
-                  {/* <CardDataStats
-                title="Ritation Qty (liter)"
-                total={ formatNumberWithSeparator(ritationQtyTotal) }
-                rate="0.43%"
-                levelUpBad
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 p-6 shadow-xl">
+                 <RitationSubtotalByFTChart data={dataRitasi} />
+               </div>
+               <div className="rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 p-6 shadow-xl">
+                 <RitationValidationChart data={dataRitasi} />
+               </div>
+            </div>
+
+            <div className="my-8 rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 p-8 shadow-xl">
+              <h4 className="text-lg font-bold mb-4 dark:text-white">Export Report</h4>
+              <p className="text-sm text-gray-500 mb-6">Specify date range to download the detailed report</p>
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="w-full">
+                  <DateRangePicker
+                    size="lg"
+                    format="dd.MM.yyyy"
+                    ranges={predefinedRanges as any}
+                    placeholder="Select Date Range"
+                    className="w-full"
+                    onShortcutClick={(shortcut) => {
+                      handleChangeDate(shortcut.value);
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={handleExportToFile}
+                  className="w-full md:w-auto flex items-center justify-center gap-3 rounded-xl bg-emerald-500 py-3 px-8 text-center font-bold text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 whitespace-nowrap"
                 >
-                  <div></div>
-                </CardDataStats> */}
-                  <div className="flex flex-col justify-between gap-2">
-                    {ritationQtyPlan <= 0 ? (
-                      <AlertError
-                        title="Plan Ritasi Belum Terinput"
-                        subtitle="Upload berita acara plan ritasi bulan ini"
-                        onClickEvent={() => navigate('/plan/fuelritationplan')}
-                      />
-                    ) : (
-                      <RitationStatsPanel
-                        panelTitle="Monthly Progress (Liter)"
-                        titleLeft="Progress Fulfill"
-                        ritationProgress={
-                          formatNumberWithSeparator(
-                            parseFloat(
-                              (
-                                (ritationQtyTotal / ritationQtyPlan) *
-                                100
-                              ).toFixed(2),
-                            ), // Convert to number after rounding
-                          ) + '%'
-                        }
-                        receiveProgress={
-                          formatNumberWithSeparator(
-                            parseFloat(
-                              (
-                                ((poDoc?.po_qty! - poDoc?.remaining_qty!) /  ritationQtyTotal) *
-                                100
-                              ).toFixed(2),
-                            ), // Convert to number after rounding
-                          ) + '%'
-                        }
-                        ritationQty={ritationQtyTotal}
-                        planQty={ritationQtyPlan}
-                        receivedQty={poDoc?.po_qty! - poDoc?.remaining_qty!}
-                        poDoc={poDoc?.po_number}
-                        onShowPoDoc={() => {
-                          showPoDetail(poDoc?.doc_url);
-                        }}
-                        onShowBaRequest={() => {
-                          showBaRequestDetail(baRequest);
-                        }}
-                      />
-                    )}
-                    {isModalOpen && pdfUrl && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                        <div
-                          ref={modalRef}
-                          className="relative w-full max-w-4xl h-[80vh] bg-white rounded shadow-lg p-4"
-                        >
-                          <button
-                            className="absolute top-2 right-2 text-black bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
-                            onClick={() => setIsModalOpen(false)}
-                          >
-                            Close
-                          </button>
-                          <iframe
-                            src={pdfUrl}
-                            title="PDF Viewer"
-                            className="w-full h-full rounded"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <LeftRightPanel
-                      panelTitle="Daily Ritation Stats (Liter)"
-                      title1="Ritation Qty (liter)"
-                      total1={formatNumberWithSeparator(ritationQtyToday)}
-                      title2="Ritation Count"
-                      total2={dataRitasi.length.toString()}
-                      titleColor="text-orange-600 dark:text-orange-400"
-                      panelColor="bg-orange-50 dark:bg-orange-900"
-                    />
-                    <LeftRightPanel
-                      panelTitle="Daily Reconcile Stats (Liter)"
-                      title1="Reconcile Qty (liter)"
-                      total1={formatNumberWithSeparator(
-                        dataReconcile.reduce((acc, item) => acc + item.qty, 0),
-                      )}
-                      title2="Reconcile Count"
-                      total2={dataReconcile.length.toString()}
-                      titleColor="text-blue-600 dark:text-blue-400"
-                      panelColor="bg-blue-50 dark:bg-blue-900"
-                    />
-                  </div>
-
-                  <RitationSubtotalByFTChart data={dataRitasi} />
-                  <RitationValidationChart data={dataRitasi} />
-                </div>
-                <div className="flex flex-col">
-                  <div className="my-6">
-                    <h4>Specify date range to download report</h4>
-                    <div className="export__segment flex flex-col lg:flex-row w-full items-start gap-2  lg:flex lg:mb-2 mb-2">
-                      <div className="flex w-full">
-                        <DateRangePicker
-                          size="lg"
-                          format="dd.MM.yyyy"
-                          ranges={predefinedRanges}
-                          placeholder="Select Date Range"
-                          onShortcutClick={(shortcut) => {
-                            handleChangeDate(shortcut.value);
-                          }}
-                        />
-                      </div>
-                      <button
-                        onClick={handleExportToFile}
-                        className="w-full lg:w-1/5 lg:flex items-center justify-center gap-2.5 rounded-md bg-meta-3 py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4"
-                      >
-                        <span>
-                          <FontAwesomeIcon
-                            icon={faFileExport}
-                          ></FontAwesomeIcon>
-                        </span>
-                        Export to File
-                      </button>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                    <div className="inline-block min-w-full py-2 sm:px-6 lg:px-8">
-                      <div className="overflow-hidden">
-                        <table className="min-w-full text-left text-sm font-light text-surface dark:text-white">
-                          <thead className="border-b border-neutral-200 font-medium dark:border-white/10">
-                            <tr>
-                              <th scope="col" className="px-6 py-4">
-                                #
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                DO Number
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Operator
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Fuelman
-                              </th>
-                              <th scope="col" className="px-2 py-4">
-                                FT Number
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Before/After
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Qty
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Evidence
-                              </th>
-                              <th scope="col" className="px-6 py-4">
-                                Action
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dataRitasi.map((row, index) => (
-                              <React.Fragment key={index}>
-                                <tr
-                                  className={`border-b border-neutral-200 transition duration-500 ease-in-out dark:border-white/10 ${
-                                    row.isValidated
-                                      ? 'bg-green-50 dark:bg-green-900'
-                                      : 'hover:bg-neutral-100 dark:hover:bg-neutral-600'
-                                  }`}
-                                >
-                                  <td className="whitespace-nowrap px-6 py-4 font-medium">
-                                    {index + 1}
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4 font-medium">
-                                    <a
-                                      href={`/reporting/ritation/${row.no_surat_jalan}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      {row.no_surat_jalan}
-                                    </a>
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4">
-                                    {row.operator_name
-                                      .split(' ')
-                                      .map((name, index) => (
-                                        <div key={index}>{name}</div>
-                                      ))}
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4">
-                                    {row.fuelman_name
-                                      .split(' ')
-                                      .map((name, index) => (
-                                        <div key={index}>{name}</div>
-                                      ))}
-                                  </td>
-                                  <td className="whitespace-nowrap px-2 py-4">
-                                    {row.unit}
-                                    <br />({row.warehouse_id})
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4 text-right">
-                                    {formatNumberWithSeparator(
-                                      row.qty_flowmeter_before,
-                                    )}
-                                    <br />
-                                    {formatNumberWithSeparator(
-                                      row.qty_flowmeter_after,
-                                    )}
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4">
-                                    {row.qty_sj}
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4">
-                                    <button
-                                      onClick={() =>
-                                        toggleEvidencePanel(row.no_surat_jalan)
-                                      }
-                                      className="text-blue-500 hover:underline"
-                                    >
-                                      {expandedRow === row.no_surat_jalan
-                                        ? 'Hide'
-                                        : 'View'}
-                                    </button>
-                                  </td>
-                                  <td className="whitespace-nowrap px-6 py-4">
-                                    <RitationAction
-                                    data={null}
-                                      onEdit={() =>
-                                        handleEdit(row.no_surat_jalan)
-                                      }
-                                      onApprove={() =>
-                                        handleApprove(row.no_surat_jalan)
-                                      }
-                                      onDelete={() =>
-                                        handleDelete(row.no_surat_jalan)
-                                      }
-                                      onShare={() => handleShare(row)}
-                                    />
-                                  </td>
-                                </tr>
-                                {/* Toggle evidence panel */}
-                                {expandedRow === row.no_surat_jalan && (
-                                  <tr>
-                                    <td colSpan={9} className="px-6 py-4">
-                                      <div className="overflow-hidden transition-max-height duration-500 ease-in-out max-h-[600px] bg-gray-100 dark:bg-gray-800 p-4 rounded">
-                                        <div className="flex justify-center space-x-4 relative">
-                                          {/* Loop over the images */}
-                                          {[
-                                            'flowmeter_before_url',
-                                            'flowmeter_after_url',
-                                            'sj_url',
-                                          ].map((urlType, idx) => (
-                                            <div
-                                              key={idx}
-                                              className={`cursor-pointer transition-all duration-300 relative ${
-                                                expandedImageId ===
-                                                `${row.no_surat_jalan}-${urlType}`
-                                                  ? 'w-full h-auto max-w-full' // Full width when expanded
-                                                  : 'w-32 h-32' // Normal size
-                                              }`}
-                                            >
-                                              <img
-                                                src={row[urlType]}
-                                                alt={urlType}
-                                                className={`rounded-md object-cover transition-all duration-300 ${
-                                                  expandedImageId ===
-                                                  `${row.no_surat_jalan}-${urlType}`
-                                                    ? 'scale-100' // Normal scale when expanded
-                                                    : 'scale-75' // Smaller scale when collapsed
-                                                }`}
-                                                onClick={() =>
-                                                  handleImageClick(
-                                                    `${row.no_surat_jalan}-${urlType}`,
-                                                  )
-                                                }
-                                                style={{
-                                                  transform: `rotate(${
-                                                    rotationAngle[
-                                                      `${row.no_surat_jalan}-${urlType}`
-                                                    ] || 0
-                                                  }deg)`,
-                                                  transition: 'transform 0.5s',
-                                                }}
-                                              />
-
-                                              {/* Rotation buttons */}
-                                              <div className="absolute top-0 right-0 flex flex-col space-y-2">
-                                                <button
-                                                  className="bg-yellow-300 p-1 rounded-full"
-                                                  onClick={() =>
-                                                    rotateLeft(
-                                                      `${row.no_surat_jalan}-${urlType}`,
-                                                    )
-                                                  }
-                                                >
-                                                  <FontAwesomeIcon
-                                                    icon={faRotateLeft}
-                                                  />
-                                                  {/* Rotate left icon */}
-                                                </button>
-                                                <button
-                                                  className="bg-yellow-300 p-1 rounded-full"
-                                                  onClick={() =>
-                                                    rotateRight(
-                                                      `${row.no_surat_jalan}-${urlType}`,
-                                                    )
-                                                  }
-                                                >
-                                                  <FontAwesomeIcon
-                                                    icon={faRotateRight}
-                                                  />
-                                                  {/* Rotate right icon */}
-                                                </button>
-                                                <button
-                                                  className="bg-yellow-300 p-1 rounded-full"
-                                                  onClick={() =>
-                                                    reuploadImage(
-                                                      row.no_surat_jalan,
-                                                      urlType,
-                                                    )
-                                                  }
-                                                >
-                                                  <FontAwesomeIcon
-                                                    icon={faUpload}
-                                                  />
-                                                  {/* Optionally, you can add text next to the icon */}
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  <FontAwesomeIcon icon={faFileExport} />
+                  Export to File
+                </button>
               </div>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-xl border border-white/20 dark:border-white/10 shadow-md bg-white/40 dark:bg-black/10 backdrop-blur-md">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-white/5">
+                <thead className="bg-gray-50/50 dark:bg-black/40">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">No</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">No Surat Jalan</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuelman</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Operator</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unit</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Qty SJ</th>
+                    <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Qty Sonding</th>
+                    <th className="px-3 py-2 text-center text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-white/5">
+                  {dataRitasi.map((row: any, index) => (
+                    <React.Fragment key={row.no_surat_jalan}>
+                      <tr className="hover:bg-white/60 dark:hover:bg-white/5 transition-all duration-200 group">
+                        <td className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums">{index + 1}</td>
+                        <td className="px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">{row.no_surat_jalan}</td>
+                        <td className="px-3 py-1.5 text-xs text-gray-900 dark:text-gray-300">{row.fuelman_name}</td>
+                        <td className="px-3 py-1.5 text-xs text-gray-900 dark:text-gray-300">{row.operator_name}</td>
+                        <td className="px-3 py-1.5 text-xs text-gray-900 dark:text-gray-300">
+                           <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-black/30 rounded text-[10px] font-bold text-gray-600 dark:text-gray-400">
+                            {row.unit}
+                           </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-xs text-gray-900 dark:text-gray-300 font-bold text-right tabular-nums">{formatNumberWithSeparator(row.qty_sj)}</td>
+                        <td className="px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold text-right tabular-nums">{formatNumberWithSeparator(row.qty_sonding || 0)}</td>
+                        <td className="px-3 py-1.5 text-xs">
+                          <div className="flex items-center justify-center gap-1">
+                            <button 
+                              onClick={() => setExpandedRow(expandedRow === row.no_surat_jalan ? null : row.no_surat_jalan)}
+                              className={`w-6 h-6 flex items-center justify-center rounded-full transition-all ${expandedRow === row.no_surat_jalan ? 'bg-blue-500 text-white rotate-180' : 'hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500'}`}
+                            >
+                              <span className="text-[10px]">▼</span>
+                            </button>
+                            <RitationAction
+                              data={row}
+                              onApprove={() => handleApprove(row.no_surat_jalan)}
+                              onEdit={() => handleEdit(row.no_surat_jalan)}
+                              onDelete={() => handleDelete(row.no_surat_jalan)}
+                              onShare={() => handleShare(row)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedRow === row.no_surat_jalan && (
+                        <tr>
+                          <td colSpan={8} className="px-6 py-6 bg-gray-50/50 dark:bg-black/30 backdrop-blur-md">
+                            <div className="flex flex-col gap-6">
+                              <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                Documentation
+                              </h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {['sj_url', 'flowmeter_before_url', 'flowmeter_after_url'].map((urlType) => (
+                                  <div key={urlType} className="flex flex-col gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 text-center">
+                                      {urlType.replace('_url', '').replace('_', ' ')}
+                                    </span>
+                                    <div className="relative group overflow-hidden rounded-xl border border-white/20 dark:border-white/5 shadow-md aspect-[4/3] bg-gray-100 dark:bg-black/40">
+                                      {row[urlType] ? (
+                                        <>
+                                          <img 
+                                            src={`${baseStorageUrl}/ritation_upload/${extractFullYear(row.no_surat_jalan)}/${row.no_surat_jalan}/${row[urlType]}`} 
+                                            style={{ 
+                                              transform: `rotate(${rotationAngle[`${row.no_surat_jalan}-${urlType}`] || 0}deg)`,
+                                              transition: 'transform 0.5s ease-in-out'
+                                            }}
+                                            className={`w-full h-full object-cover transition-all duration-700 ${expandedImageId === `${row.no_surat_jalan}-${urlType}` ? 'scale-100' : 'group-hover:scale-110'}`}
+                                            alt={urlType}
+                                            onClick={() => handleImageClick(`${row.no_surat_jalan}-${urlType}`)}
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                                            <button className="w-8 h-8 bg-white/20 backdrop-blur-md hover:bg-white/40 rounded-full text-white transition-all transform hover:scale-110" onClick={() => rotateLeft(`${row.no_surat_jalan}-${urlType}`)}><FontAwesomeIcon icon={faRotateLeft} /></button>
+                                            <button className="w-8 h-8 bg-white/20 backdrop-blur-md hover:bg-white/40 rounded-full text-white transition-all transform hover:scale-110" onClick={() => rotateRight(`${row.no_surat_jalan}-${urlType}`)}><FontAwesomeIcon icon={faRotateRight} /></button>
+                                            <button className="w-8 h-8 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-all transform hover:scale-110" onClick={() => reuploadImage(row.no_surat_jalan, urlType)}><FontAwesomeIcon icon={faUpload} /></button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-xs text-gray-400 italic">No Image</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
-    </>
+
+      {isModalOpen && pdfUrl && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div ref={modalRef} className="relative w-full max-w-5xl h-[90vh] bg-white dark:bg-boxdark rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300 border border-white/20">
+            <div className="flex items-center justify-between p-6 border-b dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
+              <h3 className="text-xl font-bold dark:text-white">Document Detail</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-gray-500 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 bg-gray-100 dark:bg-black/20 text-center">
+              <iframe src={pdfUrl} className="w-full h-full border-none" title="PDF Preview" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

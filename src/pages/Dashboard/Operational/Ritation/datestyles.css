@@ -1,3 +1,32 @@
 @import "rsuite/dist/rsuite.css";
 
 #root{ padding: 10px; }
+
+/* Ultra-compact ApexCharts tooltips */
+.apexcharts-tooltip-series-group {
+    padding: 0px 5px !important;
+    margin: 0px !important;
+    min-height: 18px !important;
+}
+
+.apexcharts-tooltip-text {
+    font-size: 11px !important;
+}
+
+.apexcharts-tooltip-title {
+    margin-bottom: 2px !important;
+    padding: 2px 5px !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+}
+
+.apexcharts-tooltip-marker {
+    width: 6px !important;
+    height: 6px !important;
+    margin-right: 6px !important;
+}
+
+.apexcharts-tooltip.apexcharts-theme-light {
+    border: 1px solid #e3e3e3 !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+}

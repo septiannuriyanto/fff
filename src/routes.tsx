@@ -202,7 +202,7 @@ const routes = [
   },
 
   // Operational Routes
-  {
+  { 
     path: '/operational/fleet',
     component: <FleetManagement />,
     title: 'FFF | Fleet Management',
