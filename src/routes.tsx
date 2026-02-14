@@ -67,6 +67,7 @@ import PlantDashboard from './pages/PlantDashboard';
 
 import PublicRoute from './components/PublicRoute';
 import FuelTripManagement from './pages/Dashboard/FuelTripManagement/FuelTripManagement';
+import StockManagement from './pages/Dashboard/StockManagement/StockManagement';
 
 const routes = [
   {
@@ -119,10 +120,19 @@ const routes = [
     title: 'FFF | Fuel Consumption',
     allowedRoles: ADMIN
   },
+
+
   {
-    path: '/fueltrip',
+    path: '/trip',
     component: <FuelTripManagement />,
-    title: 'FFF | Fuel Trip Management',
+    title: 'FFF | Trip Management',
+    allowedRoles: ADMIN
+  },
+
+  {
+    path: '/stock',
+    component: <StockManagement />,
+    title: 'FFF | Stock Management',
     allowedRoles: ADMIN
   },
   {
@@ -177,14 +187,15 @@ const routes = [
   {
     path: '/gardaloto/sessions/:session_id',
     component: <GardaLotoSessionDetails />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    isPublic: true
   },
 
   {
     path: '/profile/:id',
     component: <Profile />,
-    title: 'FFF | Profile',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    isPublic: true
   },
 
   {

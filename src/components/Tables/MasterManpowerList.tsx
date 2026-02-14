@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import ManpowerOne from '../../images/product/product-01.png';
 import { Manpower } from '../../types/manpower';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faAdd,
   faEdit,
-  faExchange,
-  faUpload,
+  faChevronLeft,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import ManpowerActionButton from './components/ManpowerActionButton';
 import DropdownManpowerAction from './components/DropdownManpowerAction';
@@ -15,90 +14,117 @@ import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
 import { supabase } from '../../db/SupabaseClient';
 import {
-  getFileFromUrl,
   profileImageBaseUrl,
   uploadImageGeneral,
 } from '../../services/ImageUploader';
-import DropZoneMini from '../DropZones/DropZoneMini';
 import { getPositionFromPositionCode } from '../../functions/get_nrp';
 import Loader from '../../common/Loader/Loader';
+import UserIcon from '../../images/icon/user-icon.svg';
 
 const MasterManpowerList = () => {
-  
   const navigate = useNavigate();
-
-  const fetchManpower = async () => {
-    const { data, error } = await supabase
-      .from('manpower')
-      .select('*')
-      .order('position')
-      .order('nama');
-
-    if (error) {
-      console.error(error.message);
-      toast.error(error.message);
-      return;
-    }
-
-    // console.log(data);
-    // setDataRow(data);
-    // setInitialDataRow(data);
-
-    //For Simulation
-
-    const updatedData = await Promise.all(
-      data.map(async (item) => ({
-        ...item,
-        status: 'Onsite',
-        nama: item.nama
-          .toLowerCase()
-          .split(' ')
-          .map((word:any) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' '),
-        image: (await getFileFromUrl(`${profileImageBaseUrl}/${item.nrp}`))
-          ? `${profileImageBaseUrl}/${item.nrp}`
-          : null,
-        position: await getPositionFromPositionCode(item.position)
-      })),
-    );
-
-    console.log(updatedData);
-    setDataRow(updatedData);
-    setInitialDataRow(updatedData);
-  };
-
-  useEffect(() => {
-    fetchManpower();
-  }, []);
 
   const [dataRow, setDataRow] = useState<Manpower[]>([] as Manpower[]);
   const [keyword, setKeyword] = useState<string>('');
-  const [initialDataRow, setInitialDataRow] = useState<Manpower[]>([]);
+  const [selectedSection, setSelectedSection] = useState<string>('FAO');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [sections, setSections] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
-  const handleSearch = (e: any) => {
-    e.preventDefault();
-    const searchValue = e.target.value; // Get the input value
-    setKeyword(searchValue);
+  const fetchManpower = async (page: number = 1, searchKeyword: string = '') => {
+    setIsLoading(true);
+    try {
+      // Calculate range for pagination
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
-    if (searchValue !== '') {
-      // Perform a case-insensitive partial match
-      const newData = initialDataRow.filter((data) =>
-        data.nama.toLowerCase().includes(searchValue.toLowerCase()),
+      // Build query
+      let query = supabase
+        .from('manpower')
+        .select('*', { count: 'exact' })
+        .eq('section', 'FAO');
+
+      // Add search filter if keyword exists
+      if (searchKeyword.trim() !== '') {
+        query = query.or(`nama.ilike.%${searchKeyword}%,nickname.ilike.%${searchKeyword}%`);
+      }
+
+      // Add ordering and pagination
+      const { data, error, count } = await query
+        .order('position')
+        .order('nama')
+        .range(from, to);
+
+      if (error) {
+        console.error(error.message);
+        toast.error(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Set total count for pagination
+      setTotalCount(count || 0);
+
+      const updatedData = await Promise.all(
+        data.map(async (item) => {
+          let positionName = '';
+          try {
+            positionName = await getPositionFromPositionCode(item.position);
+          } catch (err) {
+            console.error(`Error getting position for ${item.nrp}:`, err);
+            positionName = 'Unknown';
+          }
+
+          return {
+            ...item,
+            status: 'Onsite',
+            nama: item.nama
+              .toLowerCase()
+              .split(' ')
+              .map((word: any) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+            // Construct image URL directly without checking if file exists
+            // The image component will handle missing images gracefully
+            image: item.photo_url || `${profileImageBaseUrl}/${item.nrp}`,
+            position: positionName,
+          };
+        }),
       );
-      setDataRow(newData); // Set filtered data
-    } else {
-      // Reset to original data when search is cleared
-      setDataRow(initialDataRow); // Reset to original data
+
+      // Since we're only fetching FAO, sections will just be FAO
+      setSections(['FAO']);
+
+      setDataRow(updatedData);
+    } catch (err) {
+      console.error('Error fetching manpower:', err);
+      toast.error('Failed to load manpower data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Fetch data when component mounts or when page/keyword changes
+  useEffect(() => {
+    fetchManpower(currentPage, keyword);
+  }, [currentPage, keyword]);
+
+  // Reset to page 1 when search keyword changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [keyword]);
+
+  // Pagination logic - now based on server-side total count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
   const handleView = (id: any) => {
-    console.log(`Viewing row with id: ${id}`);
     navigate(`/profile/${id}`);
   };
 
   const handleEdit = (id: any) => {
-    console.log(`Editing row with id: ${id}`);
     navigate(`/settings/${id}`);
   };
 
@@ -113,45 +139,22 @@ const MasterManpowerList = () => {
       confirmButtonText: 'OK',
     }).then((result) => {
       if (result.isConfirmed) {
-        // Call the delete function
         const updatedRows = dataRow.filter((row) => row.nrp !== id);
         setDataRow(updatedRows);
-        // Show success toast
         toast.success('Manpower Removed');
       }
     });
   };
 
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState('asc');
-  const handleSort = (column: any) => {
-    const direction =
-      sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
-    setSortColumn(column);
-    setSortDirection(direction);
-
-    // Sort your data here based on the column and direction
-    const sortedData = [...dataRow].sort((a: any, b: any) => {
-      if (direction === 'asc') {
-        return a[column] > b[column] ? 1 : -1;
-      } else {
-        return a[column] < b[column] ? 1 : -1;
-      }
-    });
-    setDataRow(sortedData); // assuming setDataRow is your state updater
-  };
-
   const handleUploadProfileImage = async (e: any, file: File) => {
-
     const uploadstatus = await uploadImageGeneral(
       file,
       'images',
       `profile/${e}`,
     );
     if (uploadstatus) {
-       // Create a new image URL with a cache-busting query parameter
       const timestamp = new Date().getTime();
-    const imageUrl = `${profileImageBaseUrl}/${e}?t=${timestamp}`;
+      const imageUrl = `${profileImageBaseUrl}/${e}?t=${timestamp}`;
       const newDataRow = dataRow.map((row) =>
         row.nrp === e ? { ...row, image: imageUrl } : row,
       );
@@ -164,204 +167,289 @@ const MasterManpowerList = () => {
     const id = e.target.getAttribute('data-id');
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      console.log('Selected file :', file);
-      console.log('Selected id : ', id);
       handleUploadProfileImage(id, file);
-      
-      // Add your logic here to handle the file and ID
     }
   };
 
- 
   const handleButtonClick = (id: string) => {
-    fileInputRef.current?.click(); // Trigger file input click
-    fileInputRef.current?.setAttribute('data-id', id); // Store the ID for later use
+    fileInputRef.current?.click();
+    fileInputRef.current?.setAttribute('data-id', id);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   return (
-    <div>
-      {dataRow.length > 0 ? (
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark justify-between">
-        <Toaster />
-        <div className="add-menpower flex w-full justify-end my-4 ">
-          <Link
-            to="/master/manpower/add"
-            className="mr-4 inline-flex items-center justify-center gap-2.5 rounded-md bg-primary py-2 px-4 text-center font-medium text-white hover:bg-opacity-90 lg:px-4 xl:px-4"
-          >
-            <span>
-              <FontAwesomeIcon icon={faAdd}></FontAwesomeIcon>
-            </span>
-            Add Manpower
-          </Link>
-        </div>
-        <div className="relative text-gray-600">
-          <input
-            value={keyword}
-            onChange={handleSearch}
-            type="search"
-            name="serch"
-            placeholder="Search"
-            className="bg-white h-10 px-5 pr-10 rounded-full text-sm focus:outline-none w-full"
-          />
-          <button type="submit" className="absolute right-0 top-0 mt-3 mr-4">
-            <svg
-              className="h-4 w-4 fill-current"
-              xmlns="http://www.w3.org/2000/svg"
-              xmlnsXlink="http://www.w3.org/1999/xlink"
-              version="1.1"
-              id="Capa_1"
-              x="0px"
-              y="0px"
-              viewBox="0 0 56.966 56.966"
-              xmlSpace="preserve"
-              width="512px"
-              height="512px"
-            >
-              <path d="M55.146,51.887L41.588,37.786c3.486-4.144,5.396-9.358,5.396-14.786c0-12.682-10.318-23-23-23s-23,10.318-23,23  s10.318,23,23,23c4.761,0,9.298-1.436,13.177-4.162l13.661,14.208c0.571,0.593,1.339,0.92,2.162,0.92  c0.779,0,1.518-0.297,2.079-0.837C56.255,54.982,56.293,53.08,55.146,51.887z M23.984,6c9.374,0,17,7.626,17,17s-7.626,17-17,17  s-17-7.626-17-17S14.61,6,23.984,6z" />
-            </svg>
-          </button>
-        </div>
-        <div className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5">
-          <div
-            className="col-span-1 sm:col-span-2 flex items-center"
-            onClick={() => handleSort('nama')}
-          >
-            <p className="font-medium cursor-pointer">Name</p>
+    <div className="p-4">
+      <Toaster />
+      
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+          {/* Header Section */}
+          <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-xl font-semibold text-black dark:text-white">
+                Master Manpower
+              </h3>
+              <Link
+                to="/master/manpower/add"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-primary py-2.5 px-5 text-center font-medium text-white hover:bg-opacity-90"
+              >
+                <FontAwesomeIcon icon={faAdd} />
+                Add Manpower
+              </Link>
+            </div>
           </div>
-          <div
-            className="col-span-1 flex items-center justify-start sm:flex"
-            onClick={() => handleSort('nrp')}
-          >
-            <p className="font-medium cursor-pointer">NRP/SID</p>
-          </div>
-          <div
-            className="col-span-1 hidden items-center sm:flex"
-            onClick={() => handleSort('position')}
-          >
-            <p className="font-medium cursor-pointer">Role</p>
-          </div>
-          <div
-            className="col-span-1 hidden items-center sm:flex"
-            onClick={() => handleSort('join_date')}
-          >
-            <p className="font-medium cursor-pointer">Join Date</p>
-          </div>
-          <div
-            className="col-span-1 hidden items-center sm:flex"
-            onClick={() => handleSort('status')}
-          >
-            <p className="font-medium cursor-pointer">Status</p>
-          </div>
-          <div className="col-span-1 flex items-center justify-center">
-            <p className="font-medium">Action</p>
-          </div>
-        </div>
-  
-        {  dataRow.map((manpower, key) => (
-          <div
-            className="grid grid-cols-3 border-t border-stroke py-4.5 px-4 dark:border-strokedark sm:grid-cols-7 md:px-6 2xl:px-7.5"
-            key={key}
-          >
-            <div className="col-span-1 sm:col-span-2 flex items-center">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className=" flex h-12.5 w-15 rounded-md">
-                  {manpower.image ? (
-                       <button
-                       id={manpower.nrp}
-                       onClick={() => handleButtonClick(manpower.nrp)} // Pass the ID
-                       className="relative flex items-center justify-center"
-                     >
-                       <div className="absolute flex items-center justify-center transition-opacity duration-300">
-                         <FontAwesomeIcon
-                           icon={faEdit}
-                           className="text-slate-700 z-0"
-                         />
-                       </div>
-                       <img
-                         src={manpower.image}
-                         alt="ProfileImg"
-                         className="z-9 h-full w-full object-contain cursor-pointer hover:opacity-30 hover:z-2 transition-opacity duration-300"
-                       />
-                       <input
-                        id={manpower.nrp}
-                         type="file"
-                         ref={fileInputRef}
-                         onChange={handleFileChange}
-                         style={{ display: 'none' }} // Hide the input
-                       />
-                     </button>
-                  ) : (
-                    <DropZoneMini
-                      id={manpower.nrp}
-                      onFileUpload={handleUploadProfileImage}
-                    ></DropZoneMini>
-                  )}
-                </div>
-                <div className="flex flex-col">
-                  <p className="text-sm text-black dark:text-white">
-                    {manpower.nama}
-                    <br></br>
-                  </p>
-                  <p className="text-sm text-slate-400 dark:text-white">
-                    {manpower.email}
-                    <br></br>
-                  </p>
-                </div>
+
+          {/* Filters Section */}
+          <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              {/* Search Input */}
+              <div className="flex-1">
+                <input
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  type="search"
+                  placeholder="Search by name or nickname..."
+                  className="w-full rounded-md border border-stroke bg-transparent px-4 py-2.5 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-primary"
+                />
+              </div>
+
+              {/* Section Dropdown */}
+              <div className="w-full sm:w-48">
+                <select
+                  value={selectedSection}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  className="w-full rounded-md border border-stroke bg-transparent px-4 py-2.5 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white dark:focus:border-primary"
+                >
+                  {sections.map((section) => (
+                    <option key={section} value={section}>
+                      {section === 'All' ? 'All Sections' : section}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-            <div className="col-span-1 flex items-center justify-start sm:flex">
-              <p className="text-sm text-black dark:text-white">
-                {manpower.nrp}
-                <br></br>
-                {manpower.sid_code}
-              </p>
-            </div>
-            <div className="col-span-1 hidden items-center sm:flex">
-              <p className="text-sm text-black dark:text-white">
-                {manpower.position}
-              </p>
-            </div>
-  
-            <div className="col-span-1 hidden items-center sm:flex">
-              <p className="text-sm text-black dark:text-white">
-                {manpower.join_date}
-              </p>
-            </div>
-            <div className="col-span-1 hidden items-center sm:flex">
-              <p
-                className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium ${
-                  manpower.status === 'Onsite'
-                    ? 'bg-success text-success'
-                    : manpower.status === 'Cuti'
-                    ? 'bg-danger text-danger'
-                    : 'bg-warning text-warning'
-                }`}
-              >
-                {manpower.status}
-              </p>
-            </div>
-            <div className="sm:hidden flex justify-center items-center w-full">
-              <DropdownManpowerAction
-                rowId="123"
-                onView={() => handleView(manpower.nrp)}
-                onEdit={() => handleEdit(manpower.nrp)}
-                onDelete={() => handleDelete(manpower.nrp)}
-              />
-            </div>
-            <div className="hidden align-middle justify-center items-center sm:flex">
-              <ManpowerActionButton
-                rowId="123"
-                onView={() => handleView(manpower.nrp)}
-                onEdit={() => handleEdit(manpower.nrp)}
-                onDelete={() => handleDelete(manpower.nrp)}
-              />
+
+            {/* Results Info */}
+            <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              Showing {totalCount > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
             </div>
           </div>
-        )) }
-      </div>
-      ) : (
-        <div>
-          <Loader/>
+
+          {/* Table Section */}
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto">
+              <thead>
+                <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    Profile
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    NRP/SID
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    Section
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    Role
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    Join Date
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 font-medium text-black dark:text-white text-center">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {dataRow.length > 0 ? (
+                  dataRow.map((manpower: Manpower, key: number) => (
+                    <tr
+                      key={key}
+                      className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4"
+                    >
+                      {/* Profile Column */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-16 w-16 flex-shrink-0 rounded-full border border-stroke dark:border-strokedark overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <button
+                              onClick={() => handleButtonClick(manpower.nrp)}
+                              className="relative h-full w-full group flex items-center justify-center"
+                            >
+                              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 z-10">
+                                <FontAwesomeIcon
+                                  icon={faEdit}
+                                  className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                />
+                              </div>
+                              <img
+                                src={manpower.image || UserIcon}
+                                alt={manpower.nama}
+                                className={`h-full w-full object-cover transition-all duration-300 ${!manpower.image ? 'p-3 opacity-50' : ''}`}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = UserIcon;
+                                  target.className = 'h-10 w-10 opacity-50'; // Adjust size for icon fallback
+                                  target.parentElement?.classList.add('bg-gray-200');
+                                }}
+                              />
+                              <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                              />
+                            </button>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium text-black dark:text-white">
+                              {manpower.nama}
+                            </p>
+                            {manpower.nickname && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                @{manpower.nickname}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {manpower.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* NRP/SID Column */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-black dark:text-white">
+                          {manpower.nrp}
+                        </p>
+                        {manpower.sid_code && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {manpower.sid_code}
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Section Column */}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {manpower.section || '-'}
+                        </span>
+                      </td>
+
+                      {/* Role Column */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-black dark:text-white">
+                          {manpower.position}
+                        </p>
+                      </td>
+
+                      {/* Join Date Column */}
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-black dark:text-white">
+                          {manpower.join_date}
+                        </p>
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="px-6 py-4">
+                        <p
+                          className={`inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium ${
+                            manpower.status === 'Onsite'
+                              ? 'bg-success text-success'
+                              : manpower.status === 'Cuti'
+                              ? 'bg-danger text-danger'
+                              : 'bg-warning text-warning'
+                          }`}
+                        >
+                          {manpower.status}
+                        </p>
+                      </td>
+
+                      {/* Action Column */}
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center">
+                          <div className="hidden sm:block">
+                            <ManpowerActionButton
+                              rowId={manpower.nrp}
+                              onView={() => handleView(manpower.nrp)}
+                              onEdit={() => handleEdit(manpower.nrp)}
+                              onDelete={() => handleDelete(manpower.nrp)}
+                            />
+                          </div>
+                          <div className="sm:hidden">
+                            <DropdownManpowerAction
+                              rowId={manpower.nrp}
+                              onView={() => handleView(manpower.nrp)}
+                              onEdit={() => handleEdit(manpower.nrp)}
+                              onDelete={() => handleDelete(manpower.nrp)}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No manpower found
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Section */}
+          {totalPages > 1 && (
+            <div className="border-t border-stroke px-6 py-4 dark:border-strokedark">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center gap-2 rounded-md border border-stroke px-4 py-2 text-sm font-medium text-black hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:text-white dark:hover:bg-meta-4"
+                >
+                  <FontAwesomeIcon icon={faChevronLeft} />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`h-9 w-9 rounded-md text-sm font-medium ${
+                        currentPage === page
+                          ? 'bg-primary text-white'
+                          : 'border border-stroke text-black hover:bg-gray-50 dark:border-strokedark dark:text-white dark:hover:bg-meta-4'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center gap-2 rounded-md border border-stroke px-4 py-2 text-sm font-medium text-black hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-strokedark dark:text-white dark:hover:bg-meta-4"
+                >
+                  Next
+                  <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

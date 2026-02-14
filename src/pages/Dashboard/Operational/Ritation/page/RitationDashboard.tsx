@@ -48,7 +48,7 @@ const RitationDashboard = () => {
   const [distributionViewMode, setDistributionViewMode] = useState<'day' | 'month'>('day');
   const [dataRitasi, setDataRitasi] = useState<RitasiFuelData[]>([]);
   const [dataRitasiMonthly, setDataRitasiMonthly] = useState<RitasiFuelData[]>([]);
-  const [dataReconcile, setDataReconcile] = useState<ReconcileFuelData[]>([]);
+  const [, setDataReconcile] = useState<ReconcileFuelData[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [expandedImageId, setExpandedImageId] = useState<string | null>(null);
   const [rotationAngle, setRotationAngle] = useState<{ [key: string]: number }>(

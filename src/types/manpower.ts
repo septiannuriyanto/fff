@@ -3,6 +3,8 @@ export type Manpower = {
   nrp: string;
   sid_code: string;
   nama: string;
+  nickname?: string;
+  section?: string;
   position: string;
   email?: string;
   contract_date?: string;

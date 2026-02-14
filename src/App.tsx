@@ -10,8 +10,8 @@ const App = () => {
     <>
       <Toaster position="top-center" reverseOrder={false} />
       <Routes>
-        {routes.map(({ path, component, title, allowedRoles }) => {
-          // Pisahkan landing page agar tidak dibungkus DefaultLayout
+        {routes.map(({ path, component, title, allowedRoles, isPublic }: any) => {
+          // Landing page remains outside the main layout
           if (path === '/') {
             return (
               <Route
@@ -27,7 +27,7 @@ const App = () => {
               path={path}
               element={
                 <DefaultLayout>
-                  {title ? (
+                  {title && !isPublic ? (
                     <ProtectedRoute allowedRoles={allowedRoles}>
                       <>
                         <PageTitle title={title} />
@@ -35,7 +35,10 @@ const App = () => {
                       </>
                     </ProtectedRoute>
                   ) : (
-                    component
+                    <>
+                      {title && <PageTitle title={title} />}
+                      {component}
+                    </>
                   )}
                 </DefaultLayout>
               }
