@@ -30,3 +30,22 @@
     border: 1px solid #e3e3e3 !important;
     background: rgba(255, 255, 255, 0.96) !important;
 }
+
+/* Elegant Minimal DatePicker */
+.custom-date-picker.rs-picker-subtle .rs-picker-toggle {
+    background-color: transparent !important;
+    padding: 2px 4px !important;
+    cursor: pointer !important;
+}
+.custom-date-picker .rs-picker-toggle-value {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: #3b82f6 !important;
+    text-transform: uppercase;
+    cursor: pointer !important;
+}
+.custom-date-picker .rs-picker-toggle-caret,
+.custom-date-picker .rs-picker-toggle-clean {
+    display: none !important;
+}
+

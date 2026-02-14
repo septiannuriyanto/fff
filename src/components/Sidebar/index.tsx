@@ -216,7 +216,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/dashboard" label="Home" mini={isMini} />
                 <SidebarLink to="/fuelcons" label="Fuel Consumption" mini={isMini} />
-                <SidebarLink to="/stockmanagement" label="Stock Management" mini={isMini} />
+                <SidebarLink to="/fueltrip" label="Trip Management" mini={isMini} />
                 <SidebarLink to="/operational" label="Operational" mini={isMini} />
                 <SidebarLink to="/infrastructure" label="Infrastructure" mini={isMini} />
                 <SidebarLink to="/manpower" label="Manpower" mini={isMini} />

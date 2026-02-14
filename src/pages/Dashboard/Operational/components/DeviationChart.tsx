@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, memo } from 'react';
 import Chart from 'react-apexcharts';
 
 interface DeviationChartProps {
@@ -32,7 +32,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
     setCumulativeDeviation(cumulative);
   }, [chartDataDaily, chartDataCumulative]);
 
-  const chartData = {
+  const chartData = useMemo(() => ({
     series: [
       {
         name: 'Deviasi Harian',
@@ -62,7 +62,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
         curve: 'smooth' as 'smooth',
       },
       fill: {
-        type: ['solid', 'gradient'],
+        type: ['solid', 'gradient'] as any[],
         gradient: {
           shade: 'light',
           type: 'vertical',
@@ -137,7 +137,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
             labels: {
               formatter: (value: number) => value.toLocaleString('id-ID'),
             },
-          },
+          } as any,
       legend: {
         show: false,
       },
@@ -168,7 +168,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
         },
       },
     },
-  };
+  }), [dailyDeviation, cumulativeDeviation, date, normalize]);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -200,7 +200,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
   return (
     <div className="w-full overflow-hidden">
       <div className="flex items-center justify-between mb-4 px-2">
-        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Deviation Chart (Qty Sonding - Qty SJ)</h4>
+        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Measurement Deviation by Date</h4>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
           <button 
@@ -236,4 +236,4 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
   );
 };
 
-export default DeviationChart;
+export default memo(DeviationChart);

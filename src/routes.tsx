@@ -2,7 +2,6 @@ import SignIn from './pages/Authentication/SignIn';
 import SignUp from './pages/Authentication/SignUp';
 import Dashboard from './pages/Dashboard';
 import FuelConsumption from './pages/Dashboard/FuelConsumption/FuelConsumption';
-import StockManagement from './pages/Dashboard/Stock Management/StockManagement';
 import Infrastructure from './pages/Dashboard/Infrastructure/Infrastructure';
 import Operational from './pages/Dashboard/Operational/Operational';
 import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
@@ -67,6 +66,7 @@ import BaCleanliness from './pages/Plant/Cleanliness/BaCleanliness';
 import PlantDashboard from './pages/PlantDashboard';
 
 import PublicRoute from './components/PublicRoute';
+import FuelTripManagement from './pages/Dashboard/FuelTripManagement/FuelTripManagement';
 
 const routes = [
   {
@@ -116,13 +116,13 @@ const routes = [
   {
     path: '/fuelcons',
     component: <FuelConsumption />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Fuel Consumption',
     allowedRoles: ADMIN
   },
   {
-    path: '/stockmanagement',
-    component: <StockManagement />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    path: '/fueltrip',
+    component: <FuelTripManagement />,
+    title: 'FFF | Fuel Trip Management',
     allowedRoles: ADMIN
   },
   {
@@ -134,13 +134,13 @@ const routes = [
   {
     path: '/operational/ritation',
     component: <RefuelingAnomaly allowColumnsEdit />,
-    title: 'FFF | Ritation Dashboard',
+    title: 'FFF | Refueling Anomaly',
     allowedRoles: ADMIN
   },
   {
     path: '/infrastructure',
     component: <Infrastructure />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Infrastructure',
     allowedRoles: ADMIN
   },
   {
@@ -158,13 +158,13 @@ const routes = [
   {
     path: '/infrastructure/pressureless',
     component: <PressurelessSummary allowColumnsEdit />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Pressureless',
     allowedRoles: ALL_ROLES
   },
   {
     path: '/manpower',
     component: <Manpower />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Manpower',
     allowedRoles: ADMIN
   },
 
@@ -183,14 +183,14 @@ const routes = [
   {
     path: '/profile/:id',
     component: <Profile />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Profile',
     allowedRoles: ALL_ROLES
   },
 
   {
     path: '/settings/:id',
     component: <Settings />,
-    title: 'FFF | Fuel Feasibility for Fleet',
+    title: 'FFF | Settings',
     allowedRoles: ALL_ROLES
   },
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, memo } from 'react';
 import Chart from 'react-apexcharts';
 
 interface DailyRitationChartProps {
@@ -36,12 +36,14 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     const qtyPoBalance: (number | null)[] = [];
 
     // Fill in the dates and quantities from chartDataInput
-    for (let index = 0; index < chartDataInput.length; index++) {
-      dates.push(new Date(chartDataInput[index].date).getDate().toString());
-      qtys.push(chartDataInput[index].total);
-      qtyReconcile.push(chartDataReconcile[index]?.total || 0); // Use optional chaining to avoid undefined
-      qtyCumulative.push(chartDataCumulative?.[index]?.total ?? null); // Keep null for line termination
-      qtyPoBalance.push(chartDataPoBalance?.[index]?.total ?? null);
+    if (chartDataInput && chartDataInput.length > 0) {
+      for (let index = 0; index < chartDataInput.length; index++) {
+        dates.push(new Date(chartDataInput[index].date).getDate().toString());
+        qtys.push(chartDataInput[index].total);
+        qtyReconcile.push(chartDataReconcile[index]?.total || 0); // Use optional chaining to avoid undefined
+        qtyCumulative.push(chartDataCumulative?.[index]?.total ?? null); // Keep null for line termination
+        qtyPoBalance.push(chartDataPoBalance?.[index]?.total ?? null);
+      }
     }
 
     // const dailyTarget = totalPlan / daysInMonth;
@@ -75,7 +77,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
   const [normalize, setNormalize] = useState(false);
   
   // Create an array for the daily target line
-  const chartData = {
+  const chartData = useMemo(() => ({
     series: [
       {
         name: 'Ritation Qty',
@@ -115,7 +117,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         curve: 'smooth' as 'smooth',
       },
       fill: {
-        type: ['solid', 'solid', 'gradient', 'gradient'],
+        type: ['solid', 'solid', 'gradient', 'gradient'] as any[],
         gradient: {
           shade: 'light',
           type: 'vertical',
@@ -170,7 +172,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         : {
             title: { style: { fontSize: '0px' } },
             labels: { formatter: (value: number) => value.toLocaleString('id-ID') },
-          },
+          } as any,
       legend: {
         show: false,
       },
@@ -201,7 +203,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         },
       },
     },
-  };
+  }), [qty, reconcileQty, cumulativeRitation, poBalance, date, normalize]);
   
   
   
@@ -237,7 +239,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
   return (
     <div className="w-full overflow-hidden">
       <div className="flex items-center justify-between mb-4 px-2">
-        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Daily Ritation Chart</h4>
+        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Fuel Trips by Date</h4>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
           <button 
@@ -273,4 +275,4 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
   );
 };
 
-export default DailyRitationChart;
+export default memo(DailyRitationChart);

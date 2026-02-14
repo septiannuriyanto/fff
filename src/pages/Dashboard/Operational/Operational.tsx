@@ -3,7 +3,7 @@ import RefuelingAnomaly from './RefuelingAnomaly';
 import React, { useState, useEffect} from 'react'
 import { supabase } from '../../../db/SupabaseClient'
 import { Session } from '@supabase/supabase-js'; // Import Session type
-import Ritation from './Ritation/Ritation';
+import Ritation from './Ritation/page/RitationDashboard';
 const Operational = () => {
   const [session, setSession] = useState<Session | null>(null);
   useEffect(() => {
