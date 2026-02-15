@@ -56,6 +56,7 @@ const ManpowerCompetencyTab = ({ initialSearchTerm = '' }: ManpowerCompetencyTab
   const [data, setData] = useState<CompetencyStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [searchInput, setSearchInput] = useState(initialSearchTerm);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,8 +84,20 @@ const ManpowerCompetencyTab = ({ initialSearchTerm = '' }: ManpowerCompetencyTab
 
   useEffect(() => {
     // If props change, update state
-    if (initialSearchTerm) setSearchTerm(initialSearchTerm);
+    if (initialSearchTerm) {
+      setSearchTerm(initialSearchTerm);
+      setSearchInput(initialSearchTerm);
+    }
   }, [initialSearchTerm]);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   useEffect(() => {
     fetchCompetencyStatus();
@@ -364,12 +377,12 @@ const ManpowerCompetencyTab = ({ initialSearchTerm = '' }: ManpowerCompetencyTab
             type="text"
             placeholder="Search by name, NRP, or competency..."
             className="w-full rounded-lg border border-stroke bg-transparent py-2.5 pl-12 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 transition"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
-          {searchTerm && (
+          {searchInput && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => setSearchInput('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-danger transition-colors p-1"
             >
               <FontAwesomeIcon icon={faTimes} />
@@ -407,83 +420,86 @@ const ManpowerCompetencyTab = ({ initialSearchTerm = '' }: ManpowerCompetencyTab
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-stroke dark:border-strokedark">
-        <table className="w-full table-auto">
-          <thead>
-            <tr className="bg-gray-2 text-left dark:bg-meta-4">
-              <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Manpower</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Competency</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Obtained</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Expired</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Doc</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Status</th>
-              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stroke dark:divide-strokedark bg-white dark:bg-boxdark">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-400">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent shadow-sm"></div>
-                    <span>Loading competency status...</span>
-                  </div>
-                </td>
+      <div className="relative overflow-visible rounded-lg border border-stroke dark:border-strokedark shadow-sm bg-white dark:bg-boxdark">
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="absolute inset-0 z-20 backdrop-blur-[2px] bg-white/30 dark:bg-black/20 flex flex-col items-center justify-center transition-all duration-300">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              <p className="text-xs font-bold text-primary animate-pulse uppercase tracking-widest">Searching records...</p>
+            </div>
+          </div>
+        )}
+
+        <div className={`overflow-x-auto min-h-[350px] transition-all duration-300 ${loading ? 'opacity-50 grayscale-[0.2]' : 'opacity-100'}`}>
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Manpower</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Competency</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Obtained</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Expired</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Doc</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Status</th>
+                <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Actions</th>
               </tr>
-            ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-400">
-                  No records found.
-                </td>
-              </tr>
-            ) : (
-              data.map((item, index) => (
-                <tr key={`${item.nrp}-${item.competency_name}-${index}`} className="hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors text-sm">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-black dark:text-white">{item.nama}</div>
-                    <div className="text-[10px] text-slate-400 font-mono tracking-tighter">{item.nrp}</div>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-primary">{item.competency_name}</td>
-                  <td className="px-6 py-4 text-center font-medium">{item.obtained_date}</td>
-                  <td className="px-6 py-4 text-center font-medium">{item.expired_date || 'Unlimited'}</td>
-                  <td className="px-6 py-4 text-center">
-                    {item.document_url ? (
-                      <button
-                        onClick={(e) => handleZoomUrl(e, item.document_url!, `${item.nama} - ${item.competency_name}`)}
-                        className="font-bold text-primary hover:text-primary/70 transition-colors py-1 px-2 hover:bg-primary/5 rounded-md"
-                      >
-                        View
-                      </button>
-                    ) : (
-                      <span className="text-slate-300 text-xs italic">N/A</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {getStatusBadge(item.status)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleEditClick(item)}
-                        className="p-2 text-slate-400 hover:text-primary transition-all duration-200"
-                        title="Edit Record"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="text-base" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(item)}
-                        className="p-2 text-slate-400 hover:text-danger transition-all duration-200"
-                        title="Delete Record"
-                      >
-                        <FontAwesomeIcon icon={faTrash} className="text-base" />
-                      </button>
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-stroke dark:divide-strokedark bg-white dark:bg-boxdark">
+              {data.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
+                    No records found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                data.map((item, index) => (
+                  <tr key={`${item.id}-${index}`} className="hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors text-sm">
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-black dark:text-white">{item.nama}</div>
+                      <div className="text-[10px] text-slate-400 font-mono tracking-tighter">{item.nrp}</div>
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-primary">{item.competency_name}</td>
+                    <td className="px-6 py-4 text-center font-medium">{item.obtained_date}</td>
+                    <td className="px-6 py-4 text-center font-medium">{item.expired_date || 'Unlimited'}</td>
+                    <td className="px-6 py-4 text-center">
+                      {item.document_url ? (
+                        <button
+                          onClick={(e) => handleZoomUrl(e, item.document_url!, `${item.nama} - ${item.competency_name}`)}
+                          className="font-bold text-primary hover:text-primary/70 transition-colors py-1 px-2 hover:bg-primary/5 rounded-md"
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <span className="text-slate-300 text-xs italic">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {getStatusBadge(item.status)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          className="p-2 text-slate-400 hover:text-primary transition-all duration-200"
+                          title="Edit Record"
+                        >
+                          <FontAwesomeIcon icon={faEdit} className="text-base" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item)}
+                          className="p-2 text-slate-400 hover:text-danger transition-all duration-200"
+                          title="Delete Record"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="text-base" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination Controls */}

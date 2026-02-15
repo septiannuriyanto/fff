@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import UserIcon from '../../../../images/icon/user-icon.svg';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../../db/SupabaseClient';
 import toast from 'react-hot-toast';
 import { Manpower } from '../../../../types/manpower';
@@ -21,6 +21,7 @@ import DocumentsTab from './components/DocumentsTab';
 const Profile = () => {
   const { currentUser } = useAuth();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   
   const isOwner = currentUser?.nrp === id;
   const isSupervisor = currentUser && currentUser.role && SUPERVISOR.includes(currentUser.role);
@@ -70,6 +71,17 @@ const Profile = () => {
   useEffect(() => {
     fetchSingleProfile();
   }, [id]);
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      const validTabs = ['general', 'competency', 'achievement', 'documents'];
+      if (validTabs.includes(tabParam)) {
+        setActiveTab(tabParam as 'general' | 'competency' | 'achievement' | 'documents');
+      }
+    }
+  }, [searchParams]);
 
   const handleBack = () =>{
     window.history.back();
@@ -158,7 +170,10 @@ const Profile = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl relative">
+      {/* Fixed Gradient Background */}
+      <div className="fixed inset-0 z-[-1] bg-gradient-to-br from-blue-50 via-slate-50 to-purple-50 dark:from-boxdark dark:via-black dark:to-boxdark opacity-80 pointer-events-none"></div>
+      <div className="fixed top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-spin-slow pointer-events-none z-[-1]"></div>
       {/* Profile Header Card */}
       <div className={`relative overflow-hidden rounded-lg border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6 transition-all duration-300 min-h-[400px] flex flex-col justify-end ${isCoverMaximized ? 'fixed inset-0 z-50 rounded-none h-screen w-screen m-0' : ''}`}>
         
@@ -270,7 +285,7 @@ const Profile = () => {
 
               {/* Name & Role */}
               <div className="flex flex-col items-center md:items-start mb-2 md:mb-6 text-center md:text-left flex-1 relative z-30">
-                 <div className="mt-2 md:mt-0 backdrop-blur-md bg-white/60 dark:bg-black/60 border border-white/50 dark:border-white/10 shadow-lg rounded-2xl py-3 px-6 transform transition-all hover:scale-[1.02] duration-300">
+                 <div className="mt-2 md:mt-0 backdrop-blur-lg bg-white/20 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-lg rounded-2xl py-3 px-6 transform transition-all hover:scale-[1.02] duration-300">
                      <h3 className="text-2xl md:text-3xl font-bold text-black dark:text-white drop-shadow-sm tracking-tight">
                         {profileData?.nama || 'Loading...'}
                      </h3>
@@ -290,7 +305,7 @@ const Profile = () => {
         </div>
 
         {/* Tab Navigation Bar - Glass Effect */}
-        <div className={`border-t border-white/20 dark:border-white/10 bg-white/80 dark:bg-black/30 backdrop-blur-md px-4 md:px-10 relative z-30 ${isCoverMaximized ? 'hidden' : ''}`}>
+        <div className={`border-t border-white/20 dark:border-white/10 bg-white/60 dark:bg-black/30 backdrop-blur-lg px-4 md:px-10 relative z-30 ${isCoverMaximized ? 'hidden' : ''}`}>
            <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
               {tabs.map((tab) => (
                 <button

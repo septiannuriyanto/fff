@@ -7,9 +7,10 @@ interface DropdownManpowerActionProps {
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  showEdit?: boolean; // New prop to control Edit visibility
 }
 
-const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, onView, onEdit, onDelete }) => {
+const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, onView, onEdit, onDelete, showEdit = true }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const trigger = useRef<HTMLButtonElement>(null);
@@ -39,7 +40,7 @@ const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, 
   return (
     <div className="relative flex">
       <button
-        className="text-[#98A6AD] hover:text-body"
+        className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center shadow-sm"
         ref={trigger}
         onClick={() => setDropdownOpen(!dropdownOpen)}
       >
@@ -57,18 +58,20 @@ const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, 
           className="flex w-full items-center gap-2 rounded-sm px-4 py-1.5 text-left text-sm hover:bg-gray dark:hover:bg-meta-4"
         >
           <FontAwesomeIcon icon={faEye} />
-          View
+          View Profile
         </button>
-        <button
-          onClick={() => {
-            onEdit(rowId);
-            setDropdownOpen(false);
-          }}
-          className="flex w-full items-center gap-2 rounded-sm px-4 py-1.5 text-left text-sm hover:bg-gray dark:hover:bg-meta-4"
-        >
-          <FontAwesomeIcon icon={faEdit} />
-          Edit
-        </button>
+        {showEdit && (
+          <button
+            onClick={() => {
+              onEdit(rowId);
+              setDropdownOpen(false);
+            }}
+            className="flex w-full items-center gap-2 rounded-sm px-4 py-1.5 text-left text-sm hover:bg-gray dark:hover:bg-meta-4"
+          >
+            <FontAwesomeIcon icon={faEdit} />
+            Edit Profile
+          </button>
+        )}
         <button
           onClick={() => {
             onDelete(rowId);
@@ -77,7 +80,7 @@ const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, 
           className="flex w-full items-center gap-2 rounded-sm px-4 py-1.5 text-left text-sm hover:bg-gray dark:hover:bg-meta-4"
         >
           <FontAwesomeIcon icon={faRemove} />
-          Delete
+          Delete User
         </button>
       </div>
     </div>

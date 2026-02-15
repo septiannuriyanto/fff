@@ -37,20 +37,20 @@ const GeneralInfoTab = ({ profileData }: GeneralInfoTabProps) => {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {/* Position Card */}
-      <div className="rounded-sm border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
+      <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/40 hover:scale-[1.02] transition-transform duration-300">
         <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary backdrop-blur-sm">
             <FontAwesomeIcon icon={faBriefcase} />
           </div>
           <h4 className="font-semibold text-black dark:text-white">Position</h4>
         </div>
-        <p className="text-sm font-medium ml-13">{profileData.position || '-'}</p>
+        <p className="text-sm font-medium ml-13 text-slate-700 dark:text-slate-300">{profileData.position || '-'}</p>
       </div>
 
       {/* SID Code Card */}
-      <div className="rounded-sm border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
+      <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/40 hover:scale-[1.02] transition-transform duration-300">
         <div className="flex items-center gap-3 mb-3">
-           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/10 text-secondary">
+           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/20 text-secondary backdrop-blur-sm">
             <FontAwesomeIcon icon={faIdCard} />
           </div>
           <h4 className="font-semibold text-black dark:text-white">SID Code</h4>
@@ -64,31 +64,34 @@ const GeneralInfoTab = ({ profileData }: GeneralInfoTabProps) => {
       </div>
 
       {/* Contract Date Card */}
-      <div className="rounded-sm border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
+      <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/40 hover:scale-[1.02] transition-transform duration-300">
         <div className="flex items-center gap-3 mb-3">
-           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success">
+           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20 text-success backdrop-blur-sm">
             <FontAwesomeIcon icon={faFileContract} />
           </div>
           <h4 className="font-semibold text-black dark:text-white">Contract Date</h4>
         </div>
-        <p className="text-sm font-medium ml-13">{formatDate(profileData.contract_date)}</p>
+        <p className="text-sm font-medium ml-13 text-slate-700 dark:text-slate-300">{formatDate(profileData.contract_date)}</p>
       </div>
 
        {/* Join Date / Other Info */}
-       <div className="rounded-sm border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
+       <div className="rounded-2xl border border-white/40 bg-white/40 p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/40 hover:scale-[1.02] transition-transform duration-300">
         <div className="flex items-center gap-3 mb-3">
-           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10 text-warning">
+           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20 text-warning backdrop-blur-sm">
             <FontAwesomeIcon icon={faCalendarAlt} />
           </div>
           <h4 className="font-semibold text-black dark:text-white">Join Date</h4>
         </div>
-        <p className="text-sm font-medium ml-13">{formatDate(profileData.join_date)}</p>
+        <p className="text-sm font-medium ml-13 text-slate-700 dark:text-slate-300">{formatDate(profileData.join_date)}</p>
       </div>
       
       {/* Biography - Full Width */}
-      <div className="md:col-span-2 rounded-sm border border-stroke bg-white p-6 shadow-default dark:border-strokedark dark:bg-boxdark">
-        <h4 className="mb-4 text-xl font-semibold text-black dark:text-white">Biography</h4>
-        <p className="font-medium text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+      <div className="md:col-span-2 rounded-3xl border border-white/40 bg-white/40 p-8 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/40">
+        <h4 className="mb-4 text-xl font-bold text-black dark:text-white flex items-center gap-2">
+            <span className="w-1 h-6 rounded-full bg-primary block"></span>
+            Biography
+        </h4>
+        <p className="font-medium text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
             {profileData.biography || 'No biography available.'}
         </p>
       </div>

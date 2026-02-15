@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import MasterManpowerList from '../../../components/Tables/MasterManpowerList';
+import MasterManpowerList from './components/MasterManpowerList';
 import PanelContainer from '../../PanelContainer';
 import ManpowerCompetencyTab from './components/ManpowerCompetencyTab';
 

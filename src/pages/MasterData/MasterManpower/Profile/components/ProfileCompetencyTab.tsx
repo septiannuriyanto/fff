@@ -272,82 +272,86 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
+      {/* Search and Action Bar - Glassmorphism */}
+      <div className="flex flex-col md:flex-row justify-between gap-4 p-2 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-white/5">
         <div className="relative w-full max-w-sm">
           <input
             type="text"
             placeholder="Search competency..."
-            className="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4"
+            className="w-full rounded-xl border border-white/20 bg-white/40 dark:bg-black/40 py-2 pl-4 pr-10 outline-none focus:border-primary text-black dark:text-white placeholder-slate-500 backdrop-blur-sm transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
             {searchTerm ? <button onClick={() => setSearchTerm('')}><FontAwesomeIcon icon={faTimes}/></button> : <FontAwesomeIcon icon={faMagnifyingGlass} />}
           </span>
         </div>
         
         {isSupervisor && (
-          <button onClick={handleAssignClick} className="flex items-center gap-2 bg-primary px-4 py-2 text-white rounded-lg hover:bg-opacity-90 text-sm font-bold">
+          <button onClick={handleAssignClick} className="flex items-center gap-2 bg-primary/80 backdrop-blur-sm hover:bg-primary px-4 py-2 text-white rounded-xl shadow-lg hover:shadow-primary/30 transition-all text-sm font-bold">
             <FontAwesomeIcon icon={faPlus} /> Assign New
           </button>
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark">
-        <table className="w-full table-auto">
-          <thead>
-            <tr className="bg-gray-2 text-left dark:bg-meta-4">
-              <th className="px-4 py-3 font-semibold text-black dark:text-white text-xs uppercase">Competency</th>
-              <th className="px-4 py-3 font-semibold text-black dark:text-white text-center text-xs uppercase">Obtained</th>
-              <th className="px-4 py-3 font-semibold text-black dark:text-white text-center text-xs uppercase">Expired</th>
-              <th className="px-4 py-3 font-semibold text-black dark:text-white text-center text-xs uppercase">Doc</th>
-              <th className="px-4 py-3 font-semibold text-black dark:text-white text-center text-xs uppercase">Status</th>
-              {isSupervisor && (
-                <th className="px-4 py-3 font-semibold text-black dark:text-white text-center text-xs uppercase">Action</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-               <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-8 text-slate-400">Loading...</td></tr>
-            ) : data.length === 0 ? (
-               <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-8 text-slate-400">No competency records found.</td></tr>
-            ) : (
-              data.map((item, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-meta-4/20 text-sm border-t border-stroke dark:border-strokedark">
-                  <td className="px-4 py-3 font-medium text-black dark:text-white">{item.competency_name}</td>
-                  <td className="px-4 py-3 text-center">{item.obtained_date}</td>
-                  <td className="px-4 py-3 text-center">{item.expired_date || '-'}</td>
-                  <td className="px-4 py-3 text-center">
-                    {item.document_url ? (
-                      <button onClick={(e) => handleZoomUrl(e, item.document_url!, item.competency_name)} className="text-primary hover:underline text-xs font-bold">View</button>
-                    ) : <span className="text-xs text-slate-300">N/A</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(item.status)}</td>
-                  
-                  {isSupervisor && (
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(item)} className="text-slate-400 hover:text-primary"><FontAwesomeIcon icon={faEdit}/></button>
-                        <button onClick={() => handleDeleteClick(item)} className="text-slate-400 hover:text-danger"><FontAwesomeIcon icon={faTrash}/></button>
-                      </div>
+      {/* Table Container - Glassmorphism */}
+      <div className="overflow-hidden rounded-3xl border border-white/20 bg-white/20 dark:bg-black/20 backdrop-blur-xl shadow-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-white/40 dark:bg-black/40 text-left border-b border-white/10 text-slate-700 dark:text-slate-200">
+                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Competency</th>
+                <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Obtained</th>
+                <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Expired</th>
+                <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Doc</th>
+                <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Status</th>
+                {isSupervisor && (
+                  <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Action</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/10">
+              {loading ? (
+                 <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-12 text-slate-500 font-medium animate-pulse">Loading data...</td></tr>
+              ) : data.length === 0 ? (
+                 <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-12 text-slate-500 font-medium">No competency records found.</td></tr>
+              ) : (
+                data.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-white/30 dark:hover:bg-white/5 transition-colors duration-200 text-sm group">
+                    <td className="px-6 py-4 font-semibold text-black dark:text-white">{item.competency_name}</td>
+                    <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-300">{item.obtained_date}</td>
+                    <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-300">{item.expired_date || '-'}</td>
+                    <td className="px-4 py-4 text-center">
+                      {item.document_url ? (
+                        <button onClick={(e) => handleZoomUrl(e, item.document_url!, item.competency_name)} className="px-3 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold">View</button>
+                      ) : <span className="text-xs text-slate-400 italic">N/A</span>}
                     </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    <td className="px-4 py-4 text-center">{getStatusBadge(item.status)}</td>
+                    
+                    {isSupervisor && (
+                      <td className="px-4 py-4 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-center gap-3">
+                          <button onClick={() => handleEditClick(item)} className="text-slate-400 hover:text-primary transition-colors"><FontAwesomeIcon icon={faEdit} size="lg"/></button>
+                          <button onClick={() => handleDeleteClick(item)} className="text-slate-400 hover:text-danger transition-colors"><FontAwesomeIcon icon={faTrash} size="lg"/></button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-       {/* Pagination (Simplified) */}
+       {/* Pagination - Glassmorphism */}
        {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
+        <div className="flex justify-center gap-2 mt-6">
            {[...Array(totalPages)].map((_, i) => (
              <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-8 h-8 rounded-full text-xs font-bold ${currentPage === i + 1 ? 'bg-primary text-white' : 'bg-gray-2 text-black dark:bg-meta-4 dark:text-white hover:bg-gray-300'}`}
+                className={`w-10 h-10 rounded-full text-xs font-bold shadow-lg transition-all transform hover:scale-110 ${currentPage === i + 1 ? 'bg-primary text-white scale-110' : 'bg-white/40 dark:bg-black/40 text-black dark:text-white hover:bg-white/60 backdrop-blur-sm'}`}
              >
                {i + 1}
              </button>
@@ -355,57 +359,59 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
         </div>
       )}
 
-      {/* Modal - Render only if open to save resources, but keep boolean check for logic */}
+      {/* Modal - Use existing modal structure but enhanced with glassmorphism */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-boxdark rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in-95">
-             <h3 className="text-lg font-bold text-black dark:text-white mb-4">{editingId ? 'Edit Competency' : 'Assign Competency'}</h3>
-             <div className="space-y-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white/90 dark:bg-boxdark/90 backdrop-blur-xl rounded-2xl w-full max-w-lg p-8 shadow-2xl border border-white/20 animate-in zoom-in-95 ring-1 ring-white/20">
+             <h3 className="text-xl font-bold text-black dark:text-white mb-6 border-b border-white/10 pb-4">{editingId ? 'Edit Competency' : 'Assign Competency'}</h3>
+             <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold mb-1">Competency</label>
+                  <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Competency</label>
                   <select 
-                    className="w-full rounded border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4"
+                    className="w-full rounded-xl border border-stroke bg-white/50 py-3 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4/50 focus:ring-2 focus:ring-primary/20 transition-all"
                     value={selectedCompId}
                     onChange={(e) => setSelectedCompId(Number(e.target.value))}
                   >
-                    <option value="">Select...</option>
+                    <option value="">Select competency...</option>
                     {competencies.map(c => <option key={c.id} value={c.id}>{c.competency_name}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                    <div>
-                      <label className="block text-sm font-bold mb-1">Obtained</label>
-                      <input type="date" className="w-full rounded border-stroke bg-transparent py-2 px-3 outline-none dark:border-strokedark dark:bg-meta-4" value={trainingDate} onChange={(e) => setTrainingDate(e.target.value)} />
+                      <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Obtained</label>
+                      <input type="date" className="w-full rounded-xl border border-stroke bg-white/50 py-3 px-4 outline-none dark:border-strokedark dark:bg-meta-4/50 focus:ring-2 focus:ring-primary/20 transition-all" value={trainingDate} onChange={(e) => setTrainingDate(e.target.value)} />
                    </div>
                    <div>
-                      <label className="block text-sm font-bold mb-1">Expired</label>
-                      <input type="date" className="w-full rounded border-stroke bg-slate-100 py-2 px-3 outline-none dark:bg-slate-800 text-slate-500" value={expiredDate} disabled readOnly />
+                      <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Expired</label>
+                      <input type="date" className="w-full rounded-xl border border-stroke bg-slate-100/50 py-3 px-4 outline-none dark:bg-slate-800/50 text-slate-500 cursor-not-allowed" value={expiredDate} disabled readOnly />
                    </div>
                 </div>
                 <div>
-                   <label className="block text-sm font-bold mb-1">Document (PDF/Image)</label>
-                   <input 
-                     type="file" 
-                     className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                     accept=".pdf,image/*"
-                     onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
-                   />
+                   <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Document</label>
+                   <div className="relative">
+                     <input 
+                       type="file" 
+                       className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                       accept=".pdf,image/*"
+                       onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])}
+                     />
+                   </div>
                    {previewUrl && (
-                     <div className="mt-2 h-32 w-full rounded border border-dashed border-primary/50 flex items-center justify-center overflow-hidden bg-slate-50 relative group">
-                        {selectedFile?.type === 'application/pdf' ? <FontAwesomeIcon icon={faFilePdf} className="text-3xl text-danger"/> : <img src={previewUrl} className="h-full object-contain"/>}
-                        <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="absolute bg-danger text-white rounded-full w-6 h-6 flex items-center justify-center top-1 right-1 shadow"><FontAwesomeIcon icon={faTimes} size="xs"/></button>
+                     <div className="mt-3 h-32 w-full rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden bg-slate-50/50 relative group">
+                        {selectedFile?.type === 'application/pdf' ? <FontAwesomeIcon icon={faFilePdf} className="text-4xl text-danger drop-shadow-md"/> : <img src={previewUrl} className="h-full object-contain drop-shadow-md"/>}
+                        <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="absolute bg-white text-danger rounded-full w-8 h-8 flex items-center justify-center top-2 right-2 shadow-lg hover:scale-110 transition-transform"><FontAwesomeIcon icon={faTimes}/></button>
                      </div>
                    )}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-1">Note</label>
-                  <textarea className="w-full rounded border-stroke bg-transparent py-2 px-3 outline-none dark:border-strokedark dark:bg-meta-4" rows={2} value={note} onChange={(e) => setNote(e.target.value)}></textarea>
+                  <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Note</label>
+                  <textarea className="w-full rounded-xl border border-stroke bg-white/50 py-3 px-4 outline-none dark:border-strokedark dark:bg-meta-4/50 focus:ring-2 focus:ring-primary/20 transition-all" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note..."></textarea>
                 </div>
              </div>
-             <div className="flex justify-end gap-2 mt-6">
-               <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-black">Cancel</button>
-               <button onClick={handleConfirmAssign} disabled={saving || !selectedCompId} className="px-4 py-2 text-sm font-bold bg-primary text-white rounded hover:bg-opacity-90 disabled:opacity-50">
-                 {saving ? 'Saving...' : 'Save'}
+             <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-white/10">
+               <button onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-black dark:hover:text-white transition-colors">Cancel</button>
+               <button onClick={handleConfirmAssign} disabled={saving || !selectedCompId} className="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-xl hover:bg-primary/90 disabled:opacity-50 shadow-lg hover:shadow-primary/30 transition-all transform hover:translate-y-[-1px]">
+                 {saving ? 'Saving...' : 'Save Record'}
                </button>
              </div>
           </div>
@@ -414,17 +420,17 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
 
       {/* Doc Viewer Modal */}
       {viewingDoc && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur">
-           <div className="bg-white dark:bg-boxdark w-full max-w-4xl h-[80vh] rounded-lg shadow-2xl flex flex-col relative animate-in zoom-in-95">
-              <div className="flex items-center justify-between p-4 border-b border-stroke dark:border-strokedark">
-                <h3 className="font-bold">{viewingDoc.name}</h3>
-                <button onClick={() => setViewingDoc(null)} className="text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white"><FontAwesomeIcon icon={faTimes} size="lg"/></button>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+           <div className="bg-white/95 dark:bg-boxdark/95 w-full max-w-4xl h-[85vh] rounded-2xl shadow-2xl flex flex-col relative animate-in zoom-in-95 border border-white/20">
+              <div className="flex items-center justify-between p-5 border-b border-stroke dark:border-strokedark">
+                <h3 className="font-bold text-lg">{viewingDoc.name}</h3>
+                <button onClick={() => setViewingDoc(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-meta-4 dark:hover:bg-gray-700 transition-colors"><FontAwesomeIcon icon={faTimes}/></button>
               </div>
-              <div className="flex-1 bg-slate-100 p-2 overflow-auto relative">
+              <div className="flex-1 bg-slate-100/50 p-4 overflow-auto relative rounded-b-2xl">
                  {viewingDoc.url?.toLowerCase().endsWith('.pdf') ? (
-                    <embed src={viewingDoc.url} type="application/pdf" className="w-full h-full"/>
+                    <embed src={viewingDoc.url} type="application/pdf" className="w-full h-full rounded-lg shadow-inner"/>
                  ) : (
-                    <img src={viewingDoc.url} className="w-full h-full object-contain" />
+                    <img src={viewingDoc.url} className="w-full h-full object-contain rounded-lg shadow-md" />
                  )}
               </div>
            </div>

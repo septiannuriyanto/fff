@@ -8,6 +8,7 @@ import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 import FuelTruckBacklog from './pages/Dashboard/Infrastructure/FuelTruckBacklog/FuelTruckBacklog';
 import Manpower from './pages/Dashboard/Manpower/Manpower';
 import Profile from './pages/MasterData/MasterManpower/Profile/Profile';
+import ProfileEdit from './pages/MasterData/MasterManpower/Profile/Edit/ProfileEdit';
 import Calendar from './pages/Calendar';
 import FormElements from './pages/Form/FormElements';
 import Tables from './pages/Tables';
@@ -198,6 +199,13 @@ const routes = [
     component: <Profile />,
     allowedRoles: ALL_ROLES,
     isPublic: true
+  },
+
+  {
+    path: '/profile/:id/edit',
+    component: <ProfileEdit />,
+    title: 'FFF | Edit Profile',
+    allowedRoles: ALL_ROLES
   },
 
   {
