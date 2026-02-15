@@ -8,7 +8,11 @@ import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
     <>
-      <Toaster position="top-center" reverseOrder={false} />
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false} 
+        containerStyle={{ zIndex: 9999999 }}
+      />
       <Routes>
         {routes.map(({ path, component, title, allowedRoles, isPublic }: any) => {
           // Landing page remains outside the main layout

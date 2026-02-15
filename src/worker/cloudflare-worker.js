@@ -3,7 +3,7 @@ export default {
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name'
     }
 
     if (req.method === 'OPTIONS') {
@@ -67,6 +67,23 @@ export default {
         }
     }
 
+    if (req.method === 'GET' && url.pathname.startsWith('/documents/competency/')) {
+        const key = url.pathname.replace('/documents/competency/', '')
+        
+        try {
+            const object = await env.R2_COMPETENCY_DOCUMENT.get(key)
+            if (!object) return res(404, 'Document not found', cors)
+
+            const headers = new Headers(cors)
+            object.writeHttpMetadata(headers)
+            headers.set('etag', object.httpEtag)
+
+            return new Response(object.body, { headers })
+        } catch(e) {
+            return res(500, e.message, cors)
+        }
+    }
+
     // ===============================
     // FILTER REPLACEMENT IMAGE UPLOAD (R2)
     // ===============================
@@ -118,9 +135,9 @@ export default {
     }
 
     // ===============================
-    // ROSTER IMAGE UPLOAD (R2)
+    // COMPETENCY DOCUMENT UPLOAD (R2)
     // ===============================
-    if (req.method === 'PUT' && url.pathname === '/upload/roster') {
+    if (req.method === 'PUT' && url.pathname === '/upload/competency-document') {
        const token = req.headers.get('Authorization')?.split(' ')[1]
        if (!token) return res(401, 'Unauthorized', cors)
  
@@ -130,21 +147,26 @@ export default {
          return res(401, 'Unauthorized', cors)
        }
  
-       const year = req.headers.get('X-Year')
-       const month = req.headers.get('X-Month')
-       const type = req.headers.get('X-Roster-Type') 
+       const compId = req.headers.get('X-Competency-Id')
+       const nrp = req.headers.get('X-Nrp')
+       const fileName = req.headers.get('X-File-Name') || 'document'
  
-       if (!year || !month || !type) {
-         return res(400, 'Missing X-Year, X-Month, or X-Roster-Type headers', cors)
+       if (!compId || !nrp) {
+         return res(400, 'Missing X-Competency-Id or X-Nrp headers', cors)
        }
  
-       const key = `${year}/${month}/${type}.jpg`
+       // Clean fileName: remove special chars, keep extension
+       const safeFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+       const timestamp = Date.now()
+       const key = `${compId}/${nrp}/${timestamp}_${safeFileName}`
  
        try {
-         await env.ROSTER_IMAGES.put(key, req.body)
+         await env.R2_COMPETENCY_DOCUMENT.put(key, req.body, {
+           httpMetadata: { contentType: req.headers.get('Content-Type') || 'application/octet-stream' }
+         })
          
-         const publicUrl = env.PUBLIC_R2_DOMAIN 
-            ? `${env.PUBLIC_R2_DOMAIN}/${key}` 
+         const publicUrl = env.PUBLIC_R2_DOMAIN_COMPETENCY 
+            ? `${env.PUBLIC_R2_DOMAIN_COMPETENCY}/${key}` 
             : key 
  
          return Response.json({ status: 'ok', key, url: publicUrl }, { headers: cors })

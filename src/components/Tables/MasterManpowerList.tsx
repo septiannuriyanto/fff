@@ -7,6 +7,7 @@ import {
   faEdit,
   faChevronLeft,
   faChevronRight,
+  faAward,
 } from '@fortawesome/free-solid-svg-icons';
 import ManpowerActionButton from './components/ManpowerActionButton';
 import DropdownManpowerAction from './components/DropdownManpowerAction';
@@ -21,10 +22,14 @@ import { getPositionFromPositionCode } from '../../functions/get_nrp';
 import Loader from '../../common/Loader/Loader';
 import UserIcon from '../../images/icon/user-icon.svg';
 
-const MasterManpowerList = () => {
+interface MasterManpowerListProps {
+  onViewCompetency?: (nrp: string) => void;
+}
+
+const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
   const navigate = useNavigate();
 
-  const [dataRow, setDataRow] = useState<Manpower[]>([] as Manpower[]);
+  const [dataRow, setDataRow] = useState<(Manpower & { competencyCount?: number })[]>([]);
   const [keyword, setKeyword] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('FAO');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -67,6 +72,25 @@ const MasterManpowerList = () => {
       // Set total count for pagination
       setTotalCount(count || 0);
 
+      // Fetch Competency Counts for displayed manpower
+      const nrps = data.map(m => m.nrp);
+      let competencyCounts: Record<string, number> = {};
+      
+      if (nrps.length > 0) {
+        const { data: compData } = await supabase
+          .from('v_competency_status')
+          .select('nrp')
+          .in('nrp', nrps)
+          .eq('active', true);
+          
+        if (compData) {
+          competencyCounts = compData.reduce((acc: any, curr: any) => {
+            acc[curr.nrp] = (acc[curr.nrp] || 0) + 1;
+            return acc;
+          }, {});
+        }
+      }
+
       const updatedData = await Promise.all(
         data.map(async (item) => {
           let positionName = '';
@@ -89,6 +113,7 @@ const MasterManpowerList = () => {
             // The image component will handle missing images gracefully
             image: item.photo_url || `${profileImageBaseUrl}/${item.nrp}`,
             position: positionName,
+            competencyCount: competencyCounts[item.nrp] || 0,
           };
         }),
       );
@@ -257,6 +282,9 @@ const MasterManpowerList = () => {
                   <th className="px-6 py-4 font-medium text-black dark:text-white">
                     Role
                   </th>
+                   <th className="px-6 py-4 font-medium text-black dark:text-white text-center">
+                    Competencies
+                  </th>
                   <th className="px-6 py-4 font-medium text-black dark:text-white">
                     Join Date
                   </th>
@@ -270,7 +298,7 @@ const MasterManpowerList = () => {
               </thead>
               <tbody>
                 {dataRow.length > 0 ? (
-                  dataRow.map((manpower: Manpower, key: number) => (
+                  dataRow.map((manpower: Manpower & { competencyCount?: number }, key: number) => (
                     <tr
                       key={key}
                       className="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4"
@@ -350,6 +378,21 @@ const MasterManpowerList = () => {
                         </p>
                       </td>
 
+                      {/* Competencies Column */}
+                      <td className="px-6 py-4 text-center">
+                        {manpower.competencyCount ? (
+                          <button 
+                            onClick={() => onViewCompetency && onViewCompetency(manpower.nrp)}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all group"
+                          >
+                            <FontAwesomeIcon icon={faAward} />
+                            {manpower.competencyCount}
+                          </button>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
+                      </td>
+
                       {/* Join Date Column */}
                       <td className="px-6 py-4">
                         <p className="text-sm text-black dark:text-white">
@@ -397,7 +440,7 @@ const MasterManpowerList = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <p className="text-gray-500 dark:text-gray-400">
                         No manpower found
                       </p>

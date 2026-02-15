@@ -11,18 +11,30 @@ import {
   faUserPlus,
   faCalendarAlt,
   faStickyNote,
-  faCheckCircle
+  faCheckCircle,
+  faFilePdf,
+  faEye,
+  faExpand,
+  faEdit,
+  faTrash,
+  faChevronLeft,
+  faChevronRight
 } from '@fortawesome/free-solid-svg-icons';
+import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
 
 interface CompetencyStatus {
+  id: number;
   nrp: string;
   nama: string;
   competency_name: string;
+  competency_id: number;
   obtained_date: string;
   expired_date: string | null;
   active: boolean;
+  document_url: string | null;
   status: 'valid' | 'expired' | 'soon_expired';
+  note?: string;
 }
 
 interface Competency {
@@ -36,13 +48,23 @@ interface Manpower {
   nama: string;
 }
 
-const ManpowerCompetencyTab = () => {
+interface ManpowerCompetencyTabProps {
+  initialSearchTerm?: string;
+}
+
+const ManpowerCompetencyTab = ({ initialSearchTerm = '' }: ManpowerCompetencyTabProps) => {
   const [data, setData] = useState<CompetencyStatus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Assign Dialog State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [step, setStep] = useState(1); // 1: Setup, 2: Summary
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
@@ -54,24 +76,52 @@ const ManpowerCompetencyTab = () => {
   const [expiredDate, setExpiredDate] = useState('');
   const [note, setNote] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<{ url?: string; file?: File; name: string } | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // If props change, update state
+    if (initialSearchTerm) setSearchTerm(initialSearchTerm);
+  }, [initialSearchTerm]);
+
+  useEffect(() => {
     fetchCompetencyStatus();
+  }, [currentPage, pageSize, searchTerm]);
+
+  useEffect(() => {
     fetchMasterData();
   }, []);
 
   const fetchCompetencyStatus = async () => {
     setLoading(true);
     try {
-      const { data: statusData, error } = await supabase
+      let query = supabase
         .from('v_competency_status')
-        .select('*')
-        .order('nama');
+        .select('*', { count: 'exact' });
+
+      if (searchTerm) {
+        query = query.or(`nama.ilike.%${searchTerm}%,competency_name.ilike.%${searchTerm}%,nrp.ilike.%${searchTerm}%`);
+      }
+
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data: statusData, error, count } = await query
+        .order('nama', { ascending: true })
+        .range(from, to);
 
       if (error) throw error;
-      setData(statusData || []);
+      
+      // Flatten or ensure document_url is present from the join
+      const mappedData = (statusData || []).map((item: any) => ({
+        ...item,
+        document_url: item.document_url || (item.competency_history?.document_url) || null
+      }));
+
+      setData(mappedData);
+      setTotalCount(count || 0);
     } catch (error: any) {
       toast.error('Failed to fetch competency status: ' + error.message);
     } finally {
@@ -93,6 +143,7 @@ const ManpowerCompetencyTab = () => {
   };
 
   const handleAssignClick = () => {
+    setEditingId(null);
     setStep(1);
     setSelectedCompId('');
     setSelectedNrp('');
@@ -100,46 +151,150 @@ const ManpowerCompetencyTab = () => {
     setMpSearchTerm('');
     setShowSuggestions(false);
     setSelectedFile(null);
+    setPreviewUrl(null);
+    setViewingDoc(null);
     setIsModalOpen(true);
   };
 
-  const isStep1Valid = selectedCompId && selectedNrp && trainingDate && selectedFile;
+  const handleEditClick = (record: CompetencyStatus) => {
+    setEditingId(record.id);
+    setStep(1);
+    setSelectedCompId(record.competency_id || '');
+    setSelectedNrp(record.nrp);
+    setTrainingDate(record.obtained_date);
+    setExpiredDate(record.expired_date || '');
+    setNote(record.note || '');
+    setMpSearchTerm('');
+    setShowSuggestions(false);
+    setSelectedFile(null);
+    setPreviewUrl(record.document_url || null);
+    setViewingDoc(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteClick = async (item: CompetencyStatus) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      const loadingToast = toast.loading('Deleting record...');
+      try {
+        const { error } = await supabase.rpc('delete_competency_data', {
+          p_nrp: item.nrp,
+          p_competency_id: item.competency_id
+        });
+
+        if (error) throw error;
+        toast.success('Record deleted successfully', { id: loadingToast });
+        
+        // Remove from UI immediately without reloading
+        setData(prev => prev.filter(row => row.nrp !== item.nrp || row.competency_id !== item.competency_id));
+        setTotalCount(prev => Math.max(0, prev - 1));
+      } catch (error: any) {
+        toast.error('Delete failed: ' + error.message, { id: loadingToast });
+      }
+    }
+  };
+
+  const isStep1Valid = selectedCompId && selectedNrp && trainingDate;
 
   const handleNextStep = () => {
-    if (!isStep1Valid) return toast.error('Please fill all required fields including document');
+    if (!isStep1Valid) return toast.error('Please fill all required fields');
     setStep(2);
   };
 
   const handleConfirmAssign = async () => {
     setSaving(true);
+    const loadingToast = toast.loading(editingId ? 'Updating competency...' : 'Saving competency history...');
     try {
-      // Placeholder for file upload logic to get document_url
-      const document_url = ''; 
+      let document_url = previewUrl || '';
 
-      const payload = [{
+      if (selectedFile) {
+        // 1. Get Session for JWT
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+
+        // 2. Upload to Worker
+        const uploadUrl = 'https://fff-worker.septian-nuryanto.workers.dev/upload/competency-document';
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'X-Competency-Id': selectedCompId.toString(),
+            'X-Nrp': selectedNrp,
+            'X-File-Name': selectedFile.name,
+            'Content-Type': selectedFile.type
+          },
+          body: selectedFile,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          throw new Error(`Upload failed: ${errorText}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
+        document_url = (uploadResult.url && uploadResult.url.startsWith('http'))
+          ? uploadResult.url
+          : `https://fff-worker.septian-nuryanto.workers.dev/documents/competency/${uploadResult.key}`;
+      }
+
+      const payload = {
         nrp: selectedNrp,
         competency_id: selectedCompId,
         training_date: trainingDate,
         expired_date: expiredDate || null,
         note: note,
         document_url: document_url 
-      }];
+      };
 
-      const { error } = await supabase
-        .from('competency_history')
-        .insert(payload);
+      if (editingId) {
+        const { error } = await supabase
+          .from('competency_history')
+          .update(payload)
+          .eq('id', editingId);
+        if (error) throw error;
+        toast.success(`Successfully updated competency`, { id: loadingToast });
+      } else {
+        const { error } = await supabase
+          .from('competency_history')
+          .insert([payload]);
+        if (error) throw error;
+        toast.success(`Successfully assigned competency`, { id: loadingToast });
+      }
 
-      if (error) throw error;
-
-      toast.success(`Successfully assigned competency to person`);
       setIsModalOpen(false);
       fetchCompetencyStatus();
     } catch (error: any) {
-      toast.error('Assignment failed: ' + error.message);
+      toast.error((editingId ? 'Update failed: ' : 'Assignment failed: ') + error.message, { id: loadingToast });
     } finally {
       setSaving(false);
     }
   };
+
+  // Handle file changes and generate preview
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+    
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [selectedFile]);
 
   useEffect(() => {
     if (selectedCompId && trainingDate) {
@@ -156,11 +311,12 @@ const ManpowerCompetencyTab = () => {
     }
   }, [selectedCompId, trainingDate, competencies]);
 
-  const filteredData = data.filter(item => 
-    (item.nama?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (item.competency_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (item.nrp?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, pageSize]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -187,6 +343,16 @@ const ManpowerCompetencyTab = () => {
     }
   };
 
+  const handleZoomFile = (e: React.MouseEvent, file: File) => {
+    e.stopPropagation();
+    setViewingDoc({ file, name: file.name });
+  };
+
+  const handleZoomUrl = (e: React.MouseEvent, url: string, name: string) => {
+    e.stopPropagation();
+    setViewingDoc({ url, name });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -197,10 +363,18 @@ const ManpowerCompetencyTab = () => {
           <input
             type="text"
             placeholder="Search by name, NRP, or competency..."
-            className="w-full rounded-lg border border-stroke bg-transparent py-2.5 pl-12 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 transition"
+            className="w-full rounded-lg border border-stroke bg-transparent py-2.5 pl-12 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 transition"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-danger transition-colors p-1"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-3">
@@ -209,6 +383,20 @@ const ManpowerCompetencyTab = () => {
             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-warning"></div> Expired Soon</div>
             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-danger"></div> Expired</div>
           </div>
+          
+          <div className="flex items-center bg-white dark:bg-meta-4 rounded-lg border border-stroke dark:border-strokedark px-3 py-2 text-sm font-medium">
+            <span className="text-slate-400 mr-2">Show:</span>
+            <select 
+              className="bg-transparent outline-none cursor-pointer font-bold text-primary"
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
           <button
             onClick={handleAssignClick}
             className="flex items-center gap-2 bg-primary px-4 py-2 text-white rounded-lg hover:bg-opacity-90 transition shadow-lg shadow-primary/20 text-sm font-bold"
@@ -227,27 +415,29 @@ const ManpowerCompetencyTab = () => {
               <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Competency</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Obtained</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Expired</th>
+              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Doc</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Status</th>
+              <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stroke dark:divide-strokedark bg-white dark:bg-boxdark">
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-slate-400">
+                <td colSpan={7} className="text-center py-12 text-slate-400">
                   <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent shadow-sm"></div>
                     <span>Loading competency status...</span>
                   </div>
                 </td>
               </tr>
-            ) : filteredData.length === 0 ? (
+            ) : data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-slate-400">
+                <td colSpan={7} className="text-center py-12 text-slate-400">
                   No records found.
                 </td>
               </tr>
             ) : (
-              filteredData.map((item, index) => (
+              data.map((item, index) => (
                 <tr key={`${item.nrp}-${item.competency_name}-${index}`} className="hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors text-sm">
                   <td className="px-6 py-4">
                     <div className="font-bold text-black dark:text-white">{item.nama}</div>
@@ -257,13 +447,104 @@ const ManpowerCompetencyTab = () => {
                   <td className="px-6 py-4 text-center font-medium">{item.obtained_date}</td>
                   <td className="px-6 py-4 text-center font-medium">{item.expired_date || 'Unlimited'}</td>
                   <td className="px-6 py-4 text-center">
+                    {item.document_url ? (
+                      <button
+                        onClick={(e) => handleZoomUrl(e, item.document_url!, `${item.nama} - ${item.competency_name}`)}
+                        className="font-bold text-primary hover:text-primary/70 transition-colors py-1 px-2 hover:bg-primary/5 rounded-md"
+                      >
+                        View
+                      </button>
+                    ) : (
+                      <span className="text-slate-300 text-xs italic">N/A</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
                     {getStatusBadge(item.status)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        className="p-2 text-slate-400 hover:text-primary transition-all duration-200"
+                        title="Edit Record"
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="text-base" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="p-2 text-slate-400 hover:text-danger transition-all duration-200"
+                        title="Delete Record"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="text-base" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-boxdark p-4 rounded-lg border border-stroke dark:border-strokedark shadow-sm">
+        <div className="text-sm text-slate-500 font-medium">
+          Showing <span className="text-black dark:text-white font-bold">{startIndex + 1}</span> to <span className="text-black dark:text-white font-bold">{Math.min(startIndex + pageSize, totalCount)}</span> of <span className="text-black dark:text-white font-bold">{totalCount}</span> results
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className={`px-3 py-1.5 rounded-lg border border-stroke dark:border-strokedark text-sm font-bold transition-all flex items-center gap-2
+              ${currentPage === 1 ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-primary hover:text-white hover:border-primary'}
+            `}
+          >
+            <FontAwesomeIcon icon={faChevronLeft} className="text-xs" /> Previous
+          </button>
+          
+          <div className="flex items-center gap-1">
+            {[...Array(totalPages)].map((_, i) => {
+              const pageNum = i + 1;
+              if (
+                totalPages <= 5 ||
+                pageNum === 1 ||
+                pageNum === totalPages ||
+                (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`h-9 w-9 rounded-lg text-sm font-bold transition-all
+                      ${currentPage === pageNum 
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                        : 'border border-stroke dark:border-strokedark hover:bg-slate-100 dark:hover:bg-meta-4'}
+                    `}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              } else if (
+                (pageNum === 2 && currentPage > 3) ||
+                (pageNum === totalPages - 1 && currentPage < totalPages - 2)
+              ) {
+                return <span key={pageNum} className="px-1 text-slate-400">...</span>;
+              }
+              return null;
+            })}
+          </div>
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className={`px-3 py-1.5 rounded-lg border border-stroke dark:border-strokedark text-sm font-bold transition-all flex items-center gap-2
+              ${currentPage === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-primary hover:text-white hover:border-primary'}
+            `}
+          >
+            Next <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
+          </button>
+        </div>
       </div>
 
       {/* Assignment Modal */}
@@ -275,9 +556,11 @@ const ManpowerCompetencyTab = () => {
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-stroke dark:border-strokedark">
               <div>
                 <h3 className="text-xl font-bold text-black dark:text-white">
-                  Assign Competency
+                  {editingId ? 'Edit Competency Record' : 'Assign Competency'}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">Record new training/competency for manpower</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {editingId ? 'Modify existing competency details' : 'Record new training/competency for manpower'}
+                </p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 text-bodydark2 hover:bg-gray-100 dark:hover:bg-meta-4 rounded-full" disabled={saving}>
                 <FontAwesomeIcon icon={faTimes} />
@@ -407,7 +690,7 @@ const ManpowerCompetencyTab = () => {
 
                   <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-bold text-black dark:text-white italic">
-                      3. Training Document (PDF/Image) <span className="text-danger">*</span>
+                      3. Training Document (PDF/Image) <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <div 
                       className={`relative border-2 border-dashed rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer
@@ -435,14 +718,56 @@ const ManpowerCompetencyTab = () => {
                           if (file) setSelectedFile(file);
                         }}
                       />
-                      {selectedFile ? (
-                        <>
-                          <FontAwesomeIcon icon={faCheckCircle} className="text-success text-3xl" />
-                          <div className="text-center">
-                            <p className="text-sm font-bold text-black dark:text-white">{selectedFile.name}</p>
-                            <p className="text-[10px] text-slate-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB • Click to change</p>
+                       {selectedFile ? (
+                        <div className="flex flex-col items-center gap-4 w-full">
+                          <div 
+                            className="relative group/preview w-full max-w-xl h-80 md:h-96 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-2xl bg-white dark:bg-meta-4 cursor-zoom-in flex items-center justify-center p-2"
+                            onClick={(e) => selectedFile && handleZoomFile(e, selectedFile)}
+                          >
+                            {selectedFile.type === 'application/pdf' ? (
+                              <div className="w-full h-full pointer-events-none bg-slate-50">
+                                <embed 
+                                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                                  type="application/pdf"
+                                  className="w-full h-full rounded-xl"
+                                />
+                              </div>
+                            ) : previewUrl ? (
+                              <img src={previewUrl} alt="Preview" className="w-full h-full object-contain transition-transform duration-500 group-hover/preview:scale-105" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-success">
+                                <FontAwesomeIcon icon={faCheckCircle} className="text-5xl" />
+                              </div>
+                            )}
+                            
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                              <div className="bg-white/90 dark:bg-black/50 backdrop-blur-md px-4 py-2 rounded-full text-black dark:text-white shadow-lg transform translate-y-4 group-hover/preview:translate-y-0 transition-all flex items-center gap-2 font-bold text-sm">
+                                <FontAwesomeIcon icon={faExpand} />
+                                Click to Expand
+                              </div>
+                            </div>
+                            
+                            {/* Change Button Overlay */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(null);
+                              }}
+                              className="absolute top-4 right-4 bg-danger text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10"
+                              title="Remove & Change"
+                            >
+                              <FontAwesomeIcon icon={faTimes} />
+                            </button>
                           </div>
-                        </>
+                          
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-black dark:text-white truncate max-w-[400px]">{selectedFile.name}</p>
+                            <p className="text-xs text-slate-500 font-medium tracking-tight">
+                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB • PDF/Image Document
+                            </p>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
@@ -479,23 +804,69 @@ const ManpowerCompetencyTab = () => {
                   <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
                     <FontAwesomeIcon icon={faCheckCircle} /> Assignment Summary
                   </h4>
-                  <div className="grid grid-cols-2 gap-y-4 text-sm">
-                    <div className="text-slate-500">Competency:</div>
-                    <div className="font-bold text-black dark:text-white uppercase">{competencies.find(c => c.id === selectedCompId)?.competency_name}</div>
-                    
-                    <div className="text-slate-500">Obtained Date:</div>
-                    <div className="font-bold">{trainingDate}</div>
-                    
-                    <div className="text-slate-500">Expired Date:</div>
-                    <div className="font-bold">{expiredDate || 'Unlimited (Follows Master Default)'}</div>
-                    
-                    <div className="text-slate-500">Target Manpower:</div>
-                    <div className="font-bold text-black dark:text-white">
-                      {manpowerList.find(m => m.nrp === selectedNrp)?.nama} ({selectedNrp})
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                    <div className="md:col-span-2 space-y-4">
+                      <div className="grid grid-cols-2 gap-y-4">
+                        <div className="text-slate-500">Competency:</div>
+                        <div className="font-bold text-black dark:text-white uppercase">{competencies.find(c => c.id === selectedCompId)?.competency_name}</div>
+                        
+                        <div className="text-slate-500">Obtained Date:</div>
+                        <div className="font-bold">{trainingDate}</div>
+                        
+                        <div className="text-slate-500">Expired Date:</div>
+                        <div className="font-bold">{expiredDate || 'Unlimited (Follows Master Default)'}</div>
+                        
+                        <div className="text-slate-500">Target Manpower:</div>
+                        <div className="font-bold text-black dark:text-white">
+                          {manpowerList.find(m => m.nrp === selectedNrp)?.nama} ({selectedNrp})
+                        </div>
+
+                        {note && (
+                          <>
+                            <div className="text-slate-500">Note:</div>
+                            <div className="font-medium text-slate-600 dark:text-slate-400 italic">"{note}"</div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    
-                    <div className="text-slate-500">Document:</div>
-                    <div className="font-bold truncate text-primary">{selectedFile?.name}</div>
+
+                    <div className="flex flex-col items-center justify-center gap-3">
+                       {selectedFile ? (
+                         <>
+                           <div 
+                             className="relative group/preview w-48 h-32 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-xl bg-white dark:bg-meta-4 cursor-zoom-in flex items-center justify-center"
+                             onClick={(e) => selectedFile && handleZoomFile(e, selectedFile)}
+                           >
+                              {selectedFile.type === 'application/pdf' ? (
+                                <div className="w-full h-full pointer-events-none bg-white">
+                                  <embed 
+                                    src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`} 
+                                    type="application/pdf"
+                                    className="w-full h-full"
+                                  />
+                                </div>
+                              ) : previewUrl ? (
+                                <img src={previewUrl} alt="Document" className="w-full h-full object-contain transition-transform duration-500 group-hover/preview:scale-110" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-success">
+                                  <FontAwesomeIcon icon={faCheckCircle} className="text-2xl" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="bg-white/90 dark:bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-black dark:text-white flex items-center gap-2 shadow-lg">
+                                  <FontAwesomeIcon icon={faExpand} /> Preview
+                                </div>
+                              </div>
+                           </div>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Tap to View Full Document</p>
+                         </>
+                       ) : (
+                         <div className="w-28 h-28 rounded-2xl bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-300 dark:border-slate-700">
+                           <FontAwesomeIcon icon={faTimes} className="text-xl mb-1 opacity-20" />
+                           <span className="text-[9px] font-bold uppercase tracking-widest opacity-40">No Doc</span>
+                         </div>
+                       )}
+                    </div>
                   </div>
                 </div>
                 
@@ -550,6 +921,58 @@ const ManpowerCompetencyTab = () => {
                   </div>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zoom Modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setViewingDoc(null)}></div>
+          
+          <div className="relative w-full max-w-4xl h-full max-h-[85vh] flex flex-col items-center justify-center">
+            <button 
+              onClick={() => setViewingDoc(null)}
+              className="absolute -top-12 right-0 text-white hover:text-danger p-2 transition-colors flex items-center gap-2 group"
+            >
+              <span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Close Preview</span>
+              <FontAwesomeIcon icon={faTimes} className="text-2xl" />
+            </button>
+
+            <div className="w-full h-full rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl flex items-center justify-center p-2">
+              {viewingDoc.file?.type === 'application/pdf' || (viewingDoc.url?.toLowerCase().endsWith('.pdf')) ? (
+                <div className="w-full h-full border-none rounded-xl overflow-hidden bg-white">
+                   <iframe 
+                      src={viewingDoc.file ? URL.createObjectURL(viewingDoc.file) : viewingDoc.url} 
+                      className="w-full h-full border-none"
+                      title="PDF Preview"
+                   />
+                </div>
+              ) : (
+                <img 
+                  src={viewingDoc.file ? URL.createObjectURL(viewingDoc.file) : viewingDoc.url} 
+                  alt="Document Full View" 
+                  className="max-w-full max-h-full object-contain animate-in fade-in zoom-in-95 duration-300" 
+                />
+              )}
+            </div>
+            
+            <div className="mt-4 p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-white flex items-center justify-between w-full max-w-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                  <FontAwesomeIcon icon={viewingDoc.file?.type === 'application/pdf' ? faFilePdf : faEye} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold truncate max-w-[300px]">{viewingDoc.name}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest">
+                    {viewingDoc.file ? viewingDoc.file.type : 'Remote Document'}
+                  </p>
+                </div>
+              </div>
+              {viewingDoc.file && (
+                <p className="text-[10px] font-mono opacity-60">{(viewingDoc.file.size / 1024 / 1024).toFixed(2)} MB</p>
+              )}
             </div>
           </div>
         </div>

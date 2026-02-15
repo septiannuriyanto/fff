@@ -5,6 +5,12 @@ import ManpowerCompetencyTab from './components/ManpowerCompetencyTab';
 
 const MasterManpower = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'competency' | 'achievement'>('general');
+  const [competencyFilter, setCompetencyFilter] = useState('');
+
+  const handleViewCompetency = (nrp: string) => {
+    setCompetencyFilter(nrp);
+    setActiveTab('competency');
+  };
 
   const tabs = [
     { id: 'general' as const, label: 'General' },
@@ -23,7 +29,10 @@ const MasterManpower = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              if (tab.id === 'competency') setCompetencyFilter('');
+              setActiveTab(tab.id);
+            }}
             className={`
               relative py-3 px-6 text-sm font-bold uppercase tracking-wider transition-all duration-300
               ${activeTab === tab.id 
@@ -42,20 +51,16 @@ const MasterManpower = () => {
 
       {/* Tab Content */}
       <div className="p-5">
-        {activeTab === 'general' && (
-          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-            <MasterManpowerList />
-          </div>
-        )}
+        <div className={activeTab === 'general' ? 'block animate-in fade-in slide-in-from-top-2 duration-300' : 'hidden'}>
+          <MasterManpowerList onViewCompetency={handleViewCompetency} />
+        </div>
 
-        {activeTab === 'competency' && (
-          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-            <ManpowerCompetencyTab />
-          </div>
-        )}
+        <div className={activeTab === 'competency' ? 'block animate-in fade-in slide-in-from-top-2 duration-300' : 'hidden'}>
+          <ManpowerCompetencyTab initialSearchTerm={competencyFilter} />
+        </div>
 
-        {activeTab === 'achievement' && (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 animate-in fade-in duration-300">
+        <div className={activeTab === 'achievement' ? 'block animate-in fade-in slide-in-from-top-2 duration-300' : 'hidden'}>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
              <div className="w-16 h-16 bg-slate-100 dark:bg-meta-4 rounded-full flex items-center justify-center mb-4">
                <svg className="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -64,7 +69,7 @@ const MasterManpower = () => {
              <h3 className="text-xl font-bold text-black dark:text-white mb-2">Manpower Achievement</h3>
              <p className="text-sm">This feature is currently under development.</p>
           </div>
-        )}
+        </div>
       </div>
     </PanelContainer>
   );
