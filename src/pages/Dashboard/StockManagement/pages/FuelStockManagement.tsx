@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { supabase } from '../../../../db/SupabaseClient';
 import PanelContainer from '../../../PanelContainer';
@@ -11,6 +11,10 @@ export default function FuelStockManagement() {
     const [lastInputDate, setLastInputDate] = useState<string | null>(null);
     const [editingPortDay, setEditingPortDay] = useState<number | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+
+    const chartScrollRef = useRef<HTMLDivElement>(null);
+    const tableScrollRef = useRef<HTMLDivElement>(null);
+
 
     // Generate date range for selected month
     const daysInMonth = useMemo(() => {
@@ -77,20 +81,48 @@ export default function FuelStockManagement() {
         return map;
     }, [data]);
 
-    // Find last date with data - New rule: all metrics must be complete
+    // Find last date with data - Rule: (Site OR Port Stock) AND Usage must be present
     const lastDataDay = useMemo(() => {
         let lastDay = 0;
         for (let i = daysInMonth.length - 1; i >= 0; i--) {
             const day = daysInMonth[i].getDate();
             const item = dataMap.get(day);
-            // Must have site stock AND port stock AND usage to be considered complete
-            if (item && item.site_stock > 0 && item.port_stock > 0 && item.site_usage > 0) {
+            // Must have (site stock OR port stock) AND usage to be considered complete
+            if (item && (item.site_stock > 0 || item.port_stock > 0) && item.site_usage > 0) {
                 lastDay = day;
                 break;
             }
         }
         return lastDay;
     }, [daysInMonth, dataMap]);
+
+    // Auto-scroll logic - Moved here to fix ReferenceError
+    useEffect(() => {
+        if (lastDataDay > 0) {
+            const scrollToDay = (container: HTMLDivElement | null) => {
+                if (!container) return;
+                
+                const totalDays = daysInMonth.length;
+                const scrollWidth = container.scrollWidth;
+                const clientWidth = container.clientWidth;
+                
+                const dayWidth = scrollWidth / totalDays;
+                const targetScroll = (lastDataDay + 2) * dayWidth - clientWidth;
+                
+                container.scrollTo({
+                    left: Math.max(0, targetScroll),
+                    behavior: 'smooth'
+                });
+            };
+
+            const timer = setTimeout(() => {
+                scrollToDay(chartScrollRef.current);
+                scrollToDay(tableScrollRef.current);
+            }, 500);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [lastDataDay, data, daysInMonth]);
 
     // Calculate ITO and Achievement
     const getITO = (siteStock: number, portStock: number, usage: number) => {
@@ -392,9 +424,9 @@ export default function FuelStockManagement() {
   return (
     <PanelContainer title='Fuel Stock Management'>
         <div className="p-4 bg-white dark:bg-boxdark rounded-lg shadow-sm">
-            {/* Header Controls */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-4 items-center">
+            {/* Header Controls - Month Selector Left, Last Update Right */}
+            <div className="flex justify-between items-center mb-8 bg-slate-50/50 dark:bg-white/5 p-3 rounded-2xl border border-white/20">
+                <div className="relative group">
                     <input 
                         type="month" 
                         value={`${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}`}
@@ -402,29 +434,32 @@ export default function FuelStockManagement() {
                             const [y, m] = e.target.value.split('-');
                             setSelectedMonth(new Date(parseInt(y), parseInt(m) - 1, 1));
                         }}
-                        className="border rounded px-3 py-2 text-sm dark:bg-boxdark dark:border-strokedark"
+                        className="appearance-none bg-white dark:bg-meta-4 border border-stroke dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white shadow-sm hover:border-primary transition-all outline-none cursor-pointer"
                     />
-                    {lastInputDate && (
-                        <div className="text-sm text-gray-600 dark:text-gray-400 ml-4">
-                            <span className="font-semibold">Last Inputted Data:</span>{' '}
-                            Tanggal {new Date(lastInputDate).toLocaleDateString('id-ID')}
-                        </div>
-                    )}
+                    <div className="absolute inset-0 rounded-xl bg-primary/5 scale-x-0 group-hover:scale-x-100 transition-transform origin-left -z-1"></div>
                 </div>
-                <button 
-                    onClick={handleExport}
-                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Export XLSX
-                </button>
+                
+                {lastInputDate && (
+                    <div className="flex items-center gap-2 bg-white dark:bg-boxdark border border-white/20 px-4 py-2 rounded-full shadow-sm">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                        <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                            Last: <span className="text-primary dark:text-blue-400">{lastDataDateStr}</span>
+                        </span>
+                    </div>
+                )}
             </div>
 
-            {/* Chart Section */}
-            <div className="mb-6">
-                <ReactApexChart options={chartOptions} series={chartSeries} type="line" height={350} />
+            {/* Chart Section - Horizontal Scrollable on Mobile, Fixed on Desktop */}
+            <div 
+                ref={chartScrollRef}
+                className="mb-6 overflow-x-auto scrollbar-hide md:overflow-x-visible"
+            >
+                <div 
+                    className="md:!min-w-full"
+                    style={{ minWidth: `${Math.max(800, daysInMonth.length * 35)}px` }}
+                >
+                    <ReactApexChart options={chartOptions} series={chartSeries} type="line" height={350} />
+                </div>
             </div>
 
             {/* MTD Performance Info - Glassmorphism Design */}
@@ -441,8 +476,8 @@ export default function FuelStockManagement() {
                         </svg>
                     </div>
                     <div>
-                        <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                            Fuel Stock Availability <span className="text-gray-400 font-normal">| {periodString}</span>
+                        <h4 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider">
+                            Fuel Stock Availability <span className="text-slate-400 font-normal">| {periodString}</span>
                         </h4>
                         <div className="flex items-baseline gap-3">
                             <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 dark:from-blue-400 dark:to-cyan-400 tracking-tighter">
@@ -459,12 +494,12 @@ export default function FuelStockManagement() {
 
                 <div className="relative hidden md:flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Target Availability</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Target Availability</span>
                         <span className={`text-xs font-black ${mtdAchievement >= 100 ? 'text-green-500' : 'text-primary'}`}>
                             {mtdAchievement >= 100 ? 'ON TRACK' : 'BELOW TARGET'}
                         </span>
                     </div>
-                    <div className="w-48 h-3 bg-gray-200/50 dark:bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/20">
+                    <div className="w-48 h-3 bg-slate-200/50 dark:bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/20">
                         <div 
                             className={`h-full relative transition-all duration-1000 ease-out-expo ${mtdAchievement >= 100 ? 'bg-gradient-to-r from-green-400 to-emerald-600' : 'bg-gradient-to-r from-primary to-blue-600'}`} 
                             style={{ 
@@ -475,16 +510,19 @@ export default function FuelStockManagement() {
                             <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
                         </div>
                     </div>
-                    <p className="text-[10px] text-gray-400 italic font-medium">Calculation based on Avg. Daily Achievement</p>
+                    <p className="text-[10px] text-slate-400 italic font-medium">Calculation based on Avg. Daily Achievement</p>
                 </div>
             </div>
 
             {/* Horizontal Scrollable Table */}
-            <div className="overflow-x-auto pb-4">
+            <div 
+                ref={tableScrollRef}
+                className="overflow-x-auto pb-4 scrollbar-hide"
+            >
                 <table className="min-w-full border-collapse border border-stroke dark:border-strokedark text-sm">
                     <thead>
                         <tr>
-                            <th className="border border-stroke dark:border-strokedark p-2 bg-[#F1F5F9] dark:bg-[#1A2233] min-w-[150px] sticky left-0 top-0 z-30 shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">Metric / Date</th>
+                            <th className="border border-stroke dark:border-strokedark border-r-2 p-2 bg-[#F1F5F9] dark:bg-[#1A2233] min-w-[150px] sticky left-0 top-0 z-30 shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">Metric / Date</th>
                             {daysInMonth.map(d => (
                                 <th key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 min-w-[80px] text-center bg-[#F8FAFC] dark:bg-[#1A2233] sticky top-0 z-20">
                                     {d.getDate()}
@@ -495,7 +533,7 @@ export default function FuelStockManagement() {
                     <tbody>
                         {/* Site Stock Row */}
                         <tr>
-                            <td className="border border-stroke dark:border-strokedark p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Site Stock (L)</td>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Site Stock (L)</td>
                             {daysInMonth.map(d => (
                                 <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
                                     {(dataMap.get(d.getDate())?.site_stock || 0).toLocaleString('id-ID')}
@@ -504,7 +542,7 @@ export default function FuelStockManagement() {
                         </tr>
                          {/* Port Stock Row */}
                          <tr>
-                            <td className="border border-stroke dark:border-strokedark p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Port Stock (L)</td>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Port Stock (L)</td>
                             {daysInMonth.map(d => {
                                 const day = d.getDate();
                                 const currentStock = dataMap.get(day)?.port_stock || 0;
@@ -549,7 +587,7 @@ export default function FuelStockManagement() {
                         </tr>
                         {/* Fuel Usage Row */}
                          <tr>
-                            <td className="border border-stroke dark:border-strokedark p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Fuel Usage (L)</td>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Fuel Usage (L)</td>
                             {daysInMonth.map(d => (
                                 <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
                                     {(dataMap.get(d.getDate())?.site_usage || 0).toLocaleString('id-ID')}
@@ -558,7 +596,7 @@ export default function FuelStockManagement() {
                         </tr>
                         {/* ITO Row */}
                         <tr className="bg-blue-50 dark:bg-blue-900/10">
-                            <td className="border border-stroke dark:border-strokedark p-2 font-bold text-blue-700 bg-[#EEF2FF] dark:bg-[#1E293B] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">ITO (Days)</td>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-bold text-blue-700 bg-[#EEF2FF] dark:bg-[#1E293B] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">ITO (Days)</td>
                             {daysInMonth.map(d => {
                                 const item = dataMap.get(d.getDate());
                                 const ito = getITO(item?.site_stock || 0, item?.port_stock || 0, item?.site_usage || 0);
@@ -571,7 +609,7 @@ export default function FuelStockManagement() {
                         </tr>
                         {/* Achievement Row */}
                          <tr className="bg-green-50 dark:bg-green-900/10">
-                            <td className="border border-stroke dark:border-strokedark p-2 font-bold text-green-700 bg-[#F0FDF4] dark:bg-[#064E3B] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Achievement (%)</td>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-bold text-green-700 bg-[#F0FDF4] dark:bg-[#064E3B] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Achievement (%)</td>
                             {daysInMonth.map(d => {
                                 const item = dataMap.get(d.getDate());
                                 const ito = getITO(item?.site_stock || 0, item?.port_stock || 0, item?.site_usage || 0);
@@ -587,9 +625,21 @@ export default function FuelStockManagement() {
                 </table>
             </div>
 
-            <div className="mt-4 text-xs text-gray-500 italic">
-                * ITO Formula: (Site Stock + Port Stock) / Fuel Usage<br/>
-                * Achievement: 100% if ITO &gt; 3 Days
+            <div className="mt-6 flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-t border-stroke dark:border-white/10 pt-6">
+                <div className="text-xs text-slate-500 italic leading-relaxed">
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * ITO Formula: (Site Stock + Port Stock) / Fuel Usage</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * Achievement: 100% if ITO &gt; 3 Days</p>
+                </div>
+
+                <button 
+                    onClick={handleExport}
+                    className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-600/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    Export XLSX
+                </button>
             </div>
         </div>
     </PanelContainer>
