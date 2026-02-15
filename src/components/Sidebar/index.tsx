@@ -109,7 +109,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
       ref={sidebar}
       onMouseEnter={() => sidebarConfig === 'auto' && setIsHovered(true)}
       onMouseLeave={() => sidebarConfig === 'auto' && setIsHovered(false)}
-      className={`sidebar-main absolute left-0 top-0 z-[9999] flex min-h-screen ${asideWidth} flex-col overflow-visible no-scrollbar bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+      className={`sidebar-main absolute left-0 top-0 z-[999] flex min-h-screen ${asideWidth} flex-col overflow-visible no-scrollbar bg-white duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -124,7 +124,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
             </NavLink>
 
             {/* Floating Mode Switcher Panel (Visible on Logo/Header Hover) */}
-            <div className="absolute left-full top-0 pl-10 hidden group-hover/header:block animate-in fade-in slide-in-from-left-4 duration-200 z-[10000]">
+            <div className="absolute left-full top-0 pl-10 hidden group-hover/header:block animate-in fade-in slide-in-from-left-4 duration-200 z-[1000]">
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 w-52 flex flex-col gap-3 -ml-10">
                     <div className="flex flex-col gap-1 pb-2 border-b border-slate-100 dark:border-slate-700">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sidebar Mode</span>
@@ -291,6 +291,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/partner/fuel" label="Fuel Dashboard" mini={isMini} />
                 <SidebarLink to="/partner/fuel/ritation" label="Fuel Ritation" mini={isMini} />
+                <SidebarLink to="/partner/fuel/stock" label="Fuel Stock" mini={isMini} />
                 <ExclusiveWidget allowedRoles={ADMIN}>
                   <SidebarLink to="/partner/fuel/additive" label="Fuel Additive" mini={isMini} />
                 </ExclusiveWidget>
@@ -384,6 +385,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/master/materials" label="Materials" mini={isMini} />
                 <SidebarLink to="/master/manpower" label="Manpower" mini={isMini} />
+                <SidebarLink to="/master/competency" label="Competency" mini={isMini} />
                 <SidebarLink to="/master/equipment" label="Equipment" mini={isMini} />
                 <SidebarLink to="/master/storage/fuel" label="Storage Fuel" mini={isMini} />
                 <SidebarLink to="/master/library" label="Component Library" mini={isMini} />

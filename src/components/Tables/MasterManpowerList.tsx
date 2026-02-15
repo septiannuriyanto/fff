@@ -189,13 +189,11 @@ const MasterManpowerList = () => {
       {isLoading ? (
         <Loader />
       ) : (
-        <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+        <div className="">
           {/* Header Section */}
           <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-xl font-semibold text-black dark:text-white">
-                Master Manpower
-              </h3>
+              <span></span>
               <Link
                 to="/master/manpower/add"
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-primary py-2.5 px-5 text-center font-medium text-white hover:bg-opacity-90"

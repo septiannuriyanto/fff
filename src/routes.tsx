@@ -68,6 +68,8 @@ import PlantDashboard from './pages/PlantDashboard';
 import PublicRoute from './components/PublicRoute';
 import FuelTripManagement from './pages/Dashboard/FuelTripManagement/FuelTripManagement';
 import StockManagement from './pages/Dashboard/StockManagement/StockManagement';
+import MasterCompetency from './pages/MasterData/Competency/MasterCompetency';
+import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
 
 const routes = [
   {
@@ -332,6 +334,12 @@ const routes = [
     title: 'FFF | Fuel Partner Ritation',
     allowedRoles: FUEL_PARTNER
   },
+    {
+    path: '/partner/fuel/stock',
+    component: <FuelPartnerStock />,
+    title: 'FFF | Fuel Partner stock',
+    allowedRoles: FUEL_PARTNER
+  },
   {
     path: '/partner/fuel/additive',
     component: <AdditiveMonitoring />,
@@ -430,6 +438,12 @@ const routes = [
     path: '/master/manpower',
     component: <MasterManpower />,
     title: 'FFF | Master Manpower',
+    allowedRoles: SUPERVISOR
+  },
+   {
+    path: '/master/competency',
+    component: <MasterCompetency />,
+    title: 'FFF | Master Competency',
     allowedRoles: SUPERVISOR
   },
   {

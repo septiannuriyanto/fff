@@ -732,7 +732,7 @@ const RitationDashboard = () => {
 
       {/* PDF Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div ref={modalRef} className="bg-white dark:bg-boxdark w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl relative overflow-hidden">
             <button 
               onClick={() => setIsModalOpen(false)}
