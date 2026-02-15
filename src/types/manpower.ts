@@ -14,4 +14,5 @@ export type Manpower = {
   biography?: string;
   photo_url?: string;
   bg_photo_url?: string;
+  sid_expired?: string;
 };

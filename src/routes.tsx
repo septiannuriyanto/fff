@@ -7,7 +7,7 @@ import Operational from './pages/Dashboard/Operational/Operational';
 import RefuelingAnomaly from './pages/Dashboard/Operational/RefuelingAnomaly';
 import FuelTruckBacklog from './pages/Dashboard/Infrastructure/FuelTruckBacklog/FuelTruckBacklog';
 import Manpower from './pages/Dashboard/Manpower/Manpower';
-import Profile from './pages/Profile';
+import Profile from './pages/MasterData/MasterManpower/Profile/Profile';
 import Calendar from './pages/Calendar';
 import FormElements from './pages/Form/FormElements';
 import Tables from './pages/Tables';

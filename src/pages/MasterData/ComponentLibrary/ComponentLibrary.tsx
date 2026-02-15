@@ -21,7 +21,7 @@ import TableThree from "../../../components/Tables/TableThree";
 import TableTwo from "../../../components/Tables/TableTwo";
 import Chart from "../../Chart";
 import FormElements from "../../Form/FormElements";
-import Profile from "../../Profile";
+import Profile from "../MasterManpower/Profile/Profile";
 import Tables from "../../Tables";
 import Alerts from "../../UiElements/Alerts";
 import Buttons from "../../UiElements/Buttons";
