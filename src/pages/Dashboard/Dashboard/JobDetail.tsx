@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
 import { 
     FaPlus, FaTimes, FaInbox, FaCalendarAlt, FaUser, 
-    FaCheckCircle, FaTrash, FaStickyNote, FaTrafficLight 
+    FaCheckCircle, FaTrash, FaStickyNote, FaTrafficLight,
+    FaGripVertical
 } from 'react-icons/fa';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 interface JobProgress {
     id: number;
@@ -11,7 +13,7 @@ interface JobProgress {
     progress_description: string;
     pic: string;
     due_date: string | null;
-    status: 'open' | 'closed';
+    status: 'open' | 'progress' | 'closed';
     queue_num: number;
 }
 
@@ -116,7 +118,12 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
     };
 
     const toggleItemStatus = async (item: JobProgress) => {
-        const newStatus = item.status === 'open' ? 'closed' : 'open';
+        const statusMap: Record<JobProgress['status'], JobProgress['status']> = {
+            'open': 'progress',
+            'progress': 'closed',
+            'closed': 'open'
+        };
+        const newStatus = statusMap[item.status];
         const { error } = await supabase
             .from('board_jobs_progress')
             .update({ status: newStatus })
@@ -147,6 +154,41 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
         }
     };
 
+    const handleDragEnd = async (result: DropResult) => {
+        if (!result.destination) return;
+        
+        const reorderedItems = Array.from(items);
+        const [removed] = reorderedItems.splice(result.source.index, 1);
+        reorderedItems.splice(result.destination.index, 0, removed);
+
+        // Optimistic update
+        setItems(reorderedItems);
+
+        // Update queue_num in background
+        try {
+            const updates = reorderedItems.map((item, index) => ({
+                id: item.id,
+                job_id: job.id,
+                progress_description: item.progress_description,
+                pic: item.pic,
+                due_date: item.due_date,
+                status: item.status,
+                queue_num: index + 1
+            }));
+
+            const { error } = await supabase
+                .from('board_jobs_progress')
+                .upsert(updates);
+
+            if (error) throw error;
+            onUpdate();
+        } catch (err) {
+            console.error('Error saving reordered items:', err);
+            // Revert on error
+            fetchProgress();
+        }
+    };
+
     const getManpowerName = (nrp: string) => {
         const mp = manpowerList.find(m => m.nrp === nrp);
         return mp ? mp.nama : nrp;
@@ -157,7 +199,7 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
     const progressPercent = items.length > 0 ? Math.round((completedItems / items.length) * 100) : 0;
 
     return (
-        <div className="flex flex-col h-full gap-6 relative bg-white dark:bg-slate-900 overflow-hidden">
+        <div className="flex flex-col gap-6 relative bg-white dark:bg-slate-900">
             {loading ? (
                 <div className="flex items-center justify-center h-full min-h-[400px]">
                     <div className="flex flex-col items-center gap-4">
@@ -359,86 +401,115 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                 )}
 
                 <div className="flex-1 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm flex flex-col">
-                    <div className="overflow-y-auto flex-1 scrollbar-hide">
-                        <table className="w-full text-left text-sm border-collapse min-w-[600px]">
-                            <thead className="sticky top-0 z-10 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md">
-                                <tr className="border-b border-slate-100 dark:border-slate-800">
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest w-12 text-center">No</th>
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest w-32">Date</th>
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest">Progress Description</th>
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest w-40">PIC</th>
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest text-center w-20">Status</th>
-                                    <th className="px-6 py-4 font-bold text-[10px] text-slate-400 uppercase tracking-widest text-center w-20">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching Logs...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : items.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-20 text-center">
-                                            <div className="flex flex-col items-center justify-center text-slate-300 dark:text-slate-700">
-                                                <FaStickyNote size={32} className="mb-4 opacity-10" />
-                                                <p className="text-[11px] font-bold tracking-widest uppercase opacity-40">No progress reports found</p>
-                                                <p className="text-[9px] text-slate-400 mt-1">Updates reported from the field will appear here</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    items.map((item, idx) => (
-                                        <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-200">
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="text-[10px] font-bold text-slate-300 group-hover:text-blue-500 transition-colors">{(idx + 1).toString().padStart(2, '0')}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase">
-                                                    {item.due_date ? new Date(item.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-xs font-medium text-slate-700 dark:text-slate-200 uppercase leading-relaxed">
-                                                    {item.progress_description}
-                                                </p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                        <FaUser size={10} />
+                    <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-hide">
+                        <div className="min-w-[800px]">
+                            {/* Headless Table Header */}
+                            <div className="sticky top-0 z-10 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md flex items-center border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                                <div className="w-12 text-center font-bold text-[10px] text-slate-400 uppercase tracking-widest shrink-0">No</div>
+                                <div className="w-32 font-bold text-[10px] text-slate-400 uppercase tracking-widest shrink-0">Date</div>
+                                <div className="flex-1 font-bold text-[10px] text-slate-400 uppercase tracking-widest px-4">Progress Description</div>
+                                <div className="w-40 font-bold text-[10px] text-slate-400 uppercase tracking-widest shrink-0">PIC</div>
+                                <div className="w-24 text-center font-bold text-[10px] text-slate-400 uppercase tracking-widest shrink-0">Status</div>
+                                <div className="w-20 text-center font-bold text-[10px] text-slate-400 uppercase tracking-widest shrink-0">Action</div>
+                            </div>
+
+                            <DragDropContext onDragEnd={handleDragEnd}>
+                                <Droppable droppableId="progress-list">
+                                    {(provided) => (
+                                        <div 
+                                            {...provided.droppableProps}
+                                            ref={provided.innerRef}
+                                            className="divide-y divide-slate-50 dark:divide-slate-800/50"
+                                        >
+                                            {loading ? (
+                                                <div className="px-6 py-12 text-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching Logs...</span>
                                                     </div>
-                                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">{getManpowerName(item.pic)}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button 
-                                                    onClick={() => toggleItemStatus(item)}
-                                                    className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-tighter transition-all
-                                                        ${item.status === 'closed' 
-                                                            ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                                            : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}
-                                                >
-                                                    {item.status}
-                                                </button>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button 
-                                                    onClick={() => deleteItem(item.id)}
-                                                    className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <FaTrash size={12} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                            ) : items.length === 0 ? (
+                                                <div className="px-6 py-20 text-center">
+                                                    <div className="flex flex-col items-center justify-center text-slate-300 dark:text-slate-700">
+                                                        <FaStickyNote size={32} className="mb-4 opacity-10" />
+                                                        <p className="text-[11px] font-bold tracking-widest uppercase opacity-40">No progress reports found</p>
+                                                        <p className="text-[9px] text-slate-400 mt-1">Updates reported from the field will appear here</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                items.map((item, idx) => (
+                                                    <Draggable key={item.id.toString()} draggableId={item.id.toString()} index={idx}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                className={`group flex items-center px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-200 ${snapshot.isDragging ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-lg ring-1 ring-blue-500/10' : ''}`}
+                                                                style={{
+                                                                    ...provided.draggableProps.style,
+                                                                    display: 'flex'
+                                                                }}
+                                                            >
+                                                                <div className="w-12 flex items-center justify-center shrink-0 gap-1">
+                                                                    <div {...provided.dragHandleProps} className="text-slate-300 hover:text-blue-500 cursor-grab active:cursor-grabbing">
+                                                                        <FaGripVertical size={10} />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-bold text-slate-300 group-hover:text-blue-500 transition-colors">{(idx + 1).toString().padStart(2, '0')}</span>
+                                                                </div>
+
+                                                                <div className="w-32 shrink-0">
+                                                                    <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase">
+                                                                        {item.due_date ? new Date(item.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="flex-1 px-4">
+                                                                    <p className="text-xs font-medium text-slate-700 dark:text-slate-200 uppercase leading-relaxed">
+                                                                        {item.progress_description}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="w-40 shrink-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                                            <FaUser size={10} />
+                                                                        </div>
+                                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate">{getManpowerName(item.pic)}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="w-24 text-center shrink-0">
+                                                                    <button 
+                                                                        onClick={() => toggleItemStatus(item)}
+                                                                        className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-tighter transition-all
+                                                                            ${item.status === 'closed' 
+                                                                                ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                                                                : item.status === 'progress'
+                                                                                ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                                                                : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}
+                                                                    >
+                                                                        {item.status}
+                                                                    </button>
+                                                                </div>
+
+                                                                <div className="w-20 text-center shrink-0">
+                                                                    <button 
+                                                                        onClick={() => deleteItem(item.id)}
+                                                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <FaTrash size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))
+                                            )}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </DragDropContext>
+                        </div>
                     </div>
                 </div>
             </div>

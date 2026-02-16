@@ -143,8 +143,42 @@ const BoardDetail = () => {
     { 
         field: 'due_date', 
         headerName: 'Due Date', 
-        width: 120,
-        valueFormatter: (params) => params.value ? new Date(params.value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : '-'
+        width: 140,
+        cellRenderer: (params: any) => {
+            if (!params.value) return <span className="text-gray-400">-</span>;
+            
+            const dueDate = new Date(params.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const dDate = new Date(dueDate);
+            dDate.setHours(0, 0, 0, 0);
+            
+            const isToday = dDate.getTime() === today.getTime();
+            const isOverdue = dDate.getTime() < today.getTime();
+            
+            const dateStr = dueDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+            
+            if (isOverdue) {
+                return (
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-red-600 dark:text-red-400 font-bold">{dateStr}</span>
+                        <span className="text-[8px] bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-extrabold uppercase animate-pulse">Overdue</span>
+                    </div>
+                );
+            }
+            
+            if (isToday) {
+                return (
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{dateStr}</span>
+                        <span className="text-[8px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-extrabold uppercase">Today</span>
+                    </div>
+                );
+            }
+            
+            return <span className="font-medium text-slate-500 dark:text-slate-400">{dateStr}</span>;
+        }
     },
     {
         headerName: 'Progress',
@@ -153,12 +187,25 @@ const BoardDetail = () => {
             const total = params.data.progress_count || 0;
             const closed = params.data.completed_count || 0;
             const percent = total > 0 ? Math.round((closed / total) * 100) : 0;
+            
+            // Glassmorphism-friendly dynamic colors
+            const barStyles = 
+                percent < 50 ? 'bg-gradient-to-r from-red-500/80 to-rose-400/80 shadow-[0_0_8px_rgba(244,63,94,0.3)]' : 
+                percent < 80 ? 'bg-gradient-to-r from-amber-500/80 to-yellow-400/80 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 
+                'bg-gradient-to-r from-emerald-500/80 to-teal-400/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]';
+            
             return (
                 <div className="flex items-center gap-2 h-full">
-                    <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 transition-all" style={{ width: `${percent}%` }} />
+                    <div className="flex-1 h-2 bg-slate-100/50 dark:bg-slate-800/40 rounded-full overflow-hidden border border-white/20 dark:border-white/5 backdrop-blur-[2px] relative group/progress">
+                        <div 
+                            className={`h-full ${barStyles} transition-all duration-700 ease-out relative`} 
+                            style={{ width: `${percent}%` }}
+                        >
+                            {/* Inner glass highlight */}
+                            <div className="absolute inset-0 bg-white/20 h-[1px] top-0" />
+                        </div>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-500">{percent}%</span>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 min-w-[30px]">{percent}%</span>
                 </div>
             );
         }
@@ -558,7 +605,7 @@ const BoardDetail = () => {
       {/* Job Detail Modal */}
       {selectedJob && (
           <div className="fixed inset-0 z-999999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-300" onClick={() => setSelectedJob(null)}>
-               <div className="bg-white dark:bg-boxdark rounded-2xl shadow-2xl w-full max-w-5xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+               <div className="bg-white dark:bg-boxdark rounded-2xl shadow-2xl w-full max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col overflow-y-auto animate-in zoom-in-95 duration-200 scrollbar-hide" onClick={e => e.stopPropagation()}>
                    <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
                         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest flex items-center gap-3">
                             <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
@@ -568,7 +615,7 @@ const BoardDetail = () => {
                              <FaTimes size={18} />
                         </button>
                    </div>
-                   <div className="p-4 flex-1 overflow-hidden">
+                   <div className="p-4 flex-1">
                         <JobDetail 
                             job={selectedJob} 
                             manpowerList={manpowerList}
