@@ -15,6 +15,10 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { parseIDNumber } from "../../../../Utils/NumberUtility";
 
 // --- Interfaces ---
+interface StockReportingProps {
+  onSuccess?: () => void;
+}
+
 interface StorageUnit {
   id: number;
   warehouse_id: string;
@@ -61,7 +65,7 @@ interface FilterReplacement {
 }
 
 // --- Komponen Utama ---
-const StockReporting: React.FC = () => {
+const StockReporting: React.FC<StockReportingProps> = ({ onSuccess }) => {
   const gridRef = React.useRef<any>(null); // Ref untuk akses Grid API
   const [units, setUnits] = useState<StorageUnit[]>([]);
   const [rawText, setRawText] = useState("");
@@ -74,7 +78,8 @@ const StockReporting: React.FC = () => {
   const [reportShift, setReportShift] = useState<string>("1");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useFlowmeter, setUseFlowmeter] = useState(true); // Default use Flowmeter
+  const [useFlowmeter, setUseFlowmeter] = useState(false); // Default to Issuing Report
+  const [lastReport, setLastReport] = useState<{ date: string; shift: string } | null>(null);
    
 
   // --- Utilitas Parsing ---
@@ -128,7 +133,37 @@ const StockReporting: React.FC = () => {
       if (error) console.error("Error fetching storage:", error);
       else setUnits(data || []);
     };
+
+    const fetchLastReport = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("stock_taking")
+          .select("created_at, working_shift")
+          .order("created_at", { ascending: false })
+          .order("working_shift", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+           if (error.code !== 'PGRST116') { // Ignore "no rows found" error
+             console.error("Error fetching last report:", error);
+           }
+           return;
+        }
+
+        if (data) {
+          setLastReport({
+            date: data.created_at,
+            shift: data.working_shift.toString()
+          });
+        }
+      } catch (err) {
+        console.error("Catch error fetching last report:", err);
+      }
+    };
+
     fetchUnits();
+    fetchLastReport();
   }, []);
 
   // --- 2. Parsing Data Mentah (Update Transfer Logic) ---
@@ -261,20 +296,20 @@ const StockReporting: React.FC = () => {
               // If found, remove it. Then parse as integer.
               let cleanIssuing = value.trim();
               
-              // Regex to remove trailing decimal part (e.g. .7 or ,5)
-              // We assume decimal part is at the end, preceeded by . or ,
-              cleanIssuing = cleanIssuing.replace(/[,.]\d+$/, '');
+              // New Strategy:
+              // 1. Identify the LAST separator (. or ,)
+              // 2. Remove it and everything after it to strip fractions
+              // 3. Remove all remaining separators (dot/comma) from the main number
+              // 4. Parse as integer
               
-              // Now parse the remaining integer part (e.g. 14.029 or 12,000)
-              // We can rely on parseIDNumber but since we stripped decimal, it should be just thousands separator handling
-              // or simple digits. 
-              // Example: 14.029 -> parseID will handle it as 14029 (ID) or 14.029 (US decimal?) -> Wait.
+              const lastSeparatorIndex = Math.max(cleanIssuing.lastIndexOf('.'), cleanIssuing.lastIndexOf(','));
+              if (lastSeparatorIndex !== -1 && lastSeparatorIndex > cleanIssuing.length - 4) {
+                  // Only strip if the separator is near the end (likely a decimal)
+                  // e.g., 14.029.7 -> 14.029
+                  cleanIssuing = cleanIssuing.substring(0, lastSeparatorIndex);
+              }
               
-              // If we stripped the last part, 14.029 remains.
-              // parseIDNumber('14.029') -> checks if ID thousands (14.000) -> 14000. 
-              // But 14.029 is likely 14029.
-              
-              // Force remove all dots and commas after stripping decimal
+              // Strip all remaining dots and commas
               cleanIssuing = cleanIssuing.replace(/[.,]/g, '');
               
               allUnits[unit].issuing_report = parseFloat(cleanIssuing) || 0;
@@ -550,8 +585,26 @@ const formatValue = (params: ValueFormatterParams) => {
           toast.error(`Gagal submit: ${error.message}`);
       } else {
           toast.success("Data berhasil disubmit ke database!");
+          
+          // Re-fetch last report info
+          const { data: lastData } = await supabase
+            .from('stock_taking')
+            .select('created_at, working_shift')
+            .order('created_at', { ascending: false })
+            .order('working_shift', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (lastData) {
+            setLastReport({
+              date: lastData.created_at,
+              shift: lastData.working_shift.toString()
+            });
+          }
+
           handleClear();
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          if (onSuccess) onSuccess();
       }
       setIsSubmitting(false);
   };
@@ -665,137 +718,186 @@ const formatValue = (params: ValueFormatterParams) => {
   const totalPartnerFill = partnerFillSummary.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6">
-      <div className="w-full p-5">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold text-black dark:text-white text-lg">
-            Laporan Stock (Fuelman)
-          </h2>
-          <div className="flex gap-2">
+    <div className="rounded-[2.5rem] border border-white/40 dark:border-white/10 bg-white/30 dark:bg-white/5 backdrop-blur-xl shadow-2xl overflow-hidden mb-6 transition-all duration-500">
+      <div className="w-full p-8">
+        <div className="flex justify-between items-start mb-10">
+          <div className="flex flex-col relative">
+            {/* Mesh gradient glow for header */}
+            <div className="absolute -top-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-1"></div>
+            
+            <h2 className="font-black text-slate-800 dark:text-white text-2xl tracking-tight uppercase">
+              Site Inventory Data
+            </h2>
+            {lastReport && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
+                  Last: <span className="text-primary dark:text-blue-400">{(() => {
+                    const d = new Date(lastReport.date);
+                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = months[d.getMonth()];
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                  })()} shift {lastReport.shift}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3">
             <button
                 onClick={handleProcess}
                 disabled={!rawText.trim()}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                className={`px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 transform active:scale-95 ${
                     !rawText.trim()
-                        ? "bg-slate-400 cursor-not-allowed text-white"
-                        : "bg-green-600 hover:bg-green-700 text-white"
+                        ? "bg-slate-100 dark:bg-white/5 text-slate-400 cursor-not-allowed shadow-none"
+                        : "bg-gradient-to-br from-green-500 to-emerald-700 text-white shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-1"
                 }`}
              >
-                Proses
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Process
              </button>
             <button
                 onClick={handleClear}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+                className="bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-900/20 dark:to-rose-900/40 text-red-600 dark:text-red-400 px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all hover:bg-red-100 dark:hover:bg-red-800/20 active:scale-95"
             >
                 Clear
             </button>
              <button
                 onClick={handleSubmitReport}
                 disabled={isSubmitting || finalData.length === 0}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                className={`px-8 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 transform active:scale-95 ${
                     isSubmitting || finalData.length === 0
-                        ? "bg-slate-400 cursor-not-allowed text-white"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                        ? "bg-slate-100 dark:bg-white/5 text-slate-400 cursor-not-allowed shadow-none"
+                        : "bg-gradient-to-br from-primary to-indigo-700 text-white shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1"
                 }`}
             >
-                {isSubmitting ? "Submitting..." : "Submit Report"}
+                {isSubmitting ? "Submitting..." : (
+                    <>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        Submit
+                    </>
+                )}
             </button>
           </div>
         </div>
 
-        <textarea
-          value={rawText}
-          onChange={(e) => setRawText(e.target.value)}
-          placeholder="Paste laporan WhatsApp di sini..."
-          rows={6}
-          className="w-full border border-stroke dark:border-strokedark rounded-md p-3 mb-6 bg-transparent text-black dark:text-white"
-        />
+        <div className="relative group/textarea mb-8">
+            <textarea
+              value={rawText}
+              onChange={(e) => setRawText(e.target.value)}
+              placeholder="Paste WhatsApp Report here (ISSUING, SONDING, RITASI, etc...)"
+              rows={8}
+              className="w-full bg-white/50 dark:bg-white/5 border-2 border-slate-100 dark:border-white/10 rounded-[2rem] p-6 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono text-sm leading-relaxed transition-all focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none scrollbar-hide"
+            />
+            {/* Visual indicator for textarea focus */}
+            <div className="absolute inset-0 rounded-[2rem] border-2 border-primary/0 pointer-events-none group-focus-within/textarea:border-primary/30 transition-all duration-300"></div>
+        </div>
 
-        {/* Input Date & Shift */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-                <label className="block text-sm font-medium text-black dark:text-white mb-1">Tanggal</label>
+        {/* Input Date & Shift - Modern Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Report Date</label>
                 <input 
                     type="date" 
                     value={reportDate} 
                     onChange={e => setReportDate(e.target.value)}
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-3 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    className="w-full rounded-2xl border-2 border-slate-100 dark:border-white/10 bg-white/50 dark:bg-white/5 py-4 px-6 font-bold text-slate-700 dark:text-white outline-none transition-all focus:border-primary/50 focus:bg-white dark:focus:bg-white/10 shadow-sm"
                 />
             </div>
-            <div>
-                <label className="block text-sm font-medium text-black dark:text-white mb-1">Shift</label>
-                <select 
-                    value={reportShift} 
-                    onChange={e => setReportShift(e.target.value)}
-                    className="w-full rounded border-[1.5px] border-stroke bg-transparent py-2 px-3 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-                >
-                    <option value="1">Shift 1</option>
-                    <option value="2">Shift 2</option>
-                </select>
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Working Shift</label>
+                <div className="relative">
+                    <select 
+                        value={reportShift} 
+                        onChange={e => setReportShift(e.target.value)}
+                        className="w-full rounded-2xl border-2 border-slate-100 dark:border-white/10 bg-white/50 dark:bg-white/5 py-4 px-6 font-bold text-slate-700 dark:text-white outline-none transition-all focus:border-primary/50 appearance-none shadow-sm"
+                    >
+                        <option value="1">Shift 1 (Day)</option>
+                        <option value="2">Shift 2 (Night)</option>
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none border-l-2 border-slate-100 dark:border-white/10 pl-4 text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </div>
+                </div>
             </div>
         </div>
 
-        {/* Input Switch Calculation Method */}
-        <div className="mb-6 flex items-center gap-3">
-             <span className={`text-sm font-medium ${!useFlowmeter ? 'text-primary font-bold' : 'text-gray-500'}`}>By Issuing Report</span>
-             <div 
-                className={`relative w-14 h-7 rounded-full cursor-pointer transition-colors ${useFlowmeter ? 'bg-green-500' : 'bg-blue-500'}`}
-                onClick={() => setUseFlowmeter(!useFlowmeter)}
+        {/* Input Switch Calculation Method - Re-engineered toggle */}
+        <div className="mb-10 flex items-center justify-center gap-6 p-2 bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-full w-fit mx-auto transition-all">
+             <button 
+                onClick={() => setUseFlowmeter(false)}
+                className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${!useFlowmeter ? 'bg-white dark:bg-white/20 text-primary shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
              >
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${useFlowmeter ? 'left-[calc(100%-1.5rem)]' : 'left-1'}`}></div>
-             </div>
-             <span className={`text-sm font-medium ${useFlowmeter ? 'text-primary font-bold' : 'text-gray-500'}`}>By Flowmeter</span>
+                Issuing Report
+             </button>
+             <div className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/10"></div>
+             <button 
+                onClick={() => setUseFlowmeter(true)}
+                className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${useFlowmeter ? 'bg-white dark:bg-white/20 text-primary shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'}`}
+             >
+                Flowmeter
+             </button>
         </div>
 
         {isLoading ? (
           <Loader />
         ) : (
           <>
-             {/* --- Stats Summary Panel --- */}
+             {/* --- Stats Summary Panel - Re-styled as glass cards --- */}
              {finalData.length > 0 && (
-                 <div className="mt-6 mb-6 grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Total Stock</span>
-                         <div className="text-lg font-black text-blue-600 dark:text-blue-400">
+                 <div className="mt-8 mb-10 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                      <div className="p-5 bg-blue-50/50 dark:bg-blue-600/10 border border-blue-100 dark:border-blue-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all">
+                         <span className="text-[10px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-widest">Total Stock</span>
+                         <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">
                               {summary.totalStock.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                          </div>
                       </div>
-                      <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Total Usage (Flow)</span>
-                          <div className="text-lg font-black text-green-600 dark:text-green-400">
+                      
+                      <div className="p-5 bg-green-50/50 dark:bg-green-600/10 border border-green-100 dark:border-green-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all">
+                         <span className="text-[10px] font-black text-green-400 dark:text-green-500 uppercase tracking-widest">Usage (Flow)</span>
+                          <div className="text-xl font-black text-green-600 dark:text-green-400 mt-1">
                               {summary.totalUsageFlow.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                          </div>
                       </div>
 
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Total Usage (Report)</span>
-                          <div className="text-lg font-black text-blue-600 dark:text-blue-400">
+                      <div className="p-5 bg-indigo-50/50 dark:bg-indigo-600/10 border border-indigo-100 dark:border-indigo-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all">
+                         <span className="text-[10px] font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-widest">Usage (Rep)</span>
+                          <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
                               {summary.totalUsageReport.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                          </div>
                       </div>
                    
-                      <div className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Total FT RFU</span>
-                          <div className="text-lg font-black text-gray-700 dark:text-gray-200">
-                              {summary.ftRfuCount} Unit
+                      <div className="p-5 bg-slate-50/50 dark:bg-slate-600/10 border border-slate-100 dark:border-slate-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all text-center">
+                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">FT RFU</span>
+                          <div className="text-xl font-black text-slate-700 dark:text-white mt-1">
+                              {summary.ftRfuCount} <span className="text-xs font-bold text-slate-400 tracking-tight ml-0.5">Units</span>
                          </div>
                       </div>
-                       <div className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Operating FT</span>
-                          <div className="text-lg font-black text-gray-700 dark:text-gray-200">
-                              {summary.operatingFtCount} Unit
+
+                      <div className="p-5 bg-slate-50/50 dark:bg-slate-600/10 border border-slate-100 dark:border-slate-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all text-center">
+                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Op. FT</span>
+                          <div className="text-xl font-black text-slate-700 dark:text-white mt-1">
+                              {summary.operatingFtCount} <span className="text-xs font-bold text-slate-400 tracking-tight ml-0.5">Units</span>
                          </div>
                       </div>
-                       <div className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg">
-                         <span className="text-xs font-bold text-gray-500 uppercase">Operating Skidtank (FS)</span>
-                          <div className="text-lg font-black text-gray-700 dark:text-gray-200">
-                              {summary.operatingSkidtankCount} Unit
+
+                      <div className="p-5 bg-slate-50/50 dark:bg-slate-600/10 border border-slate-100 dark:border-slate-500/20 rounded-[2rem] shadow-sm hover:translate-y-[-2px] transition-all text-center">
+                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Op. Skid</span>
+                          <div className="text-xl font-black text-slate-700 dark:text-white mt-1">
+                              {summary.operatingSkidtankCount} <span className="text-xs font-bold text-slate-400 tracking-tight ml-0.5">Units</span>
                          </div>
                       </div>
                  </div>
              )}
 
-            <div className="ag-theme-quartz-auto-dark" style={{ height: 500, width: '100%' }}>
+            <div className="ag-theme-quartz-auto-dark overflow-hidden rounded-[2.5rem] border-2 border-slate-100 dark:border-white/10 shadow-inner" style={{ height: 600, width: '100%' }}>
               <AgGridReact
                 ref={gridRef}
                 rowData={finalData}

@@ -4,6 +4,9 @@ import { supabase } from '../../../../db/SupabaseClient';
 import PanelContainer from '../../../PanelContainer';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
+import StockReporting from '../../../Reporting/DailyReport/components/StockReporting';
+import { ADMIN } from '../../../../store/roles';
 
 export default function FuelStockManagement() {
     const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -11,6 +14,8 @@ export default function FuelStockManagement() {
     const [lastInputDate, setLastInputDate] = useState<string | null>(null);
     const [editingPortDay, setEditingPortDay] = useState<number | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isNormalized, setIsNormalized] = useState(false);
 
     const chartScrollRef = useRef<HTMLDivElement>(null);
     const tableScrollRef = useRef<HTMLDivElement>(null);
@@ -32,6 +37,12 @@ export default function FuelStockManagement() {
     useEffect(() => {
         fetchData();
         fetchLastInput();
+
+        const handleEsc = (event: KeyboardEvent) => {
+           if (event.key === 'Escape') setIsModalOpen(false);
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
     }, [selectedMonth]);
 
     const fetchLastInput = async () => {
@@ -228,7 +239,7 @@ export default function FuelStockManagement() {
               opacity: 0.1,
             }
         },
-        colors: ['#80CAEE', '#3C50E0', '#CBD5E1', '#00D1FF', '#94A3B8'], // Reverted to sky blue for Port Stock
+        colors: ['#80CAEE', '#3C50E0', '#CBD5E1', '#00D1FF', '#FF4560'], // Changed last color (Target) to Red
         stroke: { 
             width: [1.5, 1.5, 0, 5, 2.5], 
             curve: 'straight',
@@ -262,9 +273,11 @@ export default function FuelStockManagement() {
             {
                 seriesName: 'Port Stock',
                 title: { text: 'Volume (L)', style: { color: '#3C50E0', fontWeight: 600 } },
+                max: isNormalized ? undefined : 2000000,
                 labels: {
                     formatter: (val: number) => val ? Math.round(val).toLocaleString('id-ID') : 0
-                }
+                },
+                show: !isNormalized // Hide Port Stock in normalized view to magnify other metrics
             },
             {
                 seriesName: 'Port Stock',
@@ -279,7 +292,7 @@ export default function FuelStockManagement() {
                 opposite: true,
                 title: { text: 'ITO (Days)', style: { color: '#00D1FF', fontWeight: 700 } },
                 min: 0,
-                max: 10,
+                max: isNormalized ? undefined : 50,
                 labels: {
                     formatter: (val: number) => val?.toFixed(1)
                 }
@@ -426,17 +439,30 @@ export default function FuelStockManagement() {
         <div className="p-4 bg-white dark:bg-boxdark rounded-lg shadow-sm">
             {/* Header Controls - Month Selector Left, Last Update Right */}
             <div className="flex justify-between items-center mb-8 bg-slate-50/50 dark:bg-white/5 p-3 rounded-2xl border border-white/20">
-                <div className="relative group">
-                    <input 
-                        type="month" 
-                        value={`${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}`}
-                        onChange={(e) => {
-                            const [y, m] = e.target.value.split('-');
-                            setSelectedMonth(new Date(parseInt(y), parseInt(m) - 1, 1));
-                        }}
-                        className="appearance-none bg-white dark:bg-meta-4 border border-stroke dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white shadow-sm hover:border-primary transition-all outline-none cursor-pointer"
-                    />
-                    <div className="absolute inset-0 rounded-xl bg-primary/5 scale-x-0 group-hover:scale-x-100 transition-transform origin-left -z-1"></div>
+                <div className="flex items-center gap-4">
+                    <div className="relative group">
+                        <input 
+                            type="month" 
+                            value={`${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}`}
+                            onChange={(e) => {
+                                const [y, m] = e.target.value.split('-');
+                                setSelectedMonth(new Date(parseInt(y), parseInt(m) - 1, 1));
+                            }}
+                            className="appearance-none bg-white dark:bg-meta-4 border border-stroke dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white shadow-sm hover:border-primary transition-all outline-none cursor-pointer"
+                        />
+                        <div className="absolute inset-0 rounded-xl bg-primary/5 scale-x-0 group-hover:scale-x-100 transition-transform origin-left -z-1"></div>
+                    </div>
+                    <button 
+                        onClick={() => setIsNormalized(!isNormalized)}
+                        className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 shadow-sm ${
+                            isNormalized 
+                            ? 'bg-primary border-primary text-white shadow-primary/20' 
+                            : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-500 hover:border-primary hover:text-primary transition-all'
+                        }`}
+                    >
+                        <div className={`w-2 h-2 rounded-full ${isNormalized ? 'bg-white animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-slate-300'}`}></div>
+                        Normalize View
+                    </button>
                 </div>
                 
                 {lastInputDate && (
@@ -631,16 +657,66 @@ export default function FuelStockManagement() {
                     <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * Achievement: 100% if ITO &gt; 3 Days</p>
                 </div>
 
-                <button 
-                    onClick={handleExport}
-                    className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-600/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Export XLSX
-                </button>
+                <div className="flex items-center gap-3">
+                    <ExclusiveWidget allowedRoles={ ADMIN}>
+                        <button 
+                            onClick={() => setIsModalOpen(true)}
+                            className="flex items-center gap-2.5 bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                            Update Site Data
+                        </button>
+                    </ExclusiveWidget>
+                    <button 
+                        onClick={handleExport}
+                        className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-600/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        Export XLSX
+                    </button>
+                </div>
             </div>
+
+            {/* Modal Overlay */}
+            {isModalOpen && (
+                <div 
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsModalOpen(false);
+                    }}
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in cursor-pointer"
+                >
+                    <div className="relative w-full max-w-7xl max-h-[92vh] overflow-hidden bg-white dark:bg-boxdark rounded-[2.5rem] shadow-2xl flex flex-col border border-white/20 cursor-default">
+                        {/* Close Button UI */}
+                        <div className="flex justify-between items-center p-6 border-b border-stroke dark:border-white/10">
+                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Update Site Inventory Data</h3>
+                            <button 
+                                onClick={() => setIsModalOpen(false)}
+                                className="group p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8 text-slate-400 group-hover:text-red-500 transition-colors">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                            <StockReporting 
+                                onSuccess={() => {
+                                    setIsModalOpen(false);
+                                    fetchData();
+                                    fetchLastInput();
+                                    toast.success("Dashboard Refreshed!");
+                                }} 
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     </PanelContainer>
   )
