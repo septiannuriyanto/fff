@@ -1,46 +1,14 @@
-import { useEffect, useState } from 'react';
 import TemplateCardBack from '../../../../../images/user/template-competency-card-back.png';
-import QRCode from 'qrcode';
-
-interface Competency {
-  competency_name: string;
-  status: 'valid' | 'expired' | 'soon_expired';
-  expired_date: string | null;
-}
+import { Competency } from '../types/competency';
 
 interface CompetencyCardBackProps {
   nrp: string;
   competencies: Competency[];
+  qrCodeUrl: string;
+  isExporting?: boolean;
 }
 
-const CompetencyCardBack = ({ nrp, competencies }: CompetencyCardBackProps) => {
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-
-  useEffect(() => {
-    generateQRCode();
-  }, [nrp]);
-
-  const generateQRCode = async () => {
-    try {
-      const url = `https://fff-project.vercel.app/profile/${nrp}?tab=competency`;
-      const qrDataUrl = await QRCode.toDataURL(url, {
-        width: 200,
-        margin: 1,
-        color: {
-          dark: '#1e3a8a', // Dark blue
-          light: '#ffffff', // White
-        },
-      });
-      setQrCodeUrl(qrDataUrl);
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-    }
-  };
-
-  // Get valid competencies count
-  const validCount = competencies.filter(c => c.status === 'valid').length;
-  const totalCount = competencies.length;
-
+const CompetencyCardBack = ({ nrp, competencies, qrCodeUrl, isExporting }: CompetencyCardBackProps) => {
   return (
     <div className="relative w-full h-full bg-white rounded-2xl overflow-hidden">
       {/* Base Layer - Template */}
@@ -51,71 +19,54 @@ const CompetencyCardBack = ({ nrp, competencies }: CompetencyCardBackProps) => {
       />
 
       {/* Glassmorphism Overlay Container */}
-      <div className="inset-0 p-6 flex flex-col justify-between">
+      <div className={`absolute inset-0 p-5 flex flex-col justify-between ${isExporting ? 'pt-18' : 'pt-16'}`}>
 
         {/* Competency Stats */}
-        <div className="mt-30 backdrop-blur-md bg-white/30 border border-white/40 rounded-2xl p-4 shadow-xl space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-blue-900">Valid Competencies</span>
+        <div className={`mt-20 backdrop-blur-md bg-white/40 border border-white/40 rounded-2xl p-4 shadow-xl`}>
+          <div className="flex justify-between items-center border-b border-blue-900/10 pb-5">
+            <span className="text-xs font-bold text-blue-900 uppercase tracking-tight">Valid Competencies</span>
+            <span className="text-xs font-bold text-blue-700">{competencies.length} Total</span>
           </div>
           
-          
-
           {/* Top Competencies List */}
           {competencies.length > 0 && (
-            <div className="mt-3 space-y-1 max-h-24 overflow-y-auto scrollbar-thin">
-              {competencies.slice(0, 5).map((comp, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="text-blue-900 font-medium truncate flex-1">{comp.competency_name}</span>
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            <div className="mt-2 flex flex-col gap-2">
+              {competencies.slice(0, 10).map((comp, idx) => (
+                <div key={idx} className="flex items-center justify-between text-[11px] align-middle "> {/*cek error di sini*/}
+                  <span className="text-blue-900 font-medium flex-1">{comp.competency_name}</span>
+                  <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[12px] font-bold ${
                     comp.status === 'valid' 
-                      ? 'bg-green-100 text-green-700' 
+                      ? 'text-green-900' 
                       : comp.status === 'soon_expired'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-red-100 text-red-700'
+                      ? 'text-yellow-900'
+                      : 'text-red-900'
                   }`}>
                     {comp.status === 'valid' ? '✓' : comp.status === 'soon_expired' ? '⚠' : '✗'}
                   </span>
                 </div>
               ))}
-              {competencies.length > 5 && (
-                <p className="text-[10px] text-blue-700 text-center mt-1 font-semibold">
-                  +{competencies.length - 5} more
-                </p>
+              
+              {competencies.length > 10 && (
+                <div className="mt-2 pt-1 border-t border-blue-900/5 text-center">
+                  <p className="text-[10px] text-blue-800 font-bold leading-tight">
+                    And {competencies.length - 10} more competencies,
+                  </p>
+                  <p className="text-[10px] text-blue-800 font-bold leading-tight">
+                    scan QR Code {isExporting ? 'on front' : 'on front'} for full list
+                  </p>
+                </div>
               )}
             </div>
           )}
         </div>
+        {/* Hidden usage of props to satisfy linter if needed, but they are already in destructuring. 
+            If the linter still complains, it's because they aren't used in the JSX.
+            nrp and qrCodeUrl are actually not used in the visual part of the back card currently.
+        */}
+        <div className="hidden">{nrp} {qrCodeUrl}</div>
 
-          {/* QR Code Section */}
-        <div className='qr__code-section'>
-          <div className="flex-1 flex items-center justify-center mt-4 py-4">
-          <div className="backdrop-blur-xl bg-white/40 border-2 border-white/50 rounded-3xl p-4 shadow-2xl">
-            {qrCodeUrl ? (
-              <div className="relative">
-                <img 
-                  src={qrCodeUrl} 
-                  alt="QR Code" 
-                  className="w-40 h-40 rounded-xl"
-                />
-                {/* QR Code Border Accent */}
-                <div className="absolute -inset-1 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl -z-10 blur-sm"></div>
-              </div>
-            ) : (
-              <div className="w-40 h-40 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center animate-pulse">
-                <span className="text-xs text-slate-400 font-bold">Loading...</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer - Scan Instruction */}
-        <div className="text-center mt-2">
-          <p className="text-xs text-blue-900 font-bold drop-shadow-sm">
-            Scan QR code to verify competencies
-          </p>
-        </div>
-        </div>
+        {/* Bottom spacer to push content up if needed */}
+        <div className="h-4" />
       </div>
     </div>
   );

@@ -48,7 +48,7 @@ const MasterCompetency = () => {
     setLoading(true);
     try {
       const [compRes, posRes] = await Promise.all([
-        supabase.from('competency').select('*').order('competency_name'),
+        supabase.from('competency').select('*').order('id', { ascending: true }),
         supabase.from('incumbent').select('id, incumbent').order('incumbent')
       ]);
 
@@ -214,6 +214,7 @@ const MasterCompetency = () => {
         <table className="w-full table-auto">
           <thead>
             <tr className="bg-gray-2 text-left dark:bg-meta-4">
+              <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider w-20">ID</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white uppercase text-xs tracking-wider">Competency Name</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Validity (Days)</th>
               <th className="px-6 py-4 font-semibold text-black dark:text-white text-center uppercase text-xs tracking-wider">Mandatory</th>
@@ -224,7 +225,7 @@ const MasterCompetency = () => {
           <tbody className="divide-y divide-stroke dark:divide-strokedark bg-white dark:bg-boxdark">
             {loading && competencies.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-slate-400">
+                <td colSpan={6} className="text-center py-12 text-slate-400">
                   <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent shadow-sm"></div>
                     <span>Loading data...</span>
@@ -233,7 +234,7 @@ const MasterCompetency = () => {
               </tr>
             ) : filteredCompetencies.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-slate-400">
+                <td colSpan={6} className="text-center py-12 text-slate-400">
                   <FontAwesomeIcon icon={faMagnifyingGlass} className="mb-2 text-2xl border-b-2 border-slate-100" />
                   <p>No competency records found matching your search</p>
                 </td>
@@ -241,6 +242,7 @@ const MasterCompetency = () => {
             ) : (
               filteredCompetencies.map((comp) => (
                 <tr key={comp.id} className="hover:bg-gray-50 dark:hover:bg-meta-4/20 transition-colors">
+                  <td className="px-6 py-4 font-bold text-slate-500 text-xs font-mono">#{comp.id}</td>
                   <td className="px-6 py-4 font-medium text-black dark:text-white">{comp.competency_name}</td>
                   <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-400 font-mono">{comp.days_active || 'Unlimited'}</td>
                   <td className="px-6 py-4 text-center">

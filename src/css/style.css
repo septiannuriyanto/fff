@@ -298,3 +298,25 @@ span.flatpickr-weekday,
   border-radius: 12px !important;
   overflow: hidden !important;
 }
+
+
+
+.export-mode * {
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.export-mode span,
+.export-mode div,
+.export-mode p {
+  line-height: 1 !important;
+}
+
+.export-mode {
+  transform: scale(1);
+}
+
+.export-mode * {
+  transform: none !important;
+}
+

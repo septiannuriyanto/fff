@@ -92,7 +92,7 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
       const to = from + pageSize - 1;
 
       const { data: statusData, error, count } = await query
-        .order('competency_name', { ascending: true })
+        .order('competency_id', { ascending: true })
         .range(from, to);
 
       if (error) throw error;
@@ -300,6 +300,7 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-white/40 dark:bg-black/40 text-left border-b border-white/10 text-slate-700 dark:text-slate-200">
+                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider w-20">ID</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Competency</th>
                 <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Obtained</th>
                 <th className="px-4 py-4 font-bold text-center text-xs uppercase tracking-wider">Expired</th>
@@ -312,12 +313,13 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
             </thead>
             <tbody className="divide-y divide-white/10">
               {loading ? (
-                 <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-12 text-slate-500 font-medium animate-pulse">Loading data...</td></tr>
+                 <tr><td colSpan={isSupervisor ? 7 : 6} className="text-center py-12 text-slate-500 font-medium animate-pulse">Loading data...</td></tr>
               ) : data.length === 0 ? (
-                 <tr><td colSpan={isSupervisor ? 6 : 5} className="text-center py-12 text-slate-500 font-medium">No competency records found.</td></tr>
+                 <tr><td colSpan={isSupervisor ? 7 : 6} className="text-center py-12 text-slate-500 font-medium">No competency records found.</td></tr>
               ) : (
                 data.map((item, idx) => (
                   <tr key={idx} className="hover:bg-white/30 dark:hover:bg-white/5 transition-colors duration-200 text-sm group">
+                    <td className="px-6 py-4 font-bold text-slate-500 text-xs font-mono">#{item.competency_id}</td>
                     <td className="px-6 py-4 font-semibold text-black dark:text-white">{item.competency_name}</td>
                     <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-300">{item.obtained_date}</td>
                     <td className="px-4 py-4 text-center text-slate-700 dark:text-slate-300">{item.expired_date || '-'}</td>
