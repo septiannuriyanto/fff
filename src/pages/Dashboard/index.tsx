@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DatePickerOne from '../../components/Forms/DatePicker/DatePickerOne';
 import { formatDateToString } from '../../Utils/DateUtility';
 import ReusableSwitcher from '../../components/Switchers/SwitcherFour';
@@ -30,6 +31,7 @@ import { getShift } from '../../Utils/TimeUtility';
 import ReactApexChart from 'react-apexcharts';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [date, setDate] = useState<Date | null>(new Date());
   const [shift, setShift] = useState(getShift() === 1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,6 +45,18 @@ const Dashboard = () => {
     loader: 0,
     hauler: 0,
     support: 0,
+    loading: true
+  });
+  const [stockStats, setStockStats] = useState({
+    total_stock: 0,
+    total_space: 0,
+    fuel_ito: 0,
+    mtd_usage: 0,
+    achievement_percentage: 0,
+    usage_series: [],
+    total_ritasi: 0,
+    today_ritasi: 0,
+    ritasi_series: [],
     loading: true
   });
 
@@ -122,6 +136,31 @@ const Dashboard = () => {
     }
   };
 
+  const fetchStockStats = async () => {
+    try {
+      setStockStats(prev => ({ ...prev, loading: true }));
+      const { data, error } = await supabase.rpc('get_dashboard_stock_stats');
+
+      if (error) throw error;
+
+      setStockStats({
+        total_stock: data.total_stock || 0,
+        total_space: data.total_space || 0,
+        fuel_ito: data.fuel_ito || 0,
+        mtd_usage: data.mtd_usage || 0,
+        achievement_percentage: data.achievement_percentage || 0,
+        usage_series: data.usage_series || [],
+        total_ritasi: data.total_ritasi || 0,
+        today_ritasi: data.today_ritasi || 0,
+        ritasi_series: data.ritasi_series || [],
+        loading: false
+      });
+    } catch (err) {
+      console.error('Error fetching stock stats:', err);
+      setStockStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   const handleDateChange = (date: Date | null) => {
     setDate(date);
   };
@@ -137,12 +176,14 @@ const Dashboard = () => {
     setModalContent(null);
     fetchRosterStatus();
     fetchATRStats();
+    fetchStockStats();
   };
 
   useEffect(() => {
     fetchRosterStatus();
     fetchATRStats();
     fetchTotalUnits();
+    fetchStockStats();
   }, []);
 
   useEffect(() => {
@@ -198,6 +239,12 @@ const Dashboard = () => {
               {/* Decorative Background Element */}
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                 <FaUsers size={120} />
+              </div>
+
+              {/* LIVE Indicator */}
+              <div className="absolute top-6 right-6 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 z-20">
+                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[8px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">Live</span>
               </div>
 
               <div className="flex items-center gap-4 mb-6 relative z-10">
@@ -339,6 +386,12 @@ const Dashboard = () => {
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-transform duration-500 group-hover/card:scale-110">
                 <FaTruck size={120} />
               </div>
+
+              {/* LIVE Indicator */}
+              <div className="absolute top-6 right-6 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 z-20">
+                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[8px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">Live</span>
+              </div>
               
               <div className="relative z-10 flex flex-col h-full gap-4">
                 <div className="flex items-center gap-4">
@@ -474,6 +527,12 @@ const Dashboard = () => {
                 <FaLayerGroup size={120} />
               </div>
 
+              {/* LIVE Indicator */}
+              <div className="absolute top-6 right-6 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 z-20">
+                <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[8px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest">Live</span>
+              </div>
+
               <div className="relative z-10 flex flex-col h-full gap-4">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-yellow-500 rounded-xl text-white shadow-lg shadow-yellow-200 dark:shadow-none">
@@ -497,14 +556,30 @@ const Dashboard = () => {
                    >
                       <div className="flex justify-between items-end mb-2">
                         <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">Total Stock vs Space</div>
-                        <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400">75%</div>
+                        <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                          {stockStats.loading ? '...' : (stockStats.total_space > 0 ? Math.round((stockStats.total_stock / stockStats.total_space) * 100) : 0)}%
+                        </div>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                        <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: '75%' }}></div>
+                        <div 
+                          className="bg-yellow-500 h-2.5 rounded-full transition-all duration-1000" 
+                          style={{ width: `${stockStats.loading ? 0 : (stockStats.total_space > 0 ? (stockStats.total_stock / stockStats.total_space) * 100 : 0)}%` }}
+                        ></div>
                       </div>
                       <div className="flex justify-between mt-1 text-[10px] text-gray-500">
-                        <span>Used: 75,000 L</span>
-                        <span>Cap: 100,000 L</span>
+                        <span>Used: {stockStats.loading ? '...' : stockStats.total_stock.toLocaleString('id-ID')} L</span>
+                        <span>Cap: {stockStats.loading ? '...' : stockStats.total_space.toLocaleString('id-ID')} L</span>
+                      </div>
+                   </div>
+
+                   {/* Fuel ITO Item */}
+                   <div 
+                      className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors group"
+                      onClick={() => navigate('/stock')}
+                   >
+                      <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-yellow-600 transition-colors">Fuel ITO</div>
+                      <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                        {stockStats.loading ? '...' : stockStats.fuel_ito.toFixed(1)} <span className="text-[10px] font-medium text-gray-400 ml-1">Days</span>
                       </div>
                    </div>
 
@@ -515,10 +590,14 @@ const Dashboard = () => {
                     >
                       <div className="flex justify-between items-end mb-2">
                         <div>
-                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Usage</div>
-                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">12,500 L</div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Usage MTD</div>
+                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                            {stockStats.loading ? '...' : stockStats.mtd_usage.toLocaleString('id-ID')} L
+                          </div>
                         </div>
-                        <div className="text-[10px] text-red-500 font-medium">+5% vs plan</div>
+                        <div className={`text-[10px] font-bold ${stockStats.achievement_percentage > 100 ? 'text-red-500' : 'text-green-500'}`}>
+                          {stockStats.loading ? '...' : `${stockStats.achievement_percentage.toFixed(1)}% vs plan`}
+                        </div>
                       </div>
                       <div className="h-10 w-full overflow-hidden">
                          <ReactApexChart
@@ -530,7 +609,7 @@ const Dashboard = () => {
                               grid: { padding: { top: 5, bottom: 5, left: 0, right: 0 } },
                               fill: { opacity: 0.3 }
                             }}
-                            series={[{ name: 'Usage', data: [45, 52, 38, 24, 33, 26, 21] }]}
+                            series={[{ name: 'Usage', data: stockStats.loading ? [] : stockStats.usage_series }]}
                             type="line"
                             height={40}
                             width="100%"
@@ -540,15 +619,19 @@ const Dashboard = () => {
 
                    {/* Ritasi Graph */}
                    <div 
-                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
-                      onClick={() => openModal('Stock Ritasi', <StockDetail date={date} shift={shift} />)}
+                      className="p-3 bg-white/60 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-yellow-100 dark:border-yellow-800 cursor-pointer hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors group"
+                      onClick={() => navigate('/trip')}
                     >
                       <div className="flex justify-between items-end mb-2">
                         <div>
-                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Ritasi</div>
-                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">24</div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 group-hover:text-yellow-600 transition-colors">Ritasi MTD</div>
+                          <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                            {stockStats.loading ? '...' : stockStats.total_ritasi}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-green-500 font-medium">+2 trips</div>
+                        <div className="text-[10px] text-green-500 font-bold">
+                          {stockStats.loading ? '...' : `+${stockStats.today_ritasi} trips today`}
+                        </div>
                       </div>
                       <div className="h-10 w-full overflow-hidden">
                          <ReactApexChart
@@ -560,7 +643,7 @@ const Dashboard = () => {
                               title: { text: undefined },
                               grid: { padding: { top: 5, bottom: 5, left: 0, right: 0 } },
                             }}
-                            series={[{ name: 'Ritasi', data: [4, 3, 5, 2, 4, 3, 3] }]}
+                            series={[{ name: 'Ritasi', data: stockStats.loading ? [] : stockStats.ritasi_series }]}
                             type="bar"
                             height={40}
                             width="100%"

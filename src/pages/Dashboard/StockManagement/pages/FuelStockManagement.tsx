@@ -222,7 +222,7 @@ export default function FuelStockManagement() {
         ];
     }, [daysInMonth, dataMap, lastDataDay]);
 
-    const chartOptions: any = {
+    const chartOptions: any = useMemo(() => ({
         chart: { 
             fontFamily: 'Satoshi, sans-serif',
             height: 350, 
@@ -309,11 +309,20 @@ export default function FuelStockManagement() {
                 borderRadius: 2,
             },
         },
+        title: {
+            text: 'Fuel Inventory Availability - GMO Project',
+            align: 'center',
+            style: {
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#64748b' // Subtle slate-500
+            }
+        },
         legend: { 
             show: true,
-            position: 'top',
-            horizontalAlign: 'left',
-            offsetY: 0,
+            position: 'bottom',
+            horizontalAlign: 'center',
+            offsetY: 8,
             itemMargin: { horizontal: 10, vertical: 10 }
         },
         grid: {
@@ -335,7 +344,7 @@ export default function FuelStockManagement() {
                 }
             } 
         }
-    };
+    }), [isNormalized, daysInMonth]);
 
     const handleStartEdit = (day: number) => {
         setEditingPortDay(day);
