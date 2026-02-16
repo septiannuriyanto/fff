@@ -19,7 +19,7 @@ const Header = (props: {
   document.querySelector('sidebar-main')?.classList.remove('hidden');
   }
   return (
-    <header className="sticky top-0 z-[998] flex w-full bg-white dark:bg-boxdark drop-shadow-1 dark:drop-shadow-none border-b border-slate-100/50 dark:border-slate-800/50">
+    <header className="sticky top-0 z-[998] flex w-full bg-white/60 backdrop-blur-lg dark:bg-boxdark/60 shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 transition-colors duration-300">
       <div className="flex flex-grow items-center justify-between px-4 py-3 shadow-2 md:px-6 lg:justify-end">
         {/* <div className="flex items-center gap-2 sm:gap-4 lg:block">
 

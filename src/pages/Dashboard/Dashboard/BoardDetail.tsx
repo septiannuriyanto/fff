@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaBox, FaCubes, FaFilter, FaTrash } from 'react-icons/fa';
+import { useAuth } from '../../Authentication/AuthContext';
 import OutstandingOrder from './OutstandingOrder';
 import OrderDetail from './OrderDetail';
 import JobDetail from './JobDetail';
@@ -46,6 +47,7 @@ interface Job {
   assignee_id: string | null;
   due_date: string | null;
   priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | null;
+  created_by?: string;
   progress_count?: number;
   completed_count?: number;
 }
@@ -100,6 +102,54 @@ const BoardDetail = () => {
   // Context Menu States
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; order: Order } | null>(null);
 
+  // Undo Delete State
+  const [undoState, setUndoState] = useState<{ job: Job, timeoutId: NodeJS.Timeout } | null>(null);
+
+  // Finalize Delete (Actual API Call)
+  const executeDelete = async (jobId: string) => {
+    const { error } = await supabase
+      .from('board_jobs')
+      .delete()
+      .eq('id', jobId);
+
+    if (error) {
+      console.error('Error finalizing delete:', error);
+      // Ideally, we would want to inform the user here, but the toast is gone.
+    }
+  };
+
+  // Handle Delete Job (Delayed with Undo)
+  const handleDeleteJob = (job: Job) => {
+    // 1. If there's pending delete, finalize it immediately (for the previous item)
+    if (undoState) {
+        clearTimeout(undoState.timeoutId);
+        executeDelete(undoState.job.id);
+        // Remove the previous job from list as it is now finalized
+        setPendingJobs(prev => prev.filter(j => j.id !== undoState.job.id));
+    }
+
+    // 2. Schedule actual delete and UI removal
+    const timeoutId = setTimeout(() => {
+        executeDelete(job.id);
+        // Remove from list when timer expires
+        setPendingJobs(prev => prev.filter(j => j.id !== job.id));
+        if (selectedJob?.id === job.id) setSelectedJob(null);
+        setUndoState(null);
+    }, 5000);
+
+    // 3. Set Undo State (Job remains visible in list)
+    setUndoState({ job, timeoutId });
+  };
+
+  // Handle Undo Action
+  const handleUndo = () => {
+      if (!undoState) return;
+      clearTimeout(undoState.timeoutId);
+      
+      // Job was never removed from list, so we just clear the undo state
+      setUndoState(null);
+  };
+
   // Job Column Definitions
   const jobColDefs = useMemo<ColDef[]>(() => [
     { field: 'title', headerName: 'Job Title', width: 200, flex: 0 },
@@ -145,7 +195,7 @@ const BoardDetail = () => {
         headerName: 'Due Date', 
         width: 140,
         cellRenderer: (params: any) => {
-            if (!params.value) return <span className="text-gray-400">-</span>;
+            if (!params.value) return <span className="text-slate-400">-</span>;
             
             const dueDate = new Date(params.value);
             const today = new Date();
@@ -206,6 +256,34 @@ const BoardDetail = () => {
                         </div>
                     </div>
                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 min-w-[30px]">{percent}%</span>
+                </div>
+            );
+        }
+    },
+    {
+        headerName: 'Action',
+        width: 60,
+        cellRenderer: (params: any) => {
+            const { currentUser } = useAuth();
+            const currentNrp = currentUser?.nrp || localStorage.getItem('nrp');
+            const canEdit = currentNrp === params.data.created_by;
+            
+            if (!canEdit) return null;
+            
+            return (
+                <div className="flex items-center justify-center h-full gap-2">
+                    <button 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                            handleDeleteJob(params.data);
+                        }}
+                        className="delete-job-btn p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Job"
+                    >
+                        <FaTrash size={14} />
+                    </button>
                 </div>
             );
         }
@@ -362,10 +440,8 @@ const BoardDetail = () => {
   }, []);
 
   const handleDeleteOrder = async (orderId: number) => {
-    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
-      return;
-    }
-
+    if (!confirm('Are you sure you want to delete this order?')) return;
+    
     const { error } = await supabase
       .from('orders')
       .delete()
@@ -416,12 +492,12 @@ const BoardDetail = () => {
        <h2 className="text-xl font-bold mb-4 text-black dark:text-white uppercase tracking-widest">Board Overview</h2>
       
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto scrollbar-hide">
+      <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4 overflow-x-auto scrollbar-hide">
         <button
           className={`py-2 px-4 text-sm font-bold focus:outline-none flex items-center gap-2 transition-all uppercase tracking-wider ${
             activeTab === 'pending'
               ? 'text-orange-600 border-b-2 border-orange-600 dark:text-orange-400 dark:border-orange-400'
-              : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
           onClick={() => setActiveTab('pending')}
         >
@@ -434,7 +510,7 @@ const BoardDetail = () => {
           className={`py-2 px-4 text-sm font-bold focus:outline-none flex items-center gap-2 transition-all uppercase tracking-wider ${
             activeTab === 'orders'
               ? 'text-green-600 border-b-2 border-green-600 dark:text-green-400 dark:border-green-400'
-              : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
           onClick={() => setActiveTab('orders')}
         >
@@ -471,8 +547,17 @@ const BoardDetail = () => {
                       defaultColDef={{ flex: 1, minWidth: 100 }}
                       pagination={true}
                       paginationPageSize={10}
-                      onRowClicked={(event) => setSelectedJob(event.data)}
-                      rowClass="cursor-pointer transition-colors"
+                      onRowClicked={(event) => {
+                        const target = event.event?.target as HTMLElement;
+                        if (target?.closest('.delete-job-btn') || target?.closest('button')) return;
+                        setSelectedJob(event.data);
+                      }}
+                      getRowClass={(params) => {
+                        if (undoState && undoState.job.id === params.data.id) {
+                            return 'animate-pulse bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg';
+                        }
+                        return 'cursor-pointer transition-colors';
+                      }}
                   />
               </div>
             </div>
@@ -686,8 +771,41 @@ const BoardDetail = () => {
           </button>
         </div>
       )}
+
+      {/* Undo Toast */}
+      {undoState && (
+        <UndoToast onUndo={handleUndo} />
+      )}
     </>
   );
+};
+
+const UndoToast = ({ onUndo }: { onUndo: () => void }) => {
+    const [seconds, setSeconds] = useState(5);
+
+    useEffect(() => {
+        if (seconds <= 0) return;
+        const timer = setInterval(() => {
+            setSeconds(prev => prev - 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [seconds]);
+
+    return (
+        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 z-[999999] animate-in slide-in-from-bottom-5 duration-300 border border-slate-700">
+            <div className="flex flex-col">
+                <span className="font-bold text-sm">Job Deleted</span>
+                <span className="text-xs text-slate-400">Permanently deleting in {seconds}s...</span>
+            </div>
+            <div className="h-8 w-px bg-slate-700 mx-2"></div>
+            <button 
+                onClick={onUndo}
+                className="text-orange-500 hover:text-orange-400 font-extrabold text-sm tracking-wider transition-colors uppercase"
+            >
+                UNDO
+            </button>
+        </div>
+    );
 };
 
 export default BoardDetail;

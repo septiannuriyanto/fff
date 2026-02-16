@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DatePickerOne from '../../components/Forms/DatePicker/DatePickerOne';
 import { formatDateToString } from '../../Utils/DateUtility';
-import ReusableSwitcher from '../../components/Switchers/SwitcherFour';
+import ShiftDropdown from '../../components/Forms/SelectGroup/ShiftDropdown';
+import PanelContainer from '../PanelContainer';
 import ATRDetail from './Dashboard/ATRDetail';
 import RosterDetail from './Dashboard/RosterDetail';
 import ContractDetail from './Dashboard/ContractDetail';
@@ -174,9 +175,17 @@ const Dashboard = () => {
   const closeModal = () => {
     setModalOpen(false);
     setModalContent(null);
-    fetchRosterStatus();
-    fetchATRStats();
-    fetchStockStats();
+    
+    // Optimized Reload Logic
+    if (modalTitle.includes('Roster')) {
+        fetchRosterStatus();
+    } else if (modalTitle.includes('Attendance') || modalTitle.includes('Compliance')) {
+        fetchATRStats();
+    } else if (modalTitle.includes('Stock') || modalTitle.includes('Refueling') || modalTitle.includes('Ritasi')) {
+        fetchStockStats();
+    } else if (modalTitle.includes('Unit') || modalTitle.includes('Readiness')) {
+        // fetchTotalUnits(); // Verify if needed, currently not fetched on close
+    }
   };
 
   useEffect(() => {
@@ -204,33 +213,29 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="border-b border-stroke bg-white dark:border-strokedark dark:bg-boxdark">
-        <div className="p-4 md:p-6 pb-2">
+    
           {/* ... existing dashboard content ... */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h1 className="text-2xl font-bold text-black dark:text-white">
-              Dashboard Overview
-            </h1>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="w-full sm:w-auto">
-                <DatePickerOne
-                  enabled={true}
-                  handleChange={handleDateChange}
-                  setValue={date ? formatDateToString(new Date(date)) : ''}
-                />
+          <PanelContainer
+            title="Dashboard Overview"
+            className=""
+            actions={
+              <div className="flex flex-row gap-2 w-full sm:w-auto">
+                <div className="flex-1 sm:w-auto">
+                  <DatePickerOne
+                    enabled={true}
+                    handleChange={handleDateChange}
+                    setValue={date ? formatDateToString(new Date(date)) : ''}
+                  />
+                </div>
+                <div className="flex-1 sm:w-auto">
+                  <ShiftDropdown
+                    value={shift}
+                    onChange={setShift}
+                  />
+                </div>
               </div>
-              <div className="w-full sm:w-auto">
-                 <ReusableSwitcher
-                  textTrue="Shift 1"
-                  textFalse="Shift 2"
-                  value={shift}
-                  onChange={() => {
-                    setShift(!shift);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+            }
+          >
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Manpower Cluster */}
@@ -595,8 +600,11 @@ const Dashboard = () => {
                             {stockStats.loading ? '...' : stockStats.mtd_usage.toLocaleString('id-ID')} L
                           </div>
                         </div>
-                        <div className={`text-[10px] font-bold ${stockStats.achievement_percentage > 100 ? 'text-red-500' : 'text-green-500'}`}>
-                          {stockStats.loading ? '...' : `${stockStats.achievement_percentage.toFixed(1)}% vs plan`}
+                        <div className={`text-[10px] font-bold ${stockStats.achievement_percentage > 100 ? 'text-red-500' : 'text-green-500'} flex flex-col items-end`}>
+                          <span>{stockStats.loading ? '...' : `${stockStats.achievement_percentage.toFixed(1)}% vs plan`}</span>
+                          <span className="text-[9px] text-gray-400 font-medium mt-0.5">
+                            Avg of {stockStats.loading ? '...' : (stockStats.mtd_usage / new Date().getDate()).toLocaleString('id-ID', { maximumFractionDigits: 0 })} L/Day
+                          </span>
                         </div>
                       </div>
                       <div className="h-10 w-full overflow-hidden">
@@ -791,11 +799,11 @@ const Dashboard = () => {
             {/* Board Cluster has been moved down */}
           </div>
           
-          <div className="mt-6">
-            <BoardDetail />
-          </div>
-        </div>
-      </div>
+            <div className="mt-6">
+              <BoardDetail />
+            </div>
+          </PanelContainer>
+      
 
       {modalOpen && (
         <div 

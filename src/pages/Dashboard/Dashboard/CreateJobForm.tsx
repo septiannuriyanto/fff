@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
 import { FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import { useAuth } from '../../Authentication/AuthContext';
 
 interface Manpower {
   nrp: string;
@@ -45,6 +46,8 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
     if (data) setManpowerList(data);
   };
 
+  const { currentUser } = useAuth();
+
   const handleCreateJob = async () => {
     if (!title.trim()) {
         alert('Please enter a job title.');
@@ -53,6 +56,10 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
 
     setIsSubmitting(true);
     
+    // Robust NRP capture
+    const creatorNrp = currentUser?.nrp || localStorage.getItem('nrp');
+    console.log('Creating job with creator NRP:', creatorNrp);
+
     const { error } = await supabase
       .from('board_jobs')
       .insert([
@@ -62,6 +69,7 @@ const CreateJobForm = ({ onSuccess, jobType }: CreateJobFormProps) => {
           assignee_id: selectedAssigneeNrp,
           due_date: dueDate || null,
           priority: priority,
+          created_by: creatorNrp
         }
       ]);
 

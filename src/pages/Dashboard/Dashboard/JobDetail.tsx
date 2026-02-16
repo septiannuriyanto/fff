@@ -3,9 +3,10 @@ import { supabase } from '../../../db/SupabaseClient';
 import { 
     FaPlus, FaTimes, FaInbox, FaCalendarAlt, FaUser, 
     FaCheckCircle, FaTrash, FaStickyNote, FaTrafficLight,
-    FaGripVertical
+    FaGripVertical, FaEdit, FaSave
 } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { useAuth } from '../../Authentication/AuthContext';
 
 interface JobProgress {
     id: number;
@@ -24,11 +25,21 @@ interface JobDetailProps {
 }
 
 const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
+    const { currentUser } = useAuth();
+    const canEdit = (currentUser?.nrp || localStorage.getItem('nrp')) === job.created_by;
+
     const [items, setItems] = useState<JobProgress[]>([]);
     const [loading, setLoading] = useState(true);
     const [isClosing, setIsClosing] = useState(false);
     
-    // Form state for new progress item
+    // Header editing state
+    const [editingHeader, setEditingHeader] = useState<string | null>(null);
+    const [tempHeaderValue, setTempHeaderValue] = useState<any>(null);
+
+    // Progress item editing state
+    const [editingItemId, setEditingItemId] = useState<number | null>(null);
+
+    // Form state for new/edit progress item
     const [showAddForm, setShowAddForm] = useState(false);
     const [newDesc, setNewDesc] = useState('');
     const [newPic, setNewPic] = useState(''); // Holds the display name
@@ -36,6 +47,20 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
     const [newDueDate, setNewDueDate] = useState(new Date().toISOString().split('T')[0]);
     const [showPicSuggestions, setShowPicSuggestions] = useState(false);
     const picRef = useRef<HTMLDivElement>(null);
+
+    // Sync form when editing item
+    useEffect(() => {
+        if (editingItemId) {
+            const item = items.find(i => i.id === editingItemId);
+            if (item) {
+                setNewDesc(item.progress_description);
+                setNewPic(getManpowerName(item.pic));
+                setSelectedPicNrp(item.pic);
+                setNewDueDate(item.due_date || new Date().toISOString().split('T')[0]);
+                setShowAddForm(true);
+            }
+        }
+    }, [editingItemId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -87,32 +112,75 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
         setLoading(false);
     };
 
-    const handleAddItem = async () => {
+    const handleSaveItem = async () => {
         if (!newDesc.trim()) return;
 
-        const nextQueue = items.length > 0 ? Math.max(...items.map(i => i.queue_num || 0)) + 1 : 1;
+        if (editingItemId) {
+            // Update existing item
+            const { error } = await supabase
+                .from('board_jobs_progress')
+                .update({
+                    progress_description: newDesc,
+                    pic: selectedPicNrp || newPic,
+                    due_date: newDueDate || null
+                })
+                .eq('id', editingItemId);
 
+            if (error) {
+                console.error('Error updating progress item:', error);
+                alert('Failed to update progress item');
+            } else {
+                setEditingItemId(null);
+                resetForm();
+                fetchProgress();
+                onUpdate();
+            }
+        } else {
+            // Add new item
+            const nextQueue = items.length > 0 ? Math.max(...items.map(i => i.queue_num || 0)) + 1 : 1;
+
+            const { error } = await supabase
+                .from('board_jobs_progress')
+                .insert([{
+                    job_id: job.id,
+                    progress_description: newDesc,
+                    pic: selectedPicNrp || newPic,
+                    due_date: newDueDate || null,
+                    queue_num: nextQueue,
+                    status: 'open'
+                }]);
+
+            if (error) {
+                console.error('Error adding progress item:', error);
+                alert('Failed to add progress item');
+            } else {
+                resetForm();
+                fetchProgress();
+                onUpdate();
+            }
+        }
+    };
+
+    const resetForm = () => {
+        setNewDesc('');
+        setNewPic('');
+        setSelectedPicNrp('');
+        setNewDueDate(new Date().toISOString().split('T')[0]);
+        setShowAddForm(false);
+        setEditingItemId(null);
+    };
+
+    const handleUpdateHeader = async (field: string, value: any) => {
         const { error } = await supabase
-            .from('board_jobs_progress')
-            .insert([{
-                job_id: job.id,
-                progress_description: newDesc,
-                pic: selectedPicNrp || newPic, // Use NRP if selected, fallback to text
-                due_date: newDueDate || null,
-                queue_num: nextQueue,
-                status: 'open'
-            }]);
+            .from('board_jobs')
+            .update({ [field]: value })
+            .eq('id', job.id);
 
         if (error) {
-            console.error('Error adding progress item:', error);
-            alert('Failed to add progress item');
+            console.error(`Error updating job ${field}:`, error);
+            alert(`Failed to update ${field}`);
         } else {
-            setNewDesc('');
-            setNewPic('');
-            setSelectedPicNrp('');
-            setNewDueDate(new Date().toISOString().split('T')[0]);
-            setShowAddForm(false);
-            fetchProgress();
+            setEditingHeader(null);
             onUpdate();
         }
     };
@@ -212,60 +280,188 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
             {/* Elegant Modern Header Info */}
             <div className="flex flex-col gap-3 px-2">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                    <div className="md:col-span-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
+                    <div className="md:col-span-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3 relative group/header">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
                             <FaInbox size={14} />
                         </div>
                         <div className="min-w-0 flex-1">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Job Focus</span>
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block break-words">{job.title}</span>
+                            {editingHeader === 'title' ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <input 
+                                        className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-blue-500 rounded px-2 py-1 outline-none"
+                                        value={tempHeaderValue}
+                                        onChange={e => setTempHeaderValue(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <button onClick={() => handleUpdateHeader('title', tempHeaderValue)} className="text-emerald-500 hover:text-emerald-600"><FaSave size={14}/></button>
+                                    <button onClick={() => setEditingHeader(null)} className="text-slate-400 hover:text-red-500"><FaTimes size={14}/></button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block break-words">{job.title}</span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => { setEditingHeader('title'); setTempHeaderValue(job.title); }}
+                                            className="opacity-0 group-hover/header:opacity-100 transition-opacity text-blue-500"
+                                        >
+                                            <FaEdit size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="md:col-span-8 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3">
+                    <div className="md:col-span-8 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-3 relative group/header">
                         <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5">
                             <FaStickyNote size={14} />
                         </div>
                         <div className="min-w-0 flex-1">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Work Scope / Description</span>
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block leading-relaxed">{job.description || 'No additional work scope defined for this job.'}</span>
+                            {editingHeader === 'description' ? (
+                                <div className="flex items-start gap-2 mt-1">
+                                    <textarea 
+                                        className="w-full text-xs font-bold bg-white dark:bg-slate-900 border border-blue-500 rounded px-2 py-1 outline-none resize-none"
+                                        value={tempHeaderValue}
+                                        onChange={e => setTempHeaderValue(e.target.value)}
+                                        rows={2}
+                                        autoFocus
+                                    />
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={() => handleUpdateHeader('description', tempHeaderValue)} className="text-emerald-500 hover:text-emerald-600"><FaSave size={14}/></button>
+                                        <button onClick={() => setEditingHeader(null)} className="text-slate-400 hover:text-red-500"><FaTimes size={14}/></button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-start gap-2">
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block leading-relaxed flex-1">{job.description || 'No additional work scope defined for this job.'}</span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => { setEditingHeader('description'); setTempHeaderValue(job.description || ''); }}
+                                            className="opacity-0 group-hover/header:opacity-100 transition-opacity text-blue-500 shrink-0"
+                                        >
+                                            <FaEdit size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 relative group/header">
                         <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                             <FaCalendarAlt size={14} />
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Target Date</span>
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                                {job.due_date ? new Date(job.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 'NOT SET'}
-                            </span>
+                            {editingHeader === 'due_date' ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <input 
+                                        type="date"
+                                        className="text-xs font-bold bg-white dark:bg-slate-900 border border-blue-500 rounded px-2 py-1 outline-none"
+                                        value={tempHeaderValue}
+                                        onChange={e => setTempHeaderValue(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <button onClick={() => handleUpdateHeader('due_date', tempHeaderValue)} className="text-emerald-500 hover:text-emerald-600"><FaSave size={14}/></button>
+                                    <button onClick={() => setEditingHeader(null)} className="text-slate-400 hover:text-red-500"><FaTimes size={14}/></button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                                        {job.due_date ? new Date(job.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : 'NOT SET'}
+                                    </span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => { setEditingHeader('due_date'); setTempHeaderValue(job.due_date ? job.due_date.split('T')[0] : ''); }}
+                                            className="opacity-0 group-hover/header:opacity-100 transition-opacity text-blue-500"
+                                        >
+                                            <FaEdit size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 relative group/header">
                         <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                             <FaUser size={14} />
                         </div>
                         <div className="truncate flex-1 min-w-0">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Lead PIC</span>
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate block">{getManpowerName(job.assignee_id)}</span>
+                            {editingHeader === 'assignee_id' ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <select 
+                                        className="w-full text-[10px] font-bold bg-white dark:bg-slate-900 border border-blue-500 rounded px-1 py-1 outline-none"
+                                        value={tempHeaderValue}
+                                        onChange={e => setTempHeaderValue(e.target.value)}
+                                        autoFocus
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {manpowerList.map(m => (
+                                            <option key={m.nrp} value={m.nrp}>{m.nama}</option>
+                                        ))}
+                                    </select>
+                                    <button onClick={() => handleUpdateHeader('assignee_id', tempHeaderValue)} className="text-emerald-500 hover:text-emerald-600"><FaSave size={14}/></button>
+                                    <button onClick={() => setEditingHeader(null)} className="text-slate-400 hover:text-red-500"><FaTimes size={14}/></button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 truncate">
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate block">{getManpowerName(job.assignee_id)}</span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => { setEditingHeader('assignee_id'); setTempHeaderValue(job.assignee_id || ''); }}
+                                            className="opacity-0 group-hover/header:opacity-100 transition-opacity text-blue-500"
+                                        >
+                                            <FaEdit size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3 relative group/header">
                         <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
                             <FaTrafficLight size={14} />
                         </div>
-                        <div className="truncate">
+                        <div className="flex-1">
                             <span className="block text-[8px] text-slate-400 uppercase font-bold tracking-wider">Priority</span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase
-                                ${job.priority === 'urgent' ? 'bg-red-100 text-red-600' : 
-                                  job.priority === 'high' ? 'bg-orange-100 text-orange-600' : 
-                                  job.priority === 'low' ? 'bg-slate-100 text-slate-500' :
-                                  'bg-blue-100 text-blue-600'}`}>
-                                {job.priority || 'normal'}
-                            </span>
+                            {editingHeader === 'priority' ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <select 
+                                        className="text-[10px] font-bold bg-white dark:bg-slate-900 border border-blue-500 rounded px-1 py-1 outline-none uppercase"
+                                        value={tempHeaderValue}
+                                        onChange={e => setTempHeaderValue(e.target.value)}
+                                        autoFocus
+                                    >
+                                        {['low', 'normal', 'high', 'urgent'].map(p => (
+                                            <option key={p} value={p}>{p.toUpperCase()}</option>
+                                        ))}
+                                    </select>
+                                    <button onClick={() => handleUpdateHeader('priority', tempHeaderValue)} className="text-emerald-500 hover:text-emerald-600"><FaSave size={14}/></button>
+                                    <button onClick={() => setEditingHeader(null)} className="text-slate-400 hover:text-red-500"><FaTimes size={14}/></button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase
+                                        ${job.priority === 'urgent' ? 'bg-red-100 text-red-600' : 
+                                          job.priority === 'high' ? 'bg-orange-100 text-orange-600' : 
+                                          job.priority === 'low' ? 'bg-slate-100 text-slate-500' :
+                                          'bg-blue-100 text-blue-600'}`}>
+                                        {job.priority || 'normal'}
+                                    </span>
+                                    {canEdit && (
+                                        <button 
+                                            onClick={() => { setEditingHeader('priority'); setTempHeaderValue(job.priority || 'normal'); }}
+                                            className="opacity-0 group-hover/header:opacity-100 transition-opacity text-blue-500"
+                                        >
+                                            <FaEdit size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -319,6 +515,10 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
 
                 {showAddForm && (
                      <div className="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/40 animate-in fade-in slide-in-from-top-2">
+                        <h5 className="text-[10px] font-extrabold text-blue-600 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                            {editingItemId ? 'Update Existing Report' : 'New Progress Entry'}
+                        </h5>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                             <div className="md:col-span-1">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Report Date</label>
@@ -391,10 +591,10 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                                 Discard
                             </button>
                             <button 
-                                onClick={handleAddItem}
+                                onClick={handleSaveItem}
                                 className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-bold tracking-widest uppercase hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
                             >
-                                SUBMIT REPORT
+                                {editingItemId ? 'SAVE CHANGES' : 'SUBMIT REPORT'}
                             </button>
                         </div>
                      </div>
@@ -492,12 +692,22 @@ const JobDetail = ({ job, manpowerList, onUpdate }: JobDetailProps) => {
                                                                 </div>
 
                                                                 <div className="w-20 text-center shrink-0">
-                                                                    <button 
-                                                                        onClick={() => deleteItem(item.id)}
-                                                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                                                    >
-                                                                        <FaTrash size={12} />
-                                                                    </button>
+                                                                    {canEdit && (
+                                                                        <div className="flex items-center justify-center gap-1">
+                                                                            <button 
+                                                                                onClick={() => setEditingItemId(item.id)}
+                                                                                className="p-2 text-slate-300 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                            >
+                                                                                <FaEdit size={12} />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => deleteItem(item.id)}
+                                                                                className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                                            >
+                                                                                <FaTrash size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         )}
