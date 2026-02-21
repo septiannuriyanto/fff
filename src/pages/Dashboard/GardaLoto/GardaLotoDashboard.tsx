@@ -1,5 +1,5 @@
 import React from 'react';
-import PanelTemplate from '../../PanelTemplate'
+import PanelTemplate from '../../../components/Panels/PanelTemplate'
 import LotoAchievementByWarehouse from './LotoAchievementByWarehouse'
 import LotoTrendChart from './LotoTrendChart'
 import LotoCountByFuelman from './components/LotoCountByFuelman';

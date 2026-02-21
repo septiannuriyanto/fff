@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { supabase } from '../../../../db/SupabaseClient';
-import PanelContainer from '../../../PanelContainer';
+import PanelContainer from '../../../../components/Panels/PanelContainer';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
@@ -35,7 +35,7 @@ export default function FuelStockManagement() {
     }, [selectedMonth]);
 
     useEffect(() => {
-        fetchData();
+        fetchData();    
         fetchLastInput();
 
         const handleEsc = (event: KeyboardEvent) => {

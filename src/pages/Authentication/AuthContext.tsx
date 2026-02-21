@@ -16,6 +16,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [preparing, setPreparing] = useState<boolean>(false);
 
   // Helper to map Supabase user to local user type
   const mapSupabaseUserToLocalUser = (supabaseUser: SupabaseUser | null, nrp: string | null , role: string | null, position: number | null, dept: string | null): User | null => {
@@ -75,6 +76,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   // Sign-in logic
   const signIn = async (email: string, password: string, nrp: string | null) => {
     try {
+      setPreparing(true);
       // Sign in to Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -88,7 +90,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if(!nrp){
-        throw error;
+        throw new Error("NRP is required");
       }
 
       const { role, position, dept } = await getRole({ nrp });
@@ -98,6 +100,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       console.error("Error during sign-in:", err);
       throw err;
+    } finally {
+      setPreparing(false);
     }
   };
 
@@ -121,8 +125,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   // Provide context values
   return (
-    <AuthContext.Provider value={{ authToken, currentUser, signIn, signOut, loading }}>
-      {loading ? (
+    <AuthContext.Provider value={{ authToken, currentUser, signIn, signOut, loading, preparing }}>
+      {loading || preparing ? (
         <Loader/>
       ) : (
         children

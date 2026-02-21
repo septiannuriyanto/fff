@@ -7,7 +7,6 @@ import * as XLSX from 'xlsx';
 import InstalledChart from './components/InstalledChart';
 import StatusChart from './components/StatusChart';
 import ReportedChart from './components/ReportedChart';
-import LoaderLogo from '../../../common/Loader/LoaderLogo';
 
 const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);

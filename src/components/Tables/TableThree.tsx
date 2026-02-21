@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Package } from '../../types/package';
 
 const packageData: Package[] = [
@@ -28,8 +30,35 @@ const packageData: Package[] = [
 ];
 
 const TableThree = () => {
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
+
+  const isDark = theme.baseTheme === 'dark';
+  const containerOpacity = theme.container.opacity;
+  const containerColor = theme.container.color === 'initial' 
+    ? (isDark ? '0,0,0' : '255,255,255') 
+    : theme.container.color;
+
+  const dynamicStyle: React.CSSProperties = {
+    backgroundColor: containerColor.startsWith('rgba') 
+      ? containerColor 
+      : containerColor.includes(',') 
+        ? `rgba(${containerColor}, ${containerOpacity})`
+        : containerColor.startsWith('#')
+          ? containerColor // Hex doesn't support opacity easily without parsing
+          : `rgba(${isDark ? '0,0,0' : '255,255,255'}, ${containerOpacity})`,
+    backdropFilter: `blur(${containerOpacity * 20}px)`,
+    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.4)',
+    boxShadow: isDark 
+      ? '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)' 
+      : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+  };
+
   return (
-    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+    <div 
+      className="rounded-sm border px-5 pt-6 pb-2.5 shadow-default sm:px-7.5 xl:pb-1 transition-all duration-300"
+      style={dynamicStyle}
+    >
       <div className="max-w-full overflow-x-auto">
         <table className="w-full table-auto">
           <thead>

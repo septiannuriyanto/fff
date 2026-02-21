@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import MasterManpowerList from './components/MasterManpowerList';
-import PanelContainer from '../../PanelContainer';
+import PanelContainer from '../../../components/Panels/PanelContainer';
 import ManpowerCompetencyTab from './components/ManpowerCompetencyTab';
 
 const MasterManpower = () => {

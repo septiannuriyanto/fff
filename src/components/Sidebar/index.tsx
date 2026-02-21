@@ -24,6 +24,7 @@ import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
 import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
 import ExclusiveWidget from '../../common/TrialWrapper/ExclusiveWidget';
+import { useTheme, hexToRgba } from '../../contexts/ThemeContext';
 
 interface SidebarProps {
   role?:string | null;
@@ -104,14 +105,23 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
     }
   };
 
+  const { activeTheme } = useTheme();
+
+
   return (
     <aside
       ref={sidebar}
       onMouseEnter={() => sidebarConfig === 'auto' && setIsHovered(true)}
       onMouseLeave={() => sidebarConfig === 'auto' && setIsHovered(false)}
-      className={`sidebar-main absolute left-0 top-0 z-[999] flex min-h-screen ${asideWidth} flex-col overflow-visible no-scrollbar bg-white/60 backdrop-blur-xl border-r border-white/20 dark:border-white/5 shadow-xl duration-300 ease-linear dark:bg-boxdark/60 lg:static lg:translate-x-0 ${
+      className={`sidebar-main absolute left-0 top-0 z-[999] flex min-h-screen ${asideWidth} flex-col overflow-visible no-scrollbar shadow-xl duration-300 ease-linear lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${activeTheme.sidebar.detached ? 'lg:m-4 lg:rounded-2xl border border-white/20' : 'border-r border-white/20'} ${
+        activeTheme.sidebar.backdropBlur !== 'none' ? `glass-blur-${activeTheme.sidebar.backdropBlur}` : ''
       }`}
+      style={{
+        backgroundColor: hexToRgba(activeTheme.sidebar.color, activeTheme.sidebar.opacity),
+        color: activeTheme.sidebar.textColor,
+      }}
     >
       {/* <!-- SIDEBAR HEADER --> */}
       <div className={`relative px-6 py-5.5 lg:py-6.5 flex flex-col lg:flex-row items-center gap-4 lg:gap-2 ${isMini ? 'justify-center px-4 ' : 'justify-between'}`}>
@@ -342,33 +352,33 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 mini={isMini}
               >
                 <SidebarLink
-                  to="infrastructure/ftbacklog"
+                  to="/infrastructure/ftbacklog"
                   label="Backlog Monitoring"
                   mini={isMini}
                 />
                 <SidebarLink
-                  to="infrastructure/ftreadiness"
+                  to="/infrastructure/ftreadiness"
                   label="FT Readiness"
                   mini={isMini}
                 />
                 <SidebarLink
-                  to="infrastructure/pressureless"
+                  to="/infrastructure/pressureless"
                   label="Pressureless"
                   mini={isMini}
                 />
                 <SidebarLink
-                  to="infrastructure/filtration"
+                  to="/infrastructure/filtration"
                   label="Filtration"
                   mini={isMini}
                 />
                 <SidebarLink
-                  to="infrastructure/calibration"
+                  to="/infrastructure/calibration"
                   label="Calibration"
                   mini={isMini}
                 />
                 <SidebarLink
-                  to="infrastructure/faoinfra"
-                  label="FAO Infrastructure"
+                  to="/infrastructure/inspection"
+                  label="Inspection"
                   mini={isMini}
                 />
               </SidebarGroup>

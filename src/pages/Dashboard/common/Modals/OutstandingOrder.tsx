@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
-import { useAuth } from '../../../pages/Authentication/AuthContext';
-import ReusableSwitcher from '../../../components/Switchers/SwitcherFour';
+import { supabase } from '../../../../db/SupabaseClient';
+import { useAuth } from '../../../Authentication/AuthContext';
+import ReusableSwitcher from '../../../../components/Switchers/SwitcherFour';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 interface Manpower {

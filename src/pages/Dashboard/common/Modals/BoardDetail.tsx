@@ -1,43 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
-import { FaPlus, FaTimes, FaBox, FaCubes, FaFilter, FaTrash } from 'react-icons/fa';
-import { useAuth } from '../../Authentication/AuthContext';
+import { supabase } from '../../../../db/SupabaseClient';
+import { FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
+import { useAuth } from '../../../Authentication/AuthContext';
 import OutstandingOrder from './OutstandingOrder';
 import OrderDetail from './OrderDetail';
 import JobDetail from './JobDetail';
 import CreateJobForm from './CreateJobForm';
-import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
-import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
-import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
-
-// Custom CSS for AG Grid pagination responsive
-const agGridMobileStyle = `
-  @media (max-width: 600px) {
-    .ag-theme-quartz .ag-paging-panel {
-      font-size: 12px;
-      padding: 4px 2px;
-      flex-wrap: wrap;
-      gap: 4px;
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      width: 100% !important;
-      text-align: center !important;
-    }
-    .ag-theme-quartz .ag-paging-page-size, 
-    .ag-theme-quartz .ag-paging-row-summary-panel {
-      display: none !important;
-    }
-    .ag-theme-quartz .ag-paging-button {
-      min-width: 24px;
-      height: 24px;
-      font-size: 12px;
-      padding: 0 4px;
-    }
-  }
-`;
-
+import ThemedGrid from '../../../../common/ThemedComponents/ThemedGrid';
 import { ColDef } from 'ag-grid-community';
+
+
 
 interface Job {
   id: string;
@@ -71,18 +43,6 @@ interface Order {
 }
 
 const BoardDetail = () => {
-  // Inject custom style for AG Grid mobile pagination
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      let styleTag = document.getElementById('agGridMobileStyle');
-      if (!styleTag) {
-        styleTag = document.createElement('style');
-        styleTag.id = 'agGridMobileStyle';
-        styleTag.innerHTML = agGridMobileStyle;
-        document.head.appendChild(styleTag);
-      }
-    }
-  }, []);
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
@@ -158,9 +118,9 @@ const BoardDetail = () => {
        field: 'assignee_id', 
        headerName: 'Assignee', 
        width: 150,
-       valueFormatter: (params) => {
-           const mp = manpowerList.find(m => m.nrp === params.value);
-           return mp ? mp.nama : params.value;
+       valueGetter: (params) => {
+           const mp = manpowerList.find(m => m.nrp === params.data.assignee_id);
+           return mp ? mp.nama : params.data.assignee_id;
        }
     },
     { 
@@ -299,9 +259,9 @@ const BoardDetail = () => {
         headerName: 'Created By', 
         width: 180,
         flex: 0,
-        valueFormatter: (params) => {
-            const mp = manpowerList.find(m => m.nrp === params.value);
-            return mp ? mp.nama : params.value;
+        valueGetter: (params) => {
+            const mp = manpowerList.find(m => m.nrp === params.data.creator);
+            return mp ? mp.nama : params.data.creator;
         }
       }, 
       { 
@@ -309,9 +269,9 @@ const BoardDetail = () => {
         headerName: 'Supply To', 
         width: 180,
         flex: 0,
-        valueFormatter: (params) => {
-            const mp = manpowerList.find(m => m.nrp === params.value);
-            return mp ? mp.nama : params.value;
+        valueGetter: (params) => {
+            const mp = manpowerList.find(m => m.nrp === params.data.supply_to);
+            return mp ? mp.nama : params.data.supply_to;
         }
       },
       { field: 'item_count', headerName: 'Items', width: 80, flex: 0, cellStyle: { textAlign: 'center' } },
@@ -539,28 +499,26 @@ const BoardDetail = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-1">
-              <div className="ag-theme-quartz" style={{ height: '100%', width: '100%' }}>
-                  <AgGridReact
-                      rowData={pendingJobs}
-                      columnDefs={jobColDefs}
-                      defaultColDef={{ flex: 1, minWidth: 100 }}
-                      pagination={true}
-                      paginationPageSize={10}
-                      onRowClicked={(event) => {
-                        const target = event.event?.target as HTMLElement;
-                        if (target?.closest('.delete-job-btn') || target?.closest('button')) return;
-                        setSelectedJob(event.data);
-                      }}
-                      getRowClass={(params) => {
-                        if (undoState && undoState.job.id === params.data.id) {
-                            return 'animate-pulse bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg';
-                        }
-                        return 'cursor-pointer transition-colors';
-                      }}
-                  />
-              </div>
-            </div>
+            <ThemedGrid
+                gridClass="fff-grid-pending"
+                rowData={pendingJobs}
+                columnDefs={jobColDefs}
+                defaultColDef={{ flex: 1, minWidth: 100 }}
+                useGridFilter={true}
+                pagination={true}
+                paginationPageSize={10}
+                onRowClicked={(event) => {
+                  const target = event.event?.target as HTMLElement;
+                  if (target?.closest('.delete-job-btn') || target?.closest('button')) return;
+                  setSelectedJob(event.data);
+                }}
+                getRowClass={(params) => {
+                  if (undoState && undoState.job.id === params.data.id) {
+                      return 'animate-pulse bg-red-50 dark:bg-red-900/20 border-2 border-red-500 rounded-lg';
+                  }
+                  return 'cursor-pointer transition-colors';
+                }}
+            />
           </div>
         )}
 
@@ -596,41 +554,39 @@ const BoardDetail = () => {
                         <FaPlus size={10} /> NEW ORDER
                     </button>
                 </div>
-                <div className="flex-1 overflow-hidden bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-1">
-                    <div className="ag-theme-quartz" style={{ height: '100%', width: '100%' }}>
-                        <AgGridReact
-                            rowData={filteredOrders}
-                            columnDefs={orderColDefs}
-                            defaultColDef={{ flex: 1, minWidth: 100 }}
-                            pagination={true}
-                            paginationPageSize={10}
-                            onRowClicked={(event) => {
-                              const order = event.data;
-                              // Show action menu for incomplete orders
-                              if (order.item_count === 0) {
-                                const mouseEvent = event.event as MouseEvent;
-                                const target = mouseEvent?.target as HTMLElement;
-                                const rect = target?.getBoundingClientRect();
-                                setContextMenu({
-                                  x: rect ? rect.left + rect.width / 2 : mouseEvent?.clientX || 0,
-                                  y: rect ? rect.bottom + 5 : mouseEvent?.clientY || 0,
-                                  order: order
-                                });
-                              } else {
-                                // Open modal for orders with items
-                                setSelectedOrder(order);
-                              }
-                            }}
-                            rowClass="cursor-pointer transition-colors"
-                            getRowStyle={(params) => {
-                                if (params.data.item_count === 0) {
-                                    return { background: 'rgba(239, 68, 68, 0.05)' }; // weak red
-                                }
-                                return undefined;
-                            }}
-                        />
-                    </div>
-                </div>
+                <ThemedGrid
+                    gridClass="fff-grid-orders"
+                    rowData={filteredOrders}
+                    columnDefs={orderColDefs}
+                    defaultColDef={{ flex: 1, minWidth: 100 }}
+                    useGridFilter={true}
+                    pagination={true}
+                    paginationPageSize={10}
+                    onRowClicked={(event) => {
+                      const order = event.data;
+                      // Show action menu for incomplete orders
+                      if (order.item_count === 0) {
+                        const mouseEvent = event.event as MouseEvent;
+                        const target = mouseEvent?.target as HTMLElement;
+                        const rect = target?.getBoundingClientRect();
+                        setContextMenu({
+                          x: rect ? rect.left + rect.width / 2 : mouseEvent?.clientX || 0,
+                          y: rect ? rect.bottom + 5 : mouseEvent?.clientY || 0,
+                          order: order
+                        });
+                      } else {
+                        // Open modal for orders with items
+                        setSelectedOrder(order);
+                      }
+                    }}
+                    rowClass="cursor-pointer transition-colors"
+                    getRowStyle={(params) => {
+                        if (params.data.item_count === 0) {
+                            return { background: 'rgba(239, 68, 68, 0.05)' }; // weak red
+                        }
+                        return undefined;
+                    }}
+                />
              </div>
         )}
       </div>

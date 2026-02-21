@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PanelContainer from '../../PanelContainer';
+import PanelContainer from '../../../components/Panels/PanelContainer';
 import { supabase } from '../../../db/SupabaseClient';
 import toast, { Toaster } from 'react-hot-toast';
 import ExcelJS from 'exceljs';

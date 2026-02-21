@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
 import Chart from 'react-apexcharts';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 interface DailyRitationChartProps {
   chartDataInput: { date: string; total: number }[]; // Data grouped by date
@@ -236,39 +237,58 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     return () => clearTimeout(timer);
   }, [qty, reconcileQty]);
 
+  const { appliedTheme, trialTheme } = useTheme();
+  const activeTheme = trialTheme || appliedTheme;
+  const containerColor = activeTheme.container.color === 'initial' 
+    ? (activeTheme.baseTheme === 'dark' ? '#000000' : '#ffffff')
+    : activeTheme.container.color;
+
   return (
-    <div className="w-full overflow-hidden">
-      <div className="flex items-center justify-between mb-4 px-2">
-        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Fuel Trips by Date</h4>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
-          <button 
-            onClick={() => setNormalize(!normalize)}
-            className={`w-9 h-5 rounded-full transition-all relative border-2 ${
-              normalize 
-                ? 'bg-emerald-500 border-emerald-500 shadow-inner' 
-                : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm'
-            }`}
-          >
-            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${
-              normalize 
-                ? 'left-[20px]' 
-                : 'left-0.5 border-[1.5px] border-black'
-            }`} />
-          </button>
-        </div>
-      </div>
+    <div 
+      className="w-full rounded-2xl border p-5 shadow-sm transition-all duration-700 relative overflow-hidden backdrop-blur-md mb-6 border-white/10 shadow-lg"
+    >
+      {/* Background Layer */}
       <div 
-        ref={scrollRef}
-        className="w-full overflow-x-auto no-scrollbar scroll-smooth pb-2"
-      >
-        <div className="min-w-[1200px] md:min-w-full">
-          <Chart
-            options={chartData.options}
-            series={chartData.series}
-            type="line"
-            height={220}
-          />
+        className="absolute inset-0 z-0 transition-all duration-700"
+        style={{ 
+          backgroundColor: containerColor, 
+          opacity: activeTheme.card.opacity 
+        }}
+      />
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4 px-2">
+          <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Fuel Trips by Date</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
+            <button 
+              onClick={() => setNormalize(!normalize)}
+              className={`w-9 h-5 rounded-full transition-all relative border-2 ${
+                normalize 
+                  ? 'bg-emerald-500 border-emerald-500 shadow-inner' 
+                  : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${
+                normalize 
+                  ? 'left-[20px]' 
+                  : 'left-0.5 border-[1.5px] border-black'
+              }`} />
+            </button>
+          </div>
+        </div>
+        <div 
+          ref={scrollRef}
+          className="w-full overflow-x-auto no-scrollbar scroll-smooth pb-2"
+        >
+          <div className="min-w-[1200px] md:min-w-full">
+            <Chart
+              options={chartData.options}
+              series={chartData.series}
+              type="line"
+              height={220}
+            />
+          </div>
         </div>
       </div>
     </div>

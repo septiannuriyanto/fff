@@ -1,16 +1,27 @@
 import React, { useMemo, memo, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { formatNumberWithSeparator } from '../../../../Utils/NumberUtility';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
-interface CardPanelProps {
-  data: RitasiFuelData[];
+interface RitationSubtotalByFTChartProps {
+  data: {
+    unit: string;
+    frequency?: number;
+    qty_sj?: number;
+    [key: string]: any;
+  }[];
   viewMode: 'day' | 'month';
 }
 
 type SortField = 'unit' | 'frequency' | 'totalQty' | 'avgQty' | 'freqPercent' | 'qtyPercent';
 type SortOrder = 'asc' | 'desc';
 
-const RitationSubtotalByFTChart: React.FC<CardPanelProps> = ({ data, viewMode }) => {
+const RitationSubtotalByFTChart: React.FC<RitationSubtotalByFTChartProps> = ({ data, viewMode }) => {
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
+  const isDark = theme.baseTheme === 'dark';
+  const cardOpacity = theme.card.opacity;
+
   const [sortConfig, setSortConfig] = useState<{ field: SortField, order: SortOrder }>({
     field: 'totalQty',
     order: 'desc'
@@ -21,7 +32,7 @@ const RitationSubtotalByFTChart: React.FC<CardPanelProps> = ({ data, viewMode })
     if (!data || data.length === 0) return [];
     
     // Detect if data is already aggregated (from RPC)
-    const firstItem = data[0] as any;
+    const firstItem = data[0];
     const isAggregated = firstItem && 'frequency' in firstItem && 'qty_sj' in firstItem;
 
     let preProcessed;
@@ -150,9 +161,21 @@ const RitationSubtotalByFTChart: React.FC<CardPanelProps> = ({ data, viewMode })
   }), [unitArray, totalQty]);
 
   return (
-    <div className="w-full">
+    <div 
+      className="w-full rounded-xl p-6 transition-all duration-300"
+      style={{
+        backgroundColor: isDark 
+          ? `rgba(0, 0, 0, ${cardOpacity})` 
+          : `rgba(255, 255, 255, ${cardOpacity})`,
+        backdropFilter: `blur(${cardOpacity * 20}px)`,
+        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.4)',
+        boxShadow: isDark 
+          ? '0 10px 15px -3px rgba(0, 0, 0, 0.4)' 
+          : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+      }}
+    >
       <div className="flex items-center justify-between mb-6">
-        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm tracking-tight">Trip By Fuel Truck Number</h4>
+        <h4 className={`font-bold text-sm tracking-tight ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Trip By Fuel Truck Number</h4>
         <div className="flex items-center gap-2">
            <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-2 py-0.5 rounded uppercase tracking-widest">{viewMode} View</span>
         </div>

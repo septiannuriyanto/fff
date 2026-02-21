@@ -1,6 +1,8 @@
 import { faEdit, faEllipsis, faEye, faRemove } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
+import ThemedGlassmorphismPanel from '../../../common/ThemedComponents/ThemedGlassmorphismPanel';
 
 interface DropdownManpowerActionProps {
   rowId: string; // Adjust the type as needed
@@ -12,6 +14,8 @@ interface DropdownManpowerActionProps {
 
 const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, onView, onEdit, onDelete, showEdit = true }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { activeTheme } = useTheme();
+  const { popup } = activeTheme;
 
   const trigger = useRef<HTMLButtonElement>(null);
   const dropdown = useRef<HTMLDivElement>(null);
@@ -46,9 +50,9 @@ const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, 
       >
         <FontAwesomeIcon icon={faEllipsis} />
       </button>
-      <div
+      <ThemedGlassmorphismPanel
         ref={dropdown}
-        className={`absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm border border-stroke bg-white p-1.5 shadow-default dark:border-strokedark dark:bg-boxdark ${dropdownOpen ? 'block' : 'hidden'}`}
+        className={`absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm p-1.5 ${dropdownOpen ? 'block' : 'hidden'}`}
       >
         <button
           onClick={() => {
@@ -82,7 +86,7 @@ const DropdownManpowerAction: React.FC<DropdownManpowerActionProps> = ({ rowId, 
           <FontAwesomeIcon icon={faRemove} />
           Delete User
         </button>
-      </div>
+      </ThemedGlassmorphismPanel>
     </div>
   );
 };

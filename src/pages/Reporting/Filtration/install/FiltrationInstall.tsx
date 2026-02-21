@@ -1,5 +1,5 @@
 import React from 'react'
-import PanelTemplate from '../../../PanelTemplate'
+import PanelTemplate from '../../../../components/Panels/PanelTemplate'
 
 const FiltrationInstall = () => {
   return (

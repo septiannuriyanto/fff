@@ -3,7 +3,7 @@ export default {
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id'
     }
 
     if (req.method === 'OPTIONS') {
@@ -78,6 +78,21 @@ export default {
             object.writeHttpMetadata(headers)
             headers.set('etag', object.httpEtag)
 
+            return new Response(object.body, { headers })
+        } catch(e) {
+            return res(500, e.message, cors)
+        }
+    }
+
+    if (req.method === 'GET' && url.pathname.startsWith('/images/infra-inspection/')) {
+        const key = url.pathname.replace('/images/infra-inspection/', '')
+        try {
+            const object = await env.R2_INFRA_INSPECTION.get(key)
+            if (!object) return res(404, 'Image not found', cors)
+
+            const headers = new Headers(cors)
+            object.writeHttpMetadata(headers)
+            headers.set('etag', object.httpEtag)
             return new Response(object.body, { headers })
         } catch(e) {
             return res(500, e.message, cors)
@@ -173,7 +188,46 @@ export default {
        } catch (e) {
          return res(500, `Upload failed: ${e.message}`, cors)
        }
+     }
+
+    // ===============================
+    // INFRA INSPECTION PHOTO UPLOAD (R2)
+    // ===============================
+    if (req.method === 'PUT' && url.pathname === '/upload/infra-inspection') {
+       const token = req.headers.get('Authorization')?.split(' ')[1]
+       if (!token) return res(401, 'Unauthorized', cors)
+
+       try {
+         await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+       } catch {
+         return res(401, 'Unauthorized', cors)
+       }
+
+       const inspectionId = req.headers.get('X-Inspection-Id')
+       const itemId = req.headers.get('X-Item-Id')
+
+       if (!inspectionId || !itemId) {
+         return res(400, 'Missing X-Inspection-Id or X-Item-Id headers', cors)
+       }
+
+       const timestamp = Date.now()
+       const key = `${inspectionId}/${itemId}/${timestamp}.jpg`
+
+       try {
+         await env.R2_INFRA_INSPECTION.put(key, req.body, {
+           httpMetadata: { contentType: req.headers.get('Content-Type') || 'image/jpeg' }
+         })
+
+         const publicUrl = env.PUBLIC_R2_DOMAIN_INFRA
+            ? `${env.PUBLIC_R2_DOMAIN_INFRA}/${key}`
+            : `/images/infra-inspection/${key}`
+
+         return Response.json({ status: 'ok', key, url: publicUrl }, { headers: cors })
+       } catch (e) {
+         return res(500, `Upload failed: ${e.message}`, cors)
+       }
     }
+
 
     // ===============================
     // BATCH INSERT ENDPOINT (Original)

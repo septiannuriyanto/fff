@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CardDataStatsProps {
   title: string;
@@ -21,18 +22,38 @@ const CardDataStats: React.FC<CardDataStatsProps> = ({
   levelDownGood,
   children,
 }) => {
+  const { activeTheme } = useTheme();
+  const theme = activeTheme;
+  const isDark = theme.baseTheme === 'dark';
+  const cardTheme = theme.card;
+
   return (
-    <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div 
+      className="transition-all duration-300 py-6 px-7.5"
+      style={{
+        backgroundColor: isDark 
+          ? `rgba(0, 0, 0, ${cardTheme.opacity})` 
+          : `rgba(255, 255, 255, ${cardTheme.opacity})`,
+        backdropFilter: cardTheme.backdropBlur !== 'none' 
+          ? `blur(${cardTheme.backdropBlur === 'sm' ? '4px' : cardTheme.backdropBlur === 'md' ? '8px' : cardTheme.backdropBlur === 'lg' ? '12px' : cardTheme.backdropBlur === 'xl' ? '20px' : '0px'})` 
+          : undefined,
+        borderWidth: cardTheme.borderWidth,
+        borderColor: cardTheme.borderColor,
+        borderRadius: cardTheme.borderRadius,
+        boxShadow: cardTheme.shadow,
+        color: cardTheme.textColor,
+      }}
+    >
       <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
         {children}
       </div>
 
       <div className="mt-4 flex items-end justify-between">
         <div>
-          <h4 className="text-title-md font-bold text-black dark:text-white">
+          <h4 className="text-title-md font-bold" style={{ color: cardTheme.textColor }}>
             {total}
           </h4>
-          <span className="text-sm font-medium">{title}</span>
+          <span className="text-sm font-medium" style={{ color: cardTheme.textColor, opacity: 0.8 }}>{title}</span>
         </div>
 
         <span

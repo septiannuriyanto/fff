@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import PanelTemplate from '../../PanelTemplate'
+import PanelTemplate from '../../../components/Panels/PanelTemplate'
 import { ChevronLeft, ChevronRight, CheckCircle, Trash2, Edit, Flag, AlertCircle, Calendar as CalendarIcon, Moon, Sun } from 'lucide-react'
 import { formatInTimeZone } from 'date-fns-tz'
 import { addDays, format } from 'date-fns'

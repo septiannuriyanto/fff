@@ -1,6 +1,6 @@
   import { useEffect, useState } from 'react'
   import { useParams } from 'react-router-dom'
-  import PanelTemplate from '../../PanelTemplate'
+  import PanelTemplate from '../../../components/Panels/PanelTemplate'
   import { supabase } from '../../../db/SupabaseClient'
   import LotoVerificationDialog from '../../../common/LotoVerificationDialog'
 

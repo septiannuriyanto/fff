@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import DatePickerOne from '../../components/Forms/DatePicker/DatePickerOne';
 import { formatDateToString } from '../../Utils/DateUtility';
 import ShiftDropdown from '../../components/Forms/SelectGroup/ShiftDropdown';
-import PanelContainer from '../PanelContainer';
-import ATRDetail from './Dashboard/ATRDetail';
-import RosterDetail from './Dashboard/RosterDetail';
-import ContractDetail from './Dashboard/ContractDetail';
-import UnitDetail from './Dashboard/UnitDetail';
-import StockDetail from './Dashboard/StockDetail';
-import ScheduleDetail from './Dashboard/ScheduleDetail';
-import BoardDetail from './Dashboard/BoardDetail';
+import PanelContainer from '../../components/Panels/PanelContainer';
+import ATRDetail from './common/Modals/ATRDetail';
+import RosterDetail from './common/Modals/RosterDetail';
+import ContractDetail from './common/Modals/ContractDetail';
+import UnitDetail from './common/Modals/UnitDetail';
+import StockDetail from './common/Modals/StockDetail';
+import ScheduleDetail from './common/Modals/ScheduleDetail';
+import BoardDetail from './common/Modals/BoardDetail';
 import {
   FaUsers,
   FaTruck,
@@ -238,7 +238,6 @@ const Dashboard = () => {
           >
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {/* Manpower Cluster */}
             {/* Manpower Cluster */}
             <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-500">
               {/* Decorative Background Element */}
@@ -663,7 +662,6 @@ const Dashboard = () => {
             </div>
 
             {/* Schedule Cluster */}
-            {/* Schedule Cluster */}
             <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-purple-500/40 transition-all duration-500">
               {/* Decorative Background Element */}
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
@@ -799,7 +797,7 @@ const Dashboard = () => {
             {/* Board Cluster has been moved down */}
           </div>
           
-            <div className="mt-6">
+            <div className="my-6">
               <BoardDetail />
             </div>
           </PanelContainer>

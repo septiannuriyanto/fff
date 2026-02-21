@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassmorphismPanel';
 import ClickOutside from '../ClickOutside';
 
 const DropdownNotification = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifying, setNotifying] = useState(true);
+  const { activeTheme } = useTheme();
+  const { popup } = activeTheme;
 
   return (
     <ClickOutside onClick={() => setDropdownOpen(false)} className="relative">
@@ -41,8 +45,10 @@ const DropdownNotification = () => {
         </Link>
 
         {dropdownOpen && (
-          <div
-            className={`absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark sm:right-0 sm:w-80`}
+          <ThemedGlassmorphismPanel
+    
+            onBlur={() => setDropdownOpen(false)}
+            className="absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm sm:right-0 sm:w-80"
           >
             <div className="px-4.5 py-3">
               <h5 className="text-sm font-medium text-bodydark2">
@@ -115,7 +121,7 @@ const DropdownNotification = () => {
                 </Link>
               </li>
             </ul>
-          </div>
+          </ThemedGlassmorphismPanel>
         )}
       </li>
     </ClickOutside>

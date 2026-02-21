@@ -22,53 +22,14 @@ const SignIn: React.FC = () => {
   }, [currentUser, loading, navigate]);
   
   const [nrp, setNrp] = useState<string>('');
-  const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [password, setPassword] = useState<string>('');
-  const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleNrpChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNrpChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     const newNrp = event.target.value;
     setNrp(newNrp);
-
-    if (newNrp.trim() === '') {
-      setEmail(null);
-      return;
-    }
-    
-    try {
-      const { data, error: queryError } = await supabase
-        .from('manpower')
-        .select('email, active_date')
-        .eq('nrp', newNrp)
-        .single();
-
-      if (queryError && queryError.code !== 'PGRST116') {
-         console.error(queryError);
-      }
-
-      if (!data) {
-        setEmail(null);
-        return;
-      }
-
-      if (!data.active_date) {
-        setError('Account is not activated, contact your administrator');
-        return;
-      }
-
-      if (data.email) {
-        setEmail(data.email);
-        setActiveDate(data.active_date);
-        setError(null);
-      }
-    } catch (err) {
-      console.error(err);
-      setEmail(null);
-      setActiveDate(null);
-    }
   };
 
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,16 +47,37 @@ const SignIn: React.FC = () => {
       return;
     }
 
-    if (!email) {
-      setError('User not registered or invalid NRP');
-      return;
-    }
-
     if (!signIn) return;
 
     setIsLoading(true);
     try {
-      await signIn(email, password, nrp);
+      // 1. Fetch user details by NRP
+      const { data, error: queryError } = await supabase
+        .from('manpower')
+        .select('email, active_date')
+        .eq('nrp', nrp)
+        .single();
+
+      if (queryError || !data) {
+        setError('User not registered or invalid NRP');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.active_date) {
+        setError('Account is not activated, contact your administrator');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.email) {
+        setError('User has no email associated with this NRP');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Perform sign-in with fetched email
+      await signIn(data.email, password, nrp);
       // Redirect handled by useEffect above
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');

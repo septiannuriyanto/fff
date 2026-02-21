@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import { 
     FaPlus, FaTimes, FaInbox, FaCalendarAlt, FaUser, 
     FaCheckCircle, FaTrash, FaStickyNote, FaTrafficLight,
     FaGripVertical, FaEdit, FaSave
 } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { useAuth } from '../../Authentication/AuthContext';
+import { useAuth } from '../../../Authentication/AuthContext';
 
 interface JobProgress {
     id: number;

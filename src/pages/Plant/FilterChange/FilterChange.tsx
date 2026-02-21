@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PanelContainer from '../../PanelContainer';
+import PanelContainer from '../../../components/Panels/PanelContainer';
 import LabeledInput from '../../../components/LabeledInput';
 import SelectGroupOne from '../../../components/Forms/SelectGroup/SelectGroupOne';
 import DatePickerOne from '../../../components/Forms/DatePicker/DatePickerOne';
@@ -305,7 +305,7 @@ const FilterChange = () => {
       const requestId = `${formatDateToYyMmDd(new Date())}-${formData.unit_id}-${timestamp}`;
 
       // 3. Upload Evidence to Worker
-      const uploadUrl = 'https://fff-worker.septian-nuryanto.workers.dev/upload/filter-replacement';
+      const uploadUrl = `${import.meta.env.VITE_WORKER_URL}/upload/filter-replacement`;
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
@@ -325,7 +325,7 @@ const FilterChange = () => {
       // Use the returned URL, or construct the full serving URL from the key if needed
       const photoUrl = (uploadResult.url && uploadResult.url.startsWith('http'))
         ? uploadResult.url
-        : `https://fff-worker.septian-nuryanto.workers.dev/images/filter-replacement/${uploadResult.key}`;
+        : `${import.meta.env.VITE_WORKER_URL}/images/filter-replacement/${uploadResult.key}`;
 
       // 4. Save to Supabase
         const { error: insertError } = await supabase.from('filter_change').insert({

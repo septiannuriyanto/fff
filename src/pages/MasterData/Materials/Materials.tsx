@@ -8,7 +8,8 @@ import { toast } from 'react-hot-toast';
 import Loader from '../../../common/Loader/Loader';
 import { useLocation } from 'react-router-dom';
 import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
+import 'ag-grid-community/styles/ag-theme-quartz.css';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface Material {
   id?: number;
@@ -39,6 +40,8 @@ const Materials: React.FC = () => {
   
   const location = useLocation();
   const materialCodeRef = useRef<HTMLInputElement>(null);
+  const { appliedTheme, trialTheme } = useTheme();
+  const activeTheme = trialTheme || appliedTheme;
 
   // Form State
   const [materialCode, setMaterialCode] = useState('');
@@ -638,13 +641,23 @@ const Materials: React.FC = () => {
       </div>
 
       {/* Grid Container */}
-      <div className="flex-1 bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative transition-all duration-700">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 dark:bg-boxdark/50 backdrop-blur-sm">
             <Loader />
           </div>
         )}
-        <div className="ag-theme-alpine dark:ag-theme-alpine-dark w-full h-full">
+        <div 
+          className={`w-full h-full ag-theme-quartz transition-all duration-700 bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden`}
+                style={{ 
+                  backgroundColor: activeTheme.gridBackgroundColor !== 'default' ? activeTheme.gridBackgroundColor : undefined,
+                  '--ag-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'transparent' : undefined,
+                  '--ag-header-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
+                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
+                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                } as React.CSSProperties}
+        >
           <AgGridReact
             rowData={materials}
             columnDefs={columnDefs}

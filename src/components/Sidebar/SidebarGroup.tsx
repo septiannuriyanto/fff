@@ -1,5 +1,7 @@
 import React, { useState, ReactNode, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { useTheme } from "../../contexts/ThemeContext";
+import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassmorphismPanel';
 
 interface SidebarGroupProps {
   title: string;
@@ -23,6 +25,8 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
   mini
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
 
   // Update `isExpanded` based on the current pathname
   useEffect(() => {
@@ -44,9 +48,11 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
     <div className="relative group/group flex flex-col">
       <NavLink
         to="#"
-        className={`group relative flex items-center ${mini ? 'justify-center h-12 w-12 mx-auto mb-1' : 'gap-2.5 px-4 py-2'} rounded-xl font-medium text-bodydark2 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 transition-all ${
-          isActive && "bg-graydark dark:bg-meta-4 text-white shadow-lg"
-        }`}
+        style={{
+          color: isActive ? theme.ui.primaryColor : theme.sidebar.textColor,
+          backgroundColor: isActive ? 'rgba(255,255,255, 0.05)' : 'transparent',
+        }}
+        className={`group relative flex items-center ${mini ? 'justify-center h-12 w-12 mx-auto mb-1' : 'gap-2.5 px-4 py-2'} rounded-xl font-medium duration-300 ease-in-out hover:bg-white/5 transition-all outline-none focus:outline-none`}
         onClick={(e) => {
           e.preventDefault();
           if(!mini) handleToggle();
@@ -78,12 +84,14 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
       {/* Mini Mode Hover Overlay */}
       {mini && (
           <div className="absolute left-full top-0 pl-10 hidden group-hover/group:block animate-in fade-in slide-in-from-left-4 duration-300 z-[10000]">
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 ring-1 ring-black/5 dark:ring-white/10 -ml-10">
+              <ThemedGlassmorphismPanel 
+                className="rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 ring-1 ring-black/5 dark:ring-white/10 -ml-10"
+              >
                   <div className="pb-2 mb-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
                        <span className="p-2 bg-primary/10 text-primary rounded-lg text-lg">
                            {icon}
                        </span>
-                       <span className="font-extrabold text-sm text-slate-800 dark:text-white uppercase tracking-tight truncate">
+                       <span className="font-extrabold text-sm uppercase tracking-tight truncate" style={{ color: theme.popup.textColor || undefined }}>
                            {title}
                        </span>
                   </div>
@@ -97,7 +105,7 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
                           return child;
                       })}
                   </ul>
-              </div>
+              </ThemedGlassmorphismPanel>
           </div>
       )}
 

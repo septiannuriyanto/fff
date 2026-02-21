@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import PanelTemplate from '../../../PanelTemplate';
+import PanelTemplate from '../../../../components/Panels/PanelTemplate';
 import L from 'leaflet';
 import { LotoRecord } from './LotoRecord';
 import { supabase } from '../../../../db/SupabaseClient';
-import PanelContainer from '../../../PanelContainer';
+import PanelContainer from '../../../../components/Panels/PanelContainer';
 
 // Fix default marker icon (Leaflet bug in React)
 delete (L.Icon.Default.prototype as any)._getIconUrl;

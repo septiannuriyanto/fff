@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { BRAND } from '../../types/brand';
 import BrandOne from '../../images/brand/brand-01.svg';
 import BrandTwo from '../../images/brand/brand-02.svg';
@@ -49,8 +51,31 @@ const brandData: BRAND[] = [
 ];
 
 const TableOne = () => {
+  const { activeTheme } = useTheme();
+  const theme = activeTheme;
+
+  const isDark = theme.baseTheme === 'dark';
+  const cardTheme = theme.card;
+
+  const dynamicStyle: React.CSSProperties = {
+    backgroundColor: isDark 
+      ? `rgba(0, 0, 0, ${cardTheme.opacity})` 
+      : `rgba(255, 255, 255, ${cardTheme.opacity})`,
+    backdropFilter: cardTheme.backdropBlur !== 'none' 
+      ? `blur(${cardTheme.backdropBlur === 'sm' ? '4px' : cardTheme.backdropBlur === 'md' ? '8px' : cardTheme.backdropBlur === 'lg' ? '12px' : cardTheme.backdropBlur === 'xl' ? '20px' : '0px'})` 
+      : undefined,
+    borderWidth: cardTheme.borderWidth,
+    borderColor: cardTheme.borderColor,
+    borderRadius: cardTheme.borderRadius,
+    boxShadow: cardTheme.shadow,
+    color: cardTheme.textColor,
+  };
+
   return (
-    <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
+    <div 
+      className="px-5 pt-6 pb-2.5 sm:px-7.5 xl:pb-1 transition-all duration-300"
+      style={dynamicStyle}
+    >
       <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
         Top Channels
       </h4>

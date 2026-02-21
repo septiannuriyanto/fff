@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, memo } from 'react';
 import Chart from 'react-apexcharts';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 interface DeviationChartProps {
   chartDataDaily: { date: string; total: number | null }[]; // Allow null for dates without data
@@ -10,6 +11,11 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
   chartDataDaily,
   chartDataCumulative,
 }) => {
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
+  const isDark = theme.baseTheme === 'dark';
+  const cardOpacity = theme.card.opacity;
+
   const [normalize, setNormalize] = useState(false);
   const [date, setDate] = useState<string[]>([]);
   const [dailyDeviation, setDailyDeviation] = useState<(number | null)[]>([]);
@@ -198,9 +204,21 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
   }, [dailyDeviation]);
 
   return (
-    <div className="w-full overflow-hidden">
+    <div 
+      className="w-full rounded-xl p-5 transition-all duration-300 relative overflow-hidden backdrop-blur-md mb-6"
+      style={{
+        backgroundColor: isDark 
+          ? `rgba(0, 0, 0, ${cardOpacity})` 
+          : `rgba(255, 255, 255, ${cardOpacity})`,
+        backdropFilter: `blur(${cardOpacity * 20}px)`,
+        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.4)',
+        boxShadow: isDark 
+          ? '0 10px 15px -3px rgba(0, 0, 0, 0.4)' 
+          : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+      }}
+    >
       <div className="flex items-center justify-between mb-4 px-2">
-        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Measurement Deviation by Date</h4>
+        <h4 className={`font-bold text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Monthly Measurement Deviation by Date</h4>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
           <button 
@@ -208,7 +226,7 @@ const DeviationChart: React.FC<DeviationChartProps> = ({
             className={`w-9 h-5 rounded-full transition-all relative border-2 ${
               normalize 
                 ? 'bg-emerald-500 border-emerald-500 shadow-inner' 
-                : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm'
+                : isDark ? 'bg-gray-800 border-gray-600 shadow-sm' : 'bg-gray-200 border-gray-300 shadow-sm'
             }`}
           >
             <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${

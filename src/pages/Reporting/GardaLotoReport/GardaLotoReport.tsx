@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PanelTemplate from '../../PanelTemplate';
+import PanelTemplate from '../../../components/Panels/PanelTemplate';
 import InputLotoVerification from './components/InputLotoVerification';
 import ReconcileLotoImages from './components/ReconcileLotoImages';
 

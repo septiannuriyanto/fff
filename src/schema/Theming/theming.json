@@ -1,0 +1,42 @@
+{
+  "mode": "custom", 
+  "meta": {
+    "name": "Glass Orange",
+    "version": 1
+  },
+
+  "background": {
+    "type": "gradient", 
+    "value": "linear-gradient(135deg,#0f0f0f,#1a1a1a)"
+  },
+
+  "card": {
+    "transparency": 0.65,
+    "blur": 20,
+    "outline": {
+      "color": "#ff7a00",
+      "width": 1
+    },
+    "radius": 16,
+    "shadow": true
+  },
+
+  "colors": {
+    "primary": "#ff7a00",
+    "secondary": "#ffaa00",
+    "accent": "#ff3d00",
+    "text": "#ffffff",
+    "muted_text": "#aaaaaa"
+  },
+
+  "font": {
+    "family": "Inter",
+    "scale": 1,
+    "weight": 400
+  },
+
+  "layout": {
+    "density": "normal", 
+    "card_gap": 12
+  }
+}

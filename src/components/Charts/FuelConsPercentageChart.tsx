@@ -2,6 +2,7 @@ import { ApexOptions } from 'apexcharts';
 import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { LoaderLogo } from '../../common/Loader/LoaderLogo';
+import { useTheme } from '../../contexts/ThemeContext';
 
 //---------------------------------------------------------------------------------------
 
@@ -42,6 +43,11 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
   };
 
 
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
+  const isDark = theme.baseTheme === 'dark';
+  const cardOpacity = theme.card.opacity;
+
   useEffect(() => {
     setSelectedOption(period);
   }, [period]);
@@ -63,21 +69,21 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
     },
 
     theme: {
-      mode: 'light',
+      mode: isDark ? 'dark' : 'light',
       palette: 'palette1',
       monochrome: {
         enabled: false,
-        color: '#255aee',
-        shadeTo: 'light',
+        color: theme.ui.primaryColor,
+        shadeTo: isDark ? 'dark' : 'light',
         shadeIntensity: 0.65,
       },
     },
     colors: [
-      function ({ value, seriesIndex, w }) {
-        if (value > 1) {
-          return '#FFB8C2';
+      function ({ value }: { value: number }) {
+        if (value > 1.0) {
+          return '#ef4444'; // Red for over threshold
         } else {
-          return '#80CAEE';
+          return theme.ui.primaryColor;
         }
       },
     ],
@@ -228,7 +234,16 @@ const FuelConsPercentageChart: React.FC<FuelConsPercentageChartProps> = ({
   }, [title]);
 
   return (
-    <div className="col-span-12 rounded-sm border border-stroke bg-white p-7.5 shadow-default dark:border-strokedark dark:bg-boxdark xl:col-span-4">
+    <div 
+      className="col-span-12 rounded-xl p-7.5 shadow-card transition-all duration-300 xl:col-span-4"
+      style={{
+        backgroundColor: isDark 
+          ? `rgba(0, 0, 0, ${cardOpacity})` 
+          : `rgba(255, 255, 255, ${cardOpacity})`,
+        backdropFilter: `blur(${cardOpacity * 20}px)`,
+        border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.4)',
+      }}
+    >
       <div className="mb-4 justify-between gap-4 sm:flex">
         <div>
           <h4 className="text-xl font-semibold text-black dark:text-white">

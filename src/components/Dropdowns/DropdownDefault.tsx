@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassmorphismPanel';
 
 const DropdownDefault = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { activeTheme } = useTheme();
+  const { popup } = activeTheme;
 
   const trigger = useRef<any>(null);
   const dropdown = useRef<any>(null);
@@ -61,11 +65,11 @@ const DropdownDefault = () => {
           />
         </svg>
       </button>
-      <div
+      <ThemedGlassmorphismPanel
         ref={dropdown}
         onFocus={() => setDropdownOpen(true)}
         onBlur={() => setDropdownOpen(false)}
-        className={`absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm border border-stroke bg-white p-1.5 shadow-default dark:border-strokedark dark:bg-boxdark ${
+        className={`absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm p-1.5 ${
           dropdownOpen === true ? 'block' : 'hidden'
         }`}
       >
@@ -120,7 +124,7 @@ const DropdownDefault = () => {
           </svg>
           Delete
         </button>
-      </div>
+      </ThemedGlassmorphismPanel>
     </div>
   );
 };

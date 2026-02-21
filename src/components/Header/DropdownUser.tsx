@@ -1,15 +1,24 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassmorphismPanel';
 import ClickOutside from '../ClickOutside';
 import UserOne from '../../images/user/user-01.png';
 import { supabase } from '../../db/SupabaseClient';
+import ThemeDialog from '../../common/ThemedComponents/ThemeDialog';
+import ColorWheel from '../../images/icon/colorwheel.svg';
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [themeDialogOpen, setThemeDialogOpen] = useState(false);
+  const { activeTheme } = useTheme();
+  const { popup } = activeTheme;
   const [nama, setNama] = useState('');
   const [position, setPosition] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
-  const navigate = useNavigate();
+
+  const trigger = useRef<any>(null);
+  const dropdown = useRef<any>(null);
 
   const nrp = localStorage.getItem('nrp');
 
@@ -27,7 +36,13 @@ const DropdownUser = () => {
     }
 
     setNama(data.nama);
-    setPosition(data.incumbent?.incumbent || '');
+    // Handle incumbent data which might be an object or an array depending on the query result
+    const incumbentData = data.incumbent as any;
+    const roleTitle = Array.isArray(incumbentData) 
+      ? incumbentData[0]?.incumbent 
+      : incumbentData?.incumbent;
+      
+    setPosition(roleTitle || '');
     setPhotoUrl(data.photo_url);
   }
 
@@ -86,14 +101,19 @@ const DropdownUser = () => {
 
       {/* <!-- Dropdown Start --> */}
       {dropdownOpen && (
-        <div
-          className={`absolute right-0 mt-4 flex w-62.5 flex-col rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark`}
+        <ThemedGlassmorphismPanel
+          ref={dropdown}
+          onBlur={() => setDropdownOpen(false)}
+          className="absolute right-0 mt-4 flex w-62.5 flex-col rounded-sm"
         >
           <ul className="flex flex-col gap-5 border-b border-stroke px-6 py-7.5 dark:border-strokedark">
             <li>
               <Link
                 to={`/profile/${nrp}`}
-                className="flex items-center gap-3.5 text-sm font-medium duration-300 ease-in-out hover:text-primary lg:text-base"
+                className="flex items-center gap-3.5 text-sm font-medium duration-300 ease-in-out lg:text-base"
+                style={{ color: popup.textColor || undefined }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = popup.textHoverColor || '')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = popup.textColor || '')}
               >
                 <svg
                   className="fill-current"
@@ -115,10 +135,32 @@ const DropdownUser = () => {
                 My Profile
               </Link>
             </li>
+            <li>
+              <button
+                onClick={() => {
+                  setThemeDialogOpen(true);
+                  setDropdownOpen(false);
+                }}
+                className="flex items-center gap-3.5 text-sm font-medium duration-300 ease-in-out lg:text-base w-full overflow-hidden"
+                style={{ color: popup.textColor || undefined }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = popup.textHoverColor || '')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = popup.textColor || '')}
+              >
+                <img 
+                  src={ColorWheel} 
+                  alt="Appearance" 
+                  className="w-5.5 h-5.5" 
+                />
+                Appearance
+              </button>
+            </li>
           </ul>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3.5 px-6 py-4 text-sm font-medium duration-300 ease-in-out hover:text-primary lg:text-base"
+            className="flex items-center gap-3.5 px-6 py-4 text-sm font-medium duration-300 ease-in-out lg:text-base"
+            style={{ color: popup.textColor || undefined }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = popup.textHoverColor || '')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = popup.textColor || '')}
           >
             <svg
               className="fill-current"
@@ -139,9 +181,13 @@ const DropdownUser = () => {
             </svg>
             Log Out
           </button>
-        </div>
+        </ThemedGlassmorphismPanel>
       )}
       {/* <!-- Dropdown End --> */}
+
+      {themeDialogOpen && (
+        <ThemeDialog onClose={() => setThemeDialogOpen(false)} />
+      )}
     </ClickOutside>
   );
 };

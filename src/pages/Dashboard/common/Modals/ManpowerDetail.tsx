@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import Autosuggest from 'react-autosuggest';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef } from 'ag-grid-community';
@@ -7,9 +7,9 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css'; // Revert to standard Alpine
 import { FaPlus, FaTimes, FaCheck, FaInfoCircle, FaCalendarAlt, FaClock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import { formatDateToISO } from '../../../Utils/DateUtility';
-import { getMakassarShiftlyDateObject, getShift } from '../../../Utils/TimeUtility';
-import Loader from '../../../common/Loader/Loader';
+import { formatDateToISO } from '../../../../Utils/DateUtility';
+import { getMakassarShiftlyDateObject, getShift } from '../../../../Utils/TimeUtility';
+import Loader from '../../../../common/Loader/Loader';
 
 interface ManpowerDetailProps {
   date: Date | null;

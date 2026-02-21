@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
+import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassmorphismPanel';
 
 interface DropdownProfileEditProps {
   onUpload: () => void;
@@ -12,6 +14,8 @@ interface DropdownProfileEditProps {
 
 const DropdownProfileEdit = ({ onUpload, onDelete, onMaximize, isMaximized, showDelete = true, iconColor = "#98A6AD", className }: DropdownProfileEditProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { activeTheme } = useTheme();
+  const { popup } = activeTheme;
 
   const trigger = useRef<any>(null);
   const dropdown = useRef<any>(null);
@@ -75,11 +79,11 @@ const DropdownProfileEdit = ({ onUpload, onDelete, onMaximize, isMaximized, show
           />
         </svg>
       </button>
-      <div
+      <ThemedGlassmorphismPanel
         ref={dropdown}
         onFocus={() => setDropdownOpen(true)}
         onBlur={() => setDropdownOpen(false)}
-        className={`text-black dark:text-white absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm border border-stroke bg-white p-1.5 shadow-default dark:border-strokedark dark:bg-boxdark ${
+        className={`absolute right-0 top-full z-40 w-40 space-y-1 rounded-sm p-1.5 ${
           dropdownOpen === true ? 'block' : 'hidden'
         }`}
       >
@@ -175,7 +179,7 @@ const DropdownProfileEdit = ({ onUpload, onDelete, onMaximize, isMaximized, show
           Delete Picture
         </button>
         )}
-      </div>
+      </ThemedGlassmorphismPanel>
     </div>
   );
 };

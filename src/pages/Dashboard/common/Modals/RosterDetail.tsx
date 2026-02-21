@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import toast, { Toaster } from 'react-hot-toast';
 import { FaCalendarAlt, FaUserTie, FaTruck, FaCloudUploadAlt, FaEye, FaTrash } from 'react-icons/fa';
-import DropZone from '../../../components/DropZones/DropZone';
-import Loader from '../../../common/Loader/Loader';
+import DropZone from '../../../../components/DropZones/DropZone';
+import Loader from '../../../../common/Loader/Loader';
 
 interface RosterRecord {
   id: number;
@@ -61,7 +61,7 @@ const RosterDetail = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const uploadUrl = 'https://fff-worker.septian-nuryanto.workers.dev/upload/roster';
+      const uploadUrl = `${import.meta.env.VITE_WORKER_URL}/upload/roster`;
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
@@ -81,7 +81,7 @@ const RosterDetail = () => {
       const result = await response.json();
       const photoUrl = (result.url && result.url.startsWith('http'))
         ? result.url
-        : `https://fff-worker.septian-nuryanto.workers.dev/images/rosters/${result.key}`;
+        : `${import.meta.env.VITE_WORKER_URL}/images/rosters/${result.key}`;
 
       // Save to Supabase
       const { error: upsertError } = await supabase

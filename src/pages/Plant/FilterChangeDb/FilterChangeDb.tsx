@@ -1,5 +1,5 @@
 
-import PanelContainer from '../../PanelContainer'
+import PanelContainer from '../../../components/Panels/PanelContainer'
 
 const FilterChangeDb = () => {
   return (

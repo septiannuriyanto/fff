@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import { FaCheck, FaArrowDown, FaTrash, FaInbox, FaCalendarAlt, FaUser, FaTruckLoading, FaStickyNote, FaLayerGroup } from 'react-icons/fa';
 import OutstandingOrder from './OutstandingOrder';
-import { useAuth } from '../../Authentication/AuthContext';
+import { useAuth } from '../../../Authentication/AuthContext';
 
 interface OrderDetailProps {
     order: any;

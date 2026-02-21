@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import ManpowerDetail from './ManpowerDetail';
 import { FaChartBar, FaEdit, FaCalendarAlt } from 'react-icons/fa';
-import { useAuth } from '../../Authentication/AuthContext';
+import { useAuth } from '../../../Authentication/AuthContext';
 
 interface ATRDetailProps {
   date: Date | null;
@@ -187,8 +187,8 @@ const ATRDetail = ({ date, shift, initialTab = 'detail' }: ATRDetailProps) => {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { label: 'GRAND TOTAL', value: stats.total, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-                { label: 'POS 2 (GL)', value: stats.pos2, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-                { label: 'POS 3 (FOREMAN)', value: stats.pos3, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+                { label: 'POS 2 (ADMIN)', value: stats.pos2, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+                { label: 'POS 3 (OILMAN)', value: stats.pos3, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20' },
                 { label: 'POS 4 (OPERATOR)', value: stats.pos4, color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20' },
                 { label: 'POS 5 (FUELMAN)', value: stats.pos5, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
               ].map((s, i) => (

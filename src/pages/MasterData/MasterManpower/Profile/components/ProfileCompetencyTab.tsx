@@ -185,7 +185,7 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError || !session) throw new Error('Authentication failed');
 
-        const uploadUrl = 'https://fff-worker.septian-nuryanto.workers.dev/upload/competency-document';
+        const uploadUrl = `${import.meta.env.VITE_WORKER_URL}/upload/competency-document`;
         const uploadResponse = await fetch(uploadUrl, {
           method: 'PUT',
           headers: {
@@ -202,7 +202,7 @@ const ProfileCompetencyTab = ({ nrp }: ProfileCompetencyTabProps) => {
         const uploadResult = await uploadResponse.json();
         document_url = (uploadResult.url && uploadResult.url.startsWith('http'))
           ? uploadResult.url
-          : `https://fff-worker.septian-nuryanto.workers.dev/documents/competency/${uploadResult.key}`;
+          : `${import.meta.env.VITE_WORKER_URL}/documents/competency/${uploadResult.key}`;
       }
 
       const payload = {

@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Product } from '../../types/product';
 import ProductOne from '../../images/product/product-01.png';
 import ProductTwo from '../../images/product/product-02.png';
@@ -40,8 +42,35 @@ const productData: Product[] = [
 ];
 
 const TableTwo = () => {
+  const { appliedTheme, trialTheme } = useTheme();
+  const theme = trialTheme || appliedTheme;
+
+  const isDark = theme.baseTheme === 'dark';
+  const containerOpacity = theme.container.opacity;
+  const containerColor = theme.container.color === 'initial' 
+    ? (isDark ? '0,0,0' : '255,255,255') 
+    : theme.container.color;
+
+  const dynamicStyle: React.CSSProperties = {
+    backgroundColor: containerColor.startsWith('rgba') 
+      ? containerColor 
+      : containerColor.includes(',') 
+        ? `rgba(${containerColor}, ${containerOpacity})`
+        : containerColor.startsWith('#')
+          ? containerColor // Hex doesn't support opacity easily without parsing
+          : `rgba(${isDark ? '0,0,0' : '255,255,255'}, ${containerOpacity})`,
+    backdropFilter: `blur(${containerOpacity * 20}px)`,
+    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.4)',
+    boxShadow: isDark 
+      ? '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2)' 
+      : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+  };
+
   return (
-    <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div 
+      className="rounded-sm border shadow-default transition-all duration-300"
+      style={dynamicStyle}
+    >
       <div className="py-6 px-4 md:px-6 xl:px-7.5">
         <h4 className="text-xl font-semibold text-black dark:text-white">
           Top Products

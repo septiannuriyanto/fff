@@ -1,55 +1,64 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode } from 'react';
 import Header from '../components/Header/index';
 import Sidebar from '../components/Sidebar/index';
 import { useAuth } from '../pages/Authentication/AuthContext';
-import getRole from '../functions/get.role';
 import { useLocation } from 'react-router-dom';
+import Loader from '../common/Loader/Loader';
+import { useTheme } from '../contexts/ThemeContext';
+import UndoToast from '../common/UndoToast/UndoToast';
 
 const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { authToken, loading } = useAuth(); // Directly access `authToken` and `loading`
+  const { authToken, currentUser, loading, preparing } = useAuth();
+  const { activeTheme, showUndoToast, undoThemeChange, clearUndo } = useTheme();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
 
-  const [stateRole, setStateRole] = useState<string | null>();
+  // Display a loading screen if:
+  // 1. Initial auth state is still being determined (loading)
+  // 2. We are performing a post-login preparation (preparing)
+  // 3. We have an authToken but the currentUser is not yet available (safety check)
+  if (loading || preparing || (authToken && !currentUser && !isLandingPage)) {
+    return <Loader />;
+  }
 
+  // Determine active theme (priority: trial > applied)
+  // Active theme is now resolved by context including dark mode mappings
+  const activeBackground = activeTheme.background.type === 'gradient' 
+    ? activeTheme.background.gradient 
+    : activeTheme.background.color;
 
-  const fetchRole = async()=>{
-    const nrp = localStorage.getItem('nrp');
-    if(nrp){
-      const { role } = await getRole({ nrp });
-      console.log("DefaultLayout: Destructured role", { role, type: typeof role });
-      
-      setStateRole(role);
+  // Sync dark mode based on theme base
+  React.useEffect(() => {
+    if (activeTheme.baseTheme === 'dark') {
+      window.document.body.classList.add('dark');
+    } else {
+      window.document.body.classList.remove('dark');
     }
-   
-  }
-
-  useEffect(() => {
-    
-    fetchRole();
-
-  }, []);
-
-  // Display a loading screen if the authentication state is still being determined
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <span>Loading...</span>
-      </div>
-    );
-  }
+  }, [activeTheme.baseTheme]);
 
   return (
-    <div className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen w-full">
+    <div 
+      className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen w-full transition-all duration-700 ease-in-out"
+      style={!activeTheme.background.useSystem ? { background: activeBackground, backgroundSize: 'cover' } : {}}
+    >
+      {/* Undo Toast for Theme Changes */}
+      {showUndoToast && (
+        <UndoToast 
+          message="Theme Applied" 
+          onUndo={undoThemeChange} 
+          onExpire={clearUndo} 
+        />
+      )}
+
       {/* Page Wrapper */}
       <div className="flex h-full overflow-visible">
         {/* Sidebar */}
-        {authToken && stateRole && !isLandingPage && (
+        {authToken && currentUser?.role && !isLandingPage && (
           <Sidebar
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
-            role={stateRole}
+            role={currentUser.role}
           />
         )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
+import { supabase } from '../../../../db/SupabaseClient';
 import { FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import { useAuth } from '../../Authentication/AuthContext';
+import { useAuth } from '../../../Authentication/AuthContext';
 
 interface Manpower {
   nrp: string;

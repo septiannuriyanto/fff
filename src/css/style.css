@@ -52,6 +52,34 @@
   }
 }
 
+/* Clean Glassmorphism Utilities */
+.glass-blur-sm {
+  backdrop-filter: blur(4px) saturate(110%) !important;
+  -webkit-backdrop-filter: blur(4px) saturate(110%) !important;
+}
+.glass-blur-md {
+  backdrop-filter: blur(12px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
+}
+.glass-blur-lg {
+  backdrop-filter: blur(20px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(130%) !important;
+}
+.glass-blur-xl {
+  backdrop-filter: blur(32px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(140%) !important;
+}
+.glass-blur-none {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.glass-popup {
+  background-clip: padding-box !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
 /* third-party libraries CSS */
 
 .tableCheckbox:checked ~ div span {
@@ -246,6 +274,11 @@ span.flatpickr-weekday,
     display: none !important;
   }
 }
+
+  .ag-paging-row-summary-panel {
+    display: none !important;
+  }
+
 
 /* AG Grid Glass Theme Overrides */
 .glass-grid .ag-root-wrapper {

@@ -5,11 +5,10 @@ import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the Data Grid
 import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the Data Grid
 import { supabase } from '../../../db/SupabaseClient';
-import { GridApi } from 'ag-grid-community';
-import { formatDateForSupabase } from '../../../Utils/DateUtility';
 import AnomalyBarChart from './components/AnomalyBarChart';
 import AnomalyBarChartSwapped from './components/AnomalyBarChartSwapped';
 import { sendMessageToChannel } from '../../../services/TelegramSender';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const ProblemCategoryOptions = [
   'Run Out Fuel',
@@ -31,8 +30,10 @@ interface RefuelingAnomalyProps {
 const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
   allowColumnsEdit,
 }) => {
+  const { appliedTheme, trialTheme } = useTheme();
+  const activeTheme = trialTheme || appliedTheme;
   console.log('Allow Columns Edit:', allowColumnsEdit); // Add this to debug
-  const gridRef = useRef();
+  const gridRef = useRef<any>(null);
 
   const [editColumn, setEditColumn] = useState(allowColumnsEdit);
   const [swapChart, setSwapChart] = useState(false);
@@ -158,16 +159,13 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
 
   const autoSizeStrategy = {
     type: 'fitCellContents',
-  };
-  const [autoSize, setAutoSize] = useState(autoSizeStrategy);
+  } as const;
   const [showDragandDrop, setShowDragandDrop] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [csvData, setCsvData] = useState<string | null>(null);
   const [rowData, setRowData] = useState<any[]>([]);
   const [useColumn, setUseColumn] = useState<any[]>(simpleColumns);
-  const [gridApi, setGridApi] = useState<any>(null);
 
   const onToggleFileInput = (e: any) => {
     e.preventDefault();
@@ -192,36 +190,6 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
     }
   };
 
-  const replaceInCsvData = (
-    data: any[],
-    searchValue: string,
-    replaceValue: string,
-    columnToReplace: number,
-  ) => {
-    // Assuming column X is the 1st column (index 0) and column Y is the 23rd column (index 22)
-    const columnXIndex = 0;
-    const columnYIndex = 23;
-
-    // Remove the first row, slice the data to keep only columns from X to Y, and replace substrings in the specified column
-    const modifiedData = data
-      .slice(1) // Remove the first row
-      .map((row: any[]) => {
-        // Slice the data to keep only columns from X to Y
-        const slicedRow = row.slice(columnXIndex, columnYIndex + 1);
-
-        // Replace substring in the specified column
-        if (slicedRow[columnToReplace] !== undefined) {
-          slicedRow[columnToReplace] = slicedRow[columnToReplace].replace(
-            searchValue,
-            replaceValue,
-          );
-        }
-
-        return slicedRow;
-      });
-
-    return modifiedData;
-  };
   const handleExportCsv = (e: any) => {
     e.preventDefault();
     // exportToExcel(rowData);
@@ -241,7 +209,7 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
       },
     };
 
-    gridRef!.current!.api.exportDataAsCsv(params);
+    gridRef.current?.api.exportDataAsCsv(params);
   };
 
   const validateAndParseFile = (file: File) => {
@@ -374,9 +342,7 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
                 return filteredRow;
               });
 
-            // Convert back to CSV (for debugging)
-            const csvString = Papa.unparse(modifiedData);
-            // console.log('Modified CSV Data:', csvString);
+            // process data
 
             // Set the row data for AG Grid
             const rowDatas = modifiedData.map((row: string[]) => {
@@ -409,11 +375,11 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
 
             console.log('Row Data for AG Grid:', rowDatas); // Log the row data for AG Grid
             const newItems = rowDatas.filter(
-              (item2) =>
-                !rowData.some((item1) => item1.JobRowId === item2.JobRowId),
+              (item2:any) =>
+                !rowData.some((item1:any) => item1.JobRowId === item2.JobRowId),
             );
             const filteredRowDatas = newItems.filter(
-              (item) => item.Distrik !== '',
+              (item:any) => item.Distrik !== '',
             );
             if (filteredRowDatas.length > 0) {
               const updatedRowData = [...rowData, ...filteredRowDatas]; // Use spread operator to create a new array
@@ -441,7 +407,7 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
       // Insert the items into the `refueling_anomaly` table
       const { data, error } = await supabase
         .from('refueling_anomaly')
-        .upsert(items, { onConflict: ['JobRowId'] }); // Adjust onConflict if necessary
+        .upsert(items, { onConflict: 'JobRowId' }); // Adjust onConflict if necessary
 
       if (error) {
         throw new Error(`Error inserting items: ${error.message}`);
@@ -532,17 +498,6 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
   //   }
   // };
 
-  const handleDownload = () => {
-    if (csvData) {
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'sliced_data.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -562,7 +517,6 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
     } else {
       setUseColumn(fullColumns);
     }
-    setAutoSize(autoSizeStrategy);
   };
 
   useEffect(() => {
@@ -711,10 +665,6 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
     }
   };
 
-  const getRowId = useCallback((params: any) => {
-    return params.data.id;
-  }, []);
-
   //------------TABBED BUTTONS\
   const [allCase, setAllCase] = useState(0);
   const [feedbacked, setFeedbacked] = useState(0);
@@ -731,8 +681,7 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
 
   const [activeTab, setActiveTab] = useState<string>('ALL');
 
-  const onGridReady = useCallback(async (params: { api: GridApi }) => {
-    setGridApi(params.api);
+  const onGridReady = useCallback(async () => {
     console.log('Grid is ready.');
   }, []);
 
@@ -927,14 +876,24 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
                 ))}
               </div>
 
-              <div className="ag-theme-quartz-auto-dark h-100 w-full">
+              <div 
+                className="ag-theme-quartz h-100 w-full transition-all duration-700"
+                style={{ 
+                  backgroundColor: activeTheme.gridBackgroundColor !== 'default' ? activeTheme.gridBackgroundColor : undefined,
+                  '--ag-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'transparent' : undefined,
+                  '--ag-header-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
+                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
+                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                } as React.CSSProperties}
+              >
                 <AgGridReact
                   onCellValueChanged={onCellValueChanged}
                   ref={gridRef}
                   columnDefs={useColumn}
                   rowData={rowData}
                   defaultColDef={defaultColDef}
-                  autoSizeStrategy={autoSize}
+                  autoSizeStrategy={autoSizeStrategy}
 
                   // domLayout="autoHeight" // Automatically adjust height based on the number of rows
                 />

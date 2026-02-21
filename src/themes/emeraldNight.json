@@ -1,0 +1,153 @@
+{
+  "id": "emerald-night",
+  "name": "Emerald Night",
+  "baseTheme": "dark",
+  "isSystem": false,
+  "background": {
+    "type": "gradient",
+    "gradient": "linear-gradient(135deg, #064e3b, #022c22)",
+    "useSystem": false
+  },
+  "header": {
+    "color": "#064e3b",
+    "opacity": 1,
+    "textColor": "#FFFFFF",
+    "iconColor": "#FFFFFF",
+    "iconSize": "1.25rem",
+    "backdropBlur": "none"
+  },
+  "sidebar": {
+    "color": "#022c22",
+    "opacity": 1,
+    "textColor": "#FFFFFF",
+    "textSize": "1rem",
+    "iconColor": "#FFFFFF",
+    "iconSize": "1.5rem",
+    "detached": true,
+    "backdropBlur": "none"
+  },
+  "container": {
+    "color": "#022c22",
+    "opacity": 0.05,
+    "textColor": "#FFFFFF",
+    "textColorDark": "#FFFFFF",
+    "iconColor": "#34d399",
+    "iconColorDark": "#34d399",
+    "borderColor": "#064e3b"
+  },
+  "popup": {
+    "backgroundColor": "#064e3b",
+    "opacity": 0.4,
+    "borderRadius": "0.5rem",
+    "backdropBlur": "sm",
+    "blurDepth": "20",
+    "borderColor": "rgba(255, 255, 255, 0.1)",
+    "textColor": "#FFFFFF",
+    "textActiveColor": "#34d399",
+    "textHoverColor": "#34d399",
+    "iconColor": "#34d399",
+    "separatorColor": "rgba(255, 255, 255, 0.1)",
+    "headerIconColor": "#34d399",
+    "headerTextColor": "#FFFFFF"
+  },
+  "card": {
+    "opacity": 0.05,
+    "backdropBlur": "xl",
+    "shadow": "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+    "border": "1px solid",
+    "borderRadius": "1rem",
+    "borderWidth": "1px",
+    "borderOpacity": 0.1,
+    "borderColor": "#064e3b",
+    "textColor": "#ffffff",
+    "textSize": "1rem",
+    "iconColor": "#34d399",
+    "iconSize": "1.25rem"
+  },
+  "button": {
+    "primary": {
+      "color": "#10b981",
+      "opacity": 1,
+      "textColor": "#ffffff",
+      "textSize": "1rem",
+      "iconColor": "#ffffff",
+      "iconSize": "1.25rem",
+      "backdropBlur": "none",
+      "shadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      "border": "none",
+      "borderRadius": "0.5rem",
+      "borderWidth": "0px",
+      "borderOpacity": 1,
+      "borderColor": "transparent"
+    },
+    "secondary": {
+      "color": "rgba(16, 185, 129, 0.2)",
+      "opacity": 1,
+      "textColor": "#10b981",
+      "textSize": "1rem",
+      "iconColor": "#10b981",
+      "iconSize": "1.25rem",
+      "backdropBlur": "none",
+      "shadow": "none",
+      "border": "1px solid",
+      "borderRadius": "0.5rem",
+      "borderWidth": "1px",
+      "borderOpacity": 1,
+      "borderColor": "#10b981"
+    },
+    "tertiary": {
+      "color": "transparent",
+      "opacity": 0,
+      "textColor": "#d1fae5",
+      "textSize": "1rem",
+      "iconColor": "#d1fae5",
+      "iconSize": "1.25rem",
+      "backdropBlur": "none",
+      "shadow": "none",
+      "border": "none",
+      "borderRadius": "0.5rem",
+      "borderWidth": "0px",
+      "borderOpacity": 0,
+      "borderColor": "transparent"
+    }
+  },
+  "input": {
+    "color": "rgba(255, 255, 255, 0.1)",
+    "opacity": 1,
+    "textColor": "#ffffff",
+    "textSize": "1rem",
+    "iconColor": "#a7f3d0",
+    "iconSize": "1.25rem",
+    "backdropBlur": "none",
+    "shadow": "none",
+    "border": "1px solid",
+    "borderRadius": "0.5rem",
+    "borderWidth": "1px",
+    "borderOpacity": 0.2,
+    "borderColor": "#10b981"
+  },
+  "grid": {
+    "backgroundColor": "rgba(0, 0, 0, 0.2)",
+    "borderColor": "#064e3b",
+    "headerColor": "transparent",
+    "primaryTextColor": "#ffffff",
+    "headerTextColor": "#ffffff",
+    "secondaryTextColor": "#34d399",
+    "headerHeight": "36px",
+    "headerHoverColor": "rgba(16, 185, 129, 0.1)",
+    "headerMovingColor": "rgba(16, 185, 129, 0.2)",
+    "showWrapperBorder": false,
+    "showHeaderRowBorder": false,
+    "rowBorderStyle": "solid",
+    "rowBorderWidth": "1px",
+    "rowBorderColor": "rgba(16, 185, 129, 0.1)",
+    "columnBorderStyle": "solid",
+    "columnBorderWidth": "0px",
+    "columnBorderColor": "#064e3b"
+  },
+  "ui": {
+    "primaryColor": "#10b981",
+    "borderGlowColor": "#10b98133",
+    "borderGlowSize": "4px"
+  }
+}

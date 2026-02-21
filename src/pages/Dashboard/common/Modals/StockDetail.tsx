@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../db/SupabaseClient';
-import { formatDateForSupabase } from '../../../Utils/DateUtility';
-import { formatNumberWithSeparator } from '../../../Utils/NumberUtility';
-import { StockStatus } from '../../../types/StockStatus';
+import { supabase } from '../../../../db/SupabaseClient';
+import { formatDateForSupabase } from '../../../../Utils/DateUtility';
+import { formatNumberWithSeparator } from '../../../../Utils/NumberUtility';
+import { StockStatus } from '../../../../types/StockStatus';
 
 interface StockDetailProps {
   date: Date | null;

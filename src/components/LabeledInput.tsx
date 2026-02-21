@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface LabeledInputProps {
   label: string;
@@ -23,6 +24,10 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
   placeholder = '',
   className = 'mb-4.5',
 }) => {
+  const { activeTheme } = useTheme();
+  const theme = activeTheme;
+  const inputTheme = theme.input;
+
   return (
     <div className={className}>
       <label className="mb-2.5 block text-black dark:text-white">
@@ -38,7 +43,19 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
           value={value}
           type={type}
           onChange={onChange}
-          className="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 pr-10 text-black outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+          style={{
+            backgroundColor: inputTheme.color,
+            color: inputTheme.textColor,
+            borderColor: inputTheme.borderColor,
+            borderWidth: inputTheme.borderWidth,
+            borderRadius: inputTheme.borderRadius,
+            boxShadow: inputTheme.shadow,
+            opacity: inputTheme.opacity,
+            backdropFilter: inputTheme.backdropBlur !== 'none' 
+              ? `blur(${inputTheme.backdropBlur === 'sm' ? '4px' : inputTheme.backdropBlur === 'md' ? '8px' : inputTheme.backdropBlur === 'lg' ? '12px' : inputTheme.backdropBlur === 'xl' ? '20px' : '0px'})` 
+              : undefined,
+          }}
+          className="w-full outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:focus:border-primary px-5 py-3"
         />
         {onClear && value && (
           <button

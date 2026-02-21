@@ -71,6 +71,7 @@ import FuelTripManagement from './pages/Dashboard/FuelTripManagement/FuelTripMan
 import StockManagement from './pages/Dashboard/StockManagement/StockManagement';
 import MasterCompetency from './pages/MasterData/Competency/MasterCompetency';
 import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
+import InfrastructureInspection from './pages/Reporting/Infrastructure/InfrastructureInspection';
 
 const routes = [
   {
@@ -172,6 +173,12 @@ const routes = [
     path: '/infrastructure/pressureless',
     component: <PressurelessSummary allowColumnsEdit />,
     title: 'FFF | Pressureless',
+    allowedRoles: ALL_ROLES
+  },
+  {
+    path: '/infrastructure/inspection',
+    component: <InfrastructureInspection />,
+    title: 'FFF | Infrastructure Inspection',
     allowedRoles: ALL_ROLES
   },
   {
