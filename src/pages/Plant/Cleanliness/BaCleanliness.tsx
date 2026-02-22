@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PanelContainer from '../../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import { supabase } from '../../../db/SupabaseClient';
 import toast, { Toaster } from 'react-hot-toast';
 import ExcelJS from 'exceljs';
@@ -396,7 +396,7 @@ const BaCleanliness = () => {
   );
 
   return (
-    <PanelContainer title="Berita Acara Cleanliness">
+    <ThemedPanelContainer title="Berita Acara Cleanliness">
       <Toaster />
       <div className="flex flex-col gap-6">
         {/* Top Single Column: Global Filter Header */}
@@ -488,7 +488,7 @@ const BaCleanliness = () => {
           <PeriodCluster title="PERIODE 2" source="P2" />
         </div>
       </div>
-    </PanelContainer>
+    </ThemedPanelContainer>
   );
 };
 

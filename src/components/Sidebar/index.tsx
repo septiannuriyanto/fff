@@ -225,7 +225,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 mini={isMini}
               >
                 <SidebarLink to="/dashboard" label="Home" mini={isMini} />
-                <SidebarLink to="/fuelcons" label="Fuel Consumption" mini={isMini} />
+                {/* <SidebarLink to="/fuelcons" label="Fuel Consumption" mini={isMini} /> */}
                 <SidebarLink to="/trip" label="Trip Management" mini={isMini} />
                 <SidebarLink to="/stock" label="Stock Management" mini={isMini} />
                 <SidebarLink to="/operational" label="Operational" mini={isMini} />
@@ -392,6 +392,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 pathname={pathname}
                 basePath="/master"
                 mini={isMini}
+                align="bottom"
               >
                 <SidebarLink to="/master/materials" label="Materials" mini={isMini} />
                 <SidebarLink to="/master/manpower" label="Manpower" mini={isMini} />
@@ -413,6 +414,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 pathname={pathname}
                 basePath="/export"
                 mini={isMini}
+                align="bottom"
               >
                 <SidebarLink to="/export/bastfuel" label="BAST Fuel" mini={isMini} />
                 <SidebarLink to="/export/bastoli" label="BAST Oli" mini={isMini} />
@@ -433,6 +435,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 pathname={pathname}
                 basePath="/auth"
                 mini={isMini}
+                align="bottom"
               >
                 <SidebarLink to="/auth/registrationlist" label="Registrations" mini={isMini} />
                 <SidebarButton

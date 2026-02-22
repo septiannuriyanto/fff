@@ -51,7 +51,10 @@ const DropdownNotification = () => {
             className="absolute -right-27 mt-2.5 flex h-90 w-75 flex-col rounded-sm sm:right-0 sm:w-80"
           >
             <div className="px-4.5 py-3">
-              <h5 className="text-sm font-medium text-bodydark2">
+              <h5 
+                className="text-sm font-medium"
+                style={{ color: activeTheme.popup.headerTextColor || undefined }}
+              >
                 Notification
               </h5>
             </div>

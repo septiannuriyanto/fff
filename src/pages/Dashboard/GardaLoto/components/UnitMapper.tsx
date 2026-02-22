@@ -5,7 +5,7 @@ import PanelTemplate from '../../../../components/Panels/PanelTemplate';
 import L from 'leaflet';
 import { LotoRecord } from './LotoRecord';
 import { supabase } from '../../../../db/SupabaseClient';
-import PanelContainer from '../../../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../../../common/ThemedComponents/ThemedPanelContainer';
 
 // Fix default marker icon (Leaflet bug in React)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -62,7 +62,7 @@ const UnitLocationMapper = () => {
   }, []);
 
   return (
-    <PanelContainer title="Refueling Location Mapping">
+    <ThemedPanelContainer title="Refueling Location Mapping">
       <div style={{ height: '600px', width: '100%' }}>
         <MapContainer
           center={[-2.5, 117]} // contoh tengah Indonesia
@@ -138,7 +138,7 @@ const UnitLocationMapper = () => {
           />
         </div>
       )}
-    </PanelContainer>
+    </ThemedPanelContainer>
   );
 };
 

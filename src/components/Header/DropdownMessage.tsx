@@ -69,7 +69,12 @@ const DropdownMessage = () => {
             className="absolute -right-16 mt-2.5 flex h-90 w-75 flex-col rounded-sm sm:right-0 sm:w-80"
           >
             <div className="px-4.5 py-3">
-              <h5 className="text-sm font-medium text-bodydark2">Messages</h5>
+              <h5 
+                className="text-sm font-medium"
+                style={{ color: activeTheme.popup.headerTextColor || undefined }}
+              >
+                Messages
+              </h5>
             </div>
 
             <ul className="flex h-auto flex-col overflow-y-auto">

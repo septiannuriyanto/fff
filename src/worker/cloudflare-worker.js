@@ -2,8 +2,8 @@ export default {
   async fetch(req, env) {
     const cors = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id'
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id, X-Backlog-Id'
     }
 
     if (req.method === 'OPTIONS') {
@@ -205,13 +205,16 @@ export default {
 
        const inspectionId = req.headers.get('X-Inspection-Id')
        const itemId = req.headers.get('X-Item-Id')
+       const customFileName = req.headers.get('X-File-Name')
 
        if (!inspectionId || !itemId) {
          return res(400, 'Missing X-Inspection-Id or X-Item-Id headers', cors)
        }
 
        const timestamp = Date.now()
-       const key = `${inspectionId}/${itemId}/${timestamp}.jpg`
+       const key = customFileName 
+         ? `${inspectionId}/${itemId}/${customFileName}`
+         : `${inspectionId}/${itemId}/${timestamp}.jpg`
 
        try {
          await env.R2_INFRA_INSPECTION.put(key, req.body, {
@@ -226,6 +229,88 @@ export default {
        } catch (e) {
          return res(500, `Upload failed: ${e.message}`, cors)
        }
+    }
+
+    // ===============================
+    // DELETE INFRA INSPECTION PHOTO
+    // ===============================
+    if (req.method === 'DELETE' && url.pathname === '/upload/infra-inspection') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const key = url.searchParams.get('key')
+        if (!key) return res(400, 'Missing key parameter', cors)
+
+        try {
+          await env.R2_INFRA_INSPECTION.delete(key)
+          return Response.json({ status: 'ok', msg: 'Deleted' }, { headers: cors })
+        } catch (e) {
+          return res(500, `Delete failed: ${e.message}`, cors)
+        }
+    }
+
+    // ===============================
+    // INFRA BACKLOG PHOTO UPLOAD (R2)
+    // ===============================
+    if (req.method === 'PUT' && url.pathname === '/upload/infra-backlog') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const backlogId = req.headers.get('X-Backlog-Id')
+        if (!backlogId) return res(400, 'Missing X-Backlog-Id header', cors)
+
+        const timestamp = Date.now()
+        const key = `${backlogId}/${timestamp}.jpg`
+
+        try {
+          await env.R2_INFRA_INSPECTION.put(key, req.body, {
+            httpMetadata: { contentType: req.headers.get('Content-Type') || 'image/jpeg' }
+          })
+
+          const publicUrl = env.PUBLIC_R2_DOMAIN_INFRA
+             ? `${env.PUBLIC_R2_DOMAIN_INFRA}/${key}`
+             : `/images/infra-inspection/${key}`
+
+          return Response.json({ status: 'ok', key, url: publicUrl }, { headers: cors })
+        } catch (e) {
+          return res(500, `Upload failed: ${e.message}`, cors)
+        }
+    }
+
+    // ===============================
+    // DELETE INFRA BACKLOG PHOTO
+    // ===============================
+    if (req.method === 'DELETE' && url.pathname === '/upload/infra-backlog') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const key = url.searchParams.get('key')
+        if (!key) return res(400, 'Missing key parameter', cors)
+
+        try {
+          await env.R2_INFRA_INSPECTION.delete(key)
+          return Response.json({ status: 'ok', msg: 'Deleted' }, { headers: cors })
+        } catch (e) {
+          return res(500, `Delete failed: ${e.message}`, cors)
+        }
     }
 
 

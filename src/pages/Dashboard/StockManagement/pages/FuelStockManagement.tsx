@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { supabase } from '../../../../db/SupabaseClient';
-import PanelContainer from '../../../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../../../common/ThemedComponents/ThemedPanelContainer';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
@@ -444,7 +444,7 @@ export default function FuelStockManagement() {
 
 
   return (
-    <PanelContainer title='Fuel Stock Management'>
+    <ThemedPanelContainer title='Fuel Stock Management'>
         <div className="p-4 bg-white dark:bg-boxdark rounded-lg shadow-sm">
             {/* Header Controls - Month Selector Left, Last Update Right */}
             <div className="flex justify-between items-center mb-8 bg-slate-50/50 dark:bg-white/5 p-3 rounded-2xl border border-white/20">
@@ -727,6 +727,6 @@ export default function FuelStockManagement() {
                 </div>
             )}
         </div>
-    </PanelContainer>
+    </ThemedPanelContainer>
   )
 }

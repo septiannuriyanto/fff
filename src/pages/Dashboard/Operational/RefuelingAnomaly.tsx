@@ -30,8 +30,7 @@ interface RefuelingAnomalyProps {
 const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
   allowColumnsEdit,
 }) => {
-  const { appliedTheme, trialTheme } = useTheme();
-  const activeTheme = trialTheme || appliedTheme;
+  const { activeTheme } = useTheme();
   console.log('Allow Columns Edit:', allowColumnsEdit); // Add this to debug
   const gridRef = useRef<any>(null);
 
@@ -879,12 +878,12 @@ const RefuelingAnomaly: React.FC<RefuelingAnomalyProps> = ({
               <div 
                 className="ag-theme-quartz h-100 w-full transition-all duration-700"
                 style={{ 
-                  backgroundColor: activeTheme.gridBackgroundColor !== 'default' ? activeTheme.gridBackgroundColor : undefined,
-                  '--ag-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'transparent' : undefined,
-                  '--ag-header-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
-                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
-                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
-                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  backgroundColor: activeTheme.grid.backgroundColor !== 'default' ? activeTheme.grid.backgroundColor : undefined,
+                  '--ag-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'transparent' : undefined,
+                  '--ag-header-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#FFFFFF' : undefined,
+                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
                 } as React.CSSProperties}
               >
                 <AgGridReact

@@ -12,7 +12,8 @@ export interface UploadResult {
 export const uploadInfraPhoto = async (
     file: File,
     inspectionId: string,
-    itemId: string
+    itemId: string,
+    fileName?: string
 ): Promise<UploadResult | null> => {
     try {
         // 1. Get Session for JWT
@@ -28,14 +29,20 @@ export const uploadInfraPhoto = async (
         }
 
         const uploadUrl = `${workerUrl}/upload/infra-inspection`;
+        const headers: Record<string, string> = {
+            'Authorization': `Bearer ${session.access_token}`,
+            'X-Inspection-Id': inspectionId,
+            'X-Item-Id': itemId,
+            'Content-Type': file.type || 'image/jpeg',
+        };
+
+        if (fileName) {
+            headers['X-File-Name'] = fileName;
+        }
+
         const response = await fetch(uploadUrl, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'X-Inspection-Id': inspectionId,
-                'X-Item-Id': itemId,
-                'Content-Type': file.type || 'image/jpeg',
-            },
+            headers,
             body: file,
         });
 
@@ -91,5 +98,64 @@ export const uploadBacklogPhoto = async (
     } catch (err) {
         console.error('Error in uploadBacklogPhoto:', err);
         throw err;
+    }
+};
+
+/**
+ * Service to delete infrastructure inspection photos from Cloudflare R2
+ */
+export const deleteInfraPhoto = async (photoUrl: string): Promise<boolean> => {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Authentication failed');
+
+        // Extract key from URL
+        // URL format: .../images/infra-inspection/KEY or full R2 domain/KEY
+        const urlParts = photoUrl.split('/');
+        const key = urlParts.slice(urlParts.indexOf('infra-inspection') + 1).join('/');
+
+        const workerUrl = import.meta.env.VITE_WORKER_URL;
+        const deleteUrl = `${workerUrl}/upload/infra-inspection?key=${encodeURIComponent(key)}`;
+
+        const response = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+            }
+        });
+
+        return response.ok;
+    } catch (err) {
+        console.error('Error in deleteInfraPhoto:', err);
+        return false;
+    }
+};
+
+/**
+ * Service to delete backlog photos from Cloudflare R2
+ */
+export const deleteBacklogPhoto = async (photoUrl: string): Promise<boolean> => {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Authentication failed');
+
+        // Extract key from URL
+        const urlParts = photoUrl.split('/');
+        const key = urlParts.slice(urlParts.indexOf('infra-backlog') + 1).join('/');
+
+        const workerUrl = import.meta.env.VITE_WORKER_URL;
+        const deleteUrl = `${workerUrl}/upload/infra-backlog?key=${encodeURIComponent(key)}`;
+
+        const response = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+            }
+        });
+
+        return response.ok;
+    } catch (err) {
+        console.error('Error in deleteBacklogPhoto:', err);
+        return false;
     }
 };

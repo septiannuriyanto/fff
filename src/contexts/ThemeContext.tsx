@@ -51,8 +51,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   });
   const [trialTheme, setTrialTheme] = useState<ThemePreset | null>(null);
   
-  // Use generic hook to get color mode
-  const [colorMode, setColorMode] = useColorMode() as [string, (mode: string) => void];
+  // Compute the current active base theme to pass into useColorMode
+  const currentBaseTheme = (trialTheme || appliedTheme).baseTheme;
+
+  // Use generic hook to get color mode, now passing the active base theme
+  const [colorMode, setColorMode] = useColorMode(currentBaseTheme) as [string, (mode: string) => void];
   
   // Undo State
   const [showUndoToast, setShowUndoToast] = useState(false);

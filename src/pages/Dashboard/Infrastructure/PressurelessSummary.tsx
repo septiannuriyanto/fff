@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
-import 'ag-grid-community/styles/ag-grid.css'; // Mandatory CSS required by the Data Grid
-import 'ag-grid-community/styles/ag-theme-quartz.css'; // Optional Theme applied to the Data Grid
 import { supabase } from '../../../db/SupabaseClient';
 import * as XLSX from 'xlsx';
 import InstalledChart from './components/InstalledChart';
 import StatusChart from './components/StatusChart';
 import ReportedChart from './components/ReportedChart';
+import ThemedGrid from '../../../common/ThemedComponents/ThemedGrid';
 
 const exportToExcel = (data: any[]) => {
   const ws = XLSX.utils.json_to_sheet(data);
@@ -27,7 +25,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
   const [rowData, setRowData] = useState<any[]>([]);
   const [gridApi, setGridApi] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const gridRef = useRef();
+  const gridRef = useRef<any>(null);
   // Define the options for the status dropdown
   const statusOptions = ['OPEN', 'PROGRESS', 'CLOSED'];
   const pressurelesssOptions = ['Y', 'N', 'X'];
@@ -39,7 +37,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
   const [closedCount, setClosedCount] = useState<number>(0);
   const [reportedCount, setreportedCount] = useState<number>(0);
   const [notReportedCount, setNotReportedCount] = useState<number>(0);
-  const [colDefs, setColDefs] = useState([
+  const [colDefs, setColDefs] = useState<any[]>([
     {
       id: 'codenumber',
       field: 'codenumber',
@@ -103,9 +101,8 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
         } else if (params.value === 'CLOSED') {
           return { color: 'black', backgroundColor: '#aaffaa' };
         } else {
-          return { color: 'black' };
+          return { color: 'black', backgroundColor: 'transparent' };
         }
-        return null;
       },
 
       cellEditor: 'agSelectCellEditor', // Use agSelectCellEditor
@@ -314,7 +311,7 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
     }
   };
 
-  const autoSizeStrategy = {
+  const autoSizeStrategy: any = {
     type: 'fitCellContents',
     // type: 'fitGridWidth',
     // defaultMinWidth: 50,
@@ -477,9 +474,9 @@ const PressurelessSummary: React.FC<PressurelessSummaryProps> = ({
                     </button>
                   ))}
                 </div>
-                <div className="ag-theme-quartz-auto-dark h-100 w-full">
-                  <AgGridReact
-                    ref={gridRef}
+                <div className="h-[500px] w-full mt-4 flex flex-col">
+                  <ThemedGrid
+                    ref={gridRef as any}
                     rowData={rowData}
                     columnDefs={colDefs}
                     defaultColDef={defaultColDef}

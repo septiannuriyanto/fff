@@ -40,8 +40,7 @@ const Materials: React.FC = () => {
   
   const location = useLocation();
   const materialCodeRef = useRef<HTMLInputElement>(null);
-  const { appliedTheme, trialTheme } = useTheme();
-  const activeTheme = trialTheme || appliedTheme;
+  const { activeTheme } = useTheme();
 
   // Form State
   const [materialCode, setMaterialCode] = useState('');
@@ -650,12 +649,12 @@ const Materials: React.FC = () => {
         <div 
           className={`w-full h-full ag-theme-quartz transition-all duration-700 bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden`}
                 style={{ 
-                  backgroundColor: activeTheme.gridBackgroundColor !== 'default' ? activeTheme.gridBackgroundColor : undefined,
-                  '--ag-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'transparent' : undefined,
-                  '--ag-header-background-color': activeTheme.gridBackgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
-                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
-                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#fff' : undefined,
-                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  backgroundColor: activeTheme.grid.backgroundColor !== 'default' ? activeTheme.grid.backgroundColor : undefined,
+                  '--ag-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'transparent' : undefined,
+                  '--ag-header-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+                  '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+                  '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#FFFFFF' : undefined,
+                  '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
                 } as React.CSSProperties}
         >
           <AgGridReact

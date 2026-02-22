@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Manpower } from '../../../../types/manpower';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useTheme } from '../../../../contexts/ThemeContext';
 import {
   faAdd,
   faEdit,
@@ -28,6 +29,13 @@ interface MasterManpowerListProps {
 
 const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
   const { currentUser } = useAuth();
+  const { activeTheme } = useTheme();
+  const isDark = activeTheme.baseTheme === 'dark';
+  const cardBg = activeTheme.container.color;
+  const cardBorder = activeTheme.container.borderColor;
+  const cardText = activeTheme.container.textColor;
+  const headerBg = isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.03)';
+  const rowHover = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)';
 
   const [dataRow, setDataRow] = useState<(Manpower & { competencyCount?: number })[]>([]);
   const [keyword, setKeyword] = useState<string>('');
@@ -231,11 +239,11 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
       
       <div className="flex flex-col gap-6">
         {/* Header & Filters Section - Always Visible */}
-        <div className="bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-stroke dark:border-strokedark overflow-hidden">
+        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ backgroundColor: cardBg, border: `1px solid ${cardBorder}` }}>
           {/* Header */}
-          <div className="border-b border-stroke px-6 py-4 dark:border-strokedark bg-gray-50/50 dark:bg-meta-4/20">
+          <div className="px-6 py-4" style={{ borderBottom: `1px solid ${cardBorder}`, backgroundColor: headerBg }}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-bold text-black dark:text-white">Manpower Resources</h2>
+              <h2 className="text-xl font-bold" style={{ color: cardText }}>Manpower Resources</h2>
               <Link
                 to="/master/manpower/add"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-6 text-center font-bold text-white hover:bg-opacity-90 transition-all shadow-md hover:shadow-lg active:scale-95"
@@ -291,7 +299,7 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
         </div>
 
         {/* Table Content Section with Blur Overlay */}
-        <div className="relative bg-white dark:bg-boxdark rounded-2xl shadow-sm border border-stroke dark:border-strokedark">
+        <div className="relative rounded-2xl shadow-sm" style={{ backgroundColor: cardBg, border: `1px solid ${cardBorder}` }}>
           {/* Loading Overlay */}
           {isLoading && (
             <div className="absolute inset-0 z-20 backdrop-blur-[3px] bg-white/40 dark:bg-black/20 flex flex-col items-center justify-center transition-all duration-300">
@@ -311,31 +319,15 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
           <div className={`overflow-x-auto min-h-[350px] transition-all duration-300 ${isLoading ? 'opacity-60 grayscale-[0.3]' : 'opacity-100'}`}>
             <table className="w-full table-auto">
               <thead>
-                <tr className="bg-slate-50 dark:bg-meta-4/30 text-left">
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Profile Info
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Identity
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Assignment
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Role / Position
-                  </th>
-                   <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark text-center">
-                    Competencies
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Join date
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 font-bold text-black dark:text-white text-xs uppercase tracking-wider border-b border-stroke dark:border-strokedark text-center">
-                    Action
-                  </th>
+                <tr className="text-left" style={{ backgroundColor: headerBg }}>
+                  {['Profile Info', 'Identity', 'Assignment', 'Role / Position'].map(h => (
+                    <th key={h} className="px-6 py-4 font-bold text-xs uppercase tracking-wider" style={{ borderBottom: `1px solid ${cardBorder}`, color: cardText }}>{h}</th>
+                  ))}
+                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center" style={{ borderBottom: `1px solid ${cardBorder}`, color: cardText }}>Competencies</th>
+                  {['Join date', 'Status'].map(h => (
+                    <th key={h} className="px-6 py-4 font-bold text-xs uppercase tracking-wider" style={{ borderBottom: `1px solid ${cardBorder}`, color: cardText }}>{h}</th>
+                  ))}
+                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-center" style={{ borderBottom: `1px solid ${cardBorder}`, color: cardText }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -343,7 +335,10 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
                   dataRow.map((manpower: Manpower & { competencyCount?: number }, key: number) => (
                     <tr
                       key={key}
-                      className="border-b border-stroke dark:border-strokedark hover:bg-slate-50/80 dark:hover:bg-meta-4/20 transition-colors"
+                      className="transition-colors"
+                      style={{ borderBottom: `1px solid ${cardBorder}` }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = rowHover)}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {/* Profile Column */}
                       <td className="px-6 py-4">
@@ -372,7 +367,7 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
                           <div className="flex flex-col">
                             <button
                               onClick={() => handleView(manpower.nrp)}
-                              className="text-sm font-bold text-black dark:text-white leading-tight hover:text-primary transition-colors text-left group/name"
+                              className="text-sm font-bold leading-tight hover:text-primary transition-colors text-left group/name" style={{ color: cardText }}
                             >
                               {manpower.nama}
                               <div className="h-0.5 w-0 bg-primary group-hover/name:w-full transition-all duration-300"></div>
@@ -494,12 +489,12 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
 
           {/* Pagination Section */}
           {totalPages > 1 && (
-            <div className="border-t border-stroke px-6 py-5 dark:border-strokedark bg-slate-50/50 dark:bg-meta-4/10">
+            <div className="px-6 py-5" style={{ borderTop: `1px solid ${cardBorder}`, backgroundColor: headerBg }}>
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1 || isLoading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-stroke px-5 py-2.5 text-sm font-bold text-black hover:bg-white hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed dark:border-strokedark dark:text-white dark:hover:bg-meta-4 transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all" style={{ border: `1px solid ${cardBorder}`, color: cardText }}
                 >
                   <FontAwesomeIcon icon={faChevronLeft} />
                   Prev
@@ -525,7 +520,7 @@ const MasterManpowerList = ({ onViewCompetency }: MasterManpowerListProps) => {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages || isLoading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-stroke px-5 py-2.5 text-sm font-bold text-black hover:bg-white hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed dark:border-strokedark dark:text-white dark:hover:bg-meta-4 transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all" style={{ border: `1px solid ${cardBorder}`, color: cardText }}
                 >
                   Next
                   <FontAwesomeIcon icon={faChevronRight} />

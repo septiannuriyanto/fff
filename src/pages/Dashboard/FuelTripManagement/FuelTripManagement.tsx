@@ -1,4 +1,4 @@
-import PanelContainer from "../../../components/Panels/PanelContainer";
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import RitationDashboard from "../Operational/Ritation/page/RitationDashboard";
 
 
@@ -6,9 +6,9 @@ const FuelTripManagement = () => {
 
   return (
     <>
-      <PanelContainer title="Trip Management">
+      <ThemedPanelContainer title="Trip Management">
         <RitationDashboard />
-      </PanelContainer>
+      </ThemedPanelContainer>
     </>
   );
 };

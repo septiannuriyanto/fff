@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PanelContainer from '../../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import LabeledInput from '../../../components/LabeledInput';
 import SelectGroupOne from '../../../components/Forms/SelectGroup/SelectGroupOne';
 import DatePickerOne from '../../../components/Forms/DatePicker/DatePickerOne';
@@ -365,7 +365,7 @@ const FilterChange = () => {
   };
 
   return (
-    <PanelContainer title="Filter Change Form">
+    <ThemedPanelContainer title="Filter Change Form">
       <Toaster />
       <div className="p-4">
         <form
@@ -1049,7 +1049,7 @@ const FilterChange = () => {
           }} 
         />
       )}
-    </PanelContainer>
+    </ThemedPanelContainer>
   );
 };
 

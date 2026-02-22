@@ -31,16 +31,9 @@ import AlertError from '../../../../UiElements/Alerts/AlertError';
 import { useNavigate } from 'react-router-dom';
 import { ReconcileFuelData } from '../ReconcileFuelData';
 import RitationStatsPanel from '../components/RitationStatsPanel';
+import { ThemedMetricCard } from '../../../../../common/ThemedComponents/ThemedMetricCard';
 
-const MetricCard = ({ title, value, unit = '' }: { title: string; value: string | number; unit?: string }) => (
-  <div className="p-2 rounded-xl bg-[#f0f2f5] dark:bg-[#1a1c1e] shadow-[4px_4px_8px_#d1d9e6,-4px_-4px_8px_#ffffff] dark:shadow-[4px_4px_8px_#000000,-4px_-4px_6px_#2a2c2e] border border-white/40 dark:border-white/5 flex flex-col gap-0.5 hover:scale-[1.02] transition-all group">
-    <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</span>
-    <div className="flex items-baseline gap-1">
-      <span className="text-base font-black dark:text-white tabular-nums group-hover:bg-clip-text group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-emerald-500 transition-all">{value}</span>
-      {unit && <span className="text-[8px] text-gray-400 font-medium">{unit}</span>}
-    </div>
-  </div>
-);
+
 
 const RitationDashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -513,13 +506,13 @@ const RitationDashboard = () => {
                 <DailyRitationChart chartDataInput={chartDataInput} chartDataReconcile={chartDataReconcile} chartDataCumulative={chartDataCumulativeInner} chartDataPoBalance={chartDataPoBalance} />
                 <div className="rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md p-6 border border-white/20 dark:border-white/5 shadow-sm">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <MetricCard title="Avg Ritasi/Day" value={formatNumberWithSeparator(parseFloat(metrics.avgRitasiPerDay.toFixed(0)))} unit="Liter" />
-                    <MetricCard title="Prediction Sisa" value={formatNumberWithSeparator(parseFloat(metrics.prediksiSisaQty.toFixed(0)))} unit="Liter" />
-                    <MetricCard title="Prediction Total" value={formatNumberWithSeparator(parseFloat(metrics.prediksiTotalQty.toFixed(0)))} unit="Liter" />
-                    <MetricCard title="Plan vs Actual" value={metrics.planVsActual.toFixed(1)} unit="%" />
-                    <MetricCard title="Progress MTD" value={metrics.progressMtd.toFixed(1)} unit="%" />
-                    <MetricCard title="Sisa PO MTD" value={formatNumberWithSeparator(parseFloat(metrics.sisaPoMtd.toFixed(0)))} unit="Liter" />
-                    <MetricCard title="Qty/Ritasi" value={formatNumberWithSeparator(parseFloat(metrics.qtyFuelPerRitasi.toFixed(0)))} unit="Liter" />
+                    <ThemedMetricCard title="Avg Ritasi/Day" value={formatNumberWithSeparator(parseFloat(metrics.avgRitasiPerDay.toFixed(0)))} unit="Liter" />
+                    <ThemedMetricCard title="Prediction Sisa" value={formatNumberWithSeparator(parseFloat(metrics.prediksiSisaQty.toFixed(0)))} unit="Liter" />
+                    <ThemedMetricCard title="Prediction Total" value={formatNumberWithSeparator(parseFloat(metrics.prediksiTotalQty.toFixed(0)))} unit="Liter" />
+                    <ThemedMetricCard title="Plan vs Actual" value={metrics.planVsActual.toFixed(1)} unit="%" />
+                    <ThemedMetricCard title="Progress MTD" value={metrics.progressMtd.toFixed(1)} unit="%" />
+                    <ThemedMetricCard title="Sisa PO MTD" value={formatNumberWithSeparator(parseFloat(metrics.sisaPoMtd.toFixed(0)))} unit="Liter" />
+                    <ThemedMetricCard title="Qty/Ritasi" value={formatNumberWithSeparator(parseFloat(metrics.qtyFuelPerRitasi.toFixed(0)))} unit="Liter" />
                   </div>
                 </div>
               </div>
@@ -530,11 +523,11 @@ const RitationDashboard = () => {
                   chartDataCumulative={chartDataDeviationCumulative}
                 />
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
-                  <MetricCard title="Total Deviasi MTD" value={formatNumberWithSeparator(parseFloat(metrics.totalDevMtd.toFixed(0)))} unit="Liter" />
-                  <MetricCard title="Percent MTD Deviation" value={metrics.percentDevMtd.toFixed(2)} unit="%" />
-                  <MetricCard title="Avg Daily Deviation" value={formatNumberWithSeparator(parseFloat(metrics.avgDailyDev.toFixed(1)))} unit="Liter" />
-                  <MetricCard title="Most Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.mostSingleDev.toFixed(0)))} unit="Liter" />
-                  <MetricCard title="Least Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.leastSingleDev.toFixed(0)))} unit="Liter" />
+                  <ThemedMetricCard title="Total Deviasi MTD" value={formatNumberWithSeparator(parseFloat(metrics.totalDevMtd.toFixed(0)))} unit="Liter" />
+                  <ThemedMetricCard title="Percent MTD Deviation" value={metrics.percentDevMtd.toFixed(2)} unit="%" />
+                  <ThemedMetricCard title="Avg Daily Deviation" value={formatNumberWithSeparator(parseFloat(metrics.avgDailyDev.toFixed(1)))} unit="Liter" />
+                  <ThemedMetricCard title="Most Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.mostSingleDev.toFixed(0)))} unit="Liter" />
+                  <ThemedMetricCard title="Least Single Deviation" value={formatNumberWithSeparator(parseFloat(metrics.leastSingleDev.toFixed(0)))} unit="Liter" />
                 </div>
               </div>
 

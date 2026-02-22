@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import PanelContainer from '../../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import { supabase } from '../../../db/SupabaseClient';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -183,7 +183,7 @@ const MasterCompetency = () => {
   );
 
   return (
-    <PanelContainer 
+    <ThemedPanelContainer 
       title="Master Competency"
       actions={
         <button
@@ -464,7 +464,7 @@ const MasterCompetency = () => {
           </div>
         </div>
       )}
-    </PanelContainer>
+    </ThemedPanelContainer>
   );
 };
 

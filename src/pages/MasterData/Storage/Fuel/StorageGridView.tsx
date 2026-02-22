@@ -1,6 +1,7 @@
 // components/MasterStorage/StorageGridView.tsx
 
 import React, { useMemo, useCallback } from 'react';
+import { useTheme } from '../../../../contexts/ThemeContext';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ValueFormatterParams } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -15,6 +16,7 @@ interface GridViewProps {
 }
 
 const StorageGridView: React.FC<GridViewProps> = ({ rowData, onEdit, onDelete }) => {
+  const { activeTheme } = useTheme();
   
   // Custom Cell Renderer untuk Actions
   const actionCellRenderer = useCallback((params: any) => {
@@ -48,7 +50,19 @@ const StorageGridView: React.FC<GridViewProps> = ({ rowData, onEdit, onDelete })
   }), []);
 
   return (
-    <div className="ag-theme-alpine" style={{ height: 600, width: '100%' }}>
+    <div 
+      className="ag-theme-alpine" 
+      style={{ 
+        height: 600, 
+        width: '100%',
+        backgroundColor: activeTheme.grid.backgroundColor !== 'default' ? activeTheme.grid.backgroundColor : undefined,
+        '--ag-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'transparent' : undefined,
+        '--ag-header-background-color': activeTheme.grid.backgroundColor !== 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+        '--ag-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : undefined,
+        '--ag-header-foreground-color': activeTheme.baseTheme === 'dark' ? '#FFFFFF' : undefined,
+        '--ag-secondary-foreground-color': activeTheme.baseTheme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : undefined,
+      } as React.CSSProperties}
+    >
       <AgGridReact<StorageData>
         rowData={rowData}
         columnDefs={columnDefs}

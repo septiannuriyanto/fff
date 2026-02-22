@@ -12,6 +12,7 @@ interface SidebarGroupProps {
   currentRole: string; // The current user's role
   children: ReactNode;
   mini?: boolean;
+  align?: 'top' | 'bottom';
 }
 
 const SidebarGroup: React.FC<SidebarGroupProps> = ({
@@ -22,11 +23,11 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
   roles,
   currentRole,
   children,
-  mini
+  mini,
+  align = 'top'
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { appliedTheme, trialTheme } = useTheme();
-  const theme = trialTheme || appliedTheme;
+  const { activeTheme: theme } = useTheme();
 
   // Update `isExpanded` based on the current pathname
   useEffect(() => {
@@ -83,7 +84,7 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
 
       {/* Mini Mode Hover Overlay */}
       {mini && (
-          <div className="absolute left-full top-0 pl-10 hidden group-hover/group:block animate-in fade-in slide-in-from-left-4 duration-300 z-[10000]">
+          <div className={`absolute left-full ${align === 'bottom' ? '-bottom-4' : '-top-4'} pl-10 hidden group-hover/group:block animate-in fade-in slide-in-from-left-4 duration-300 z-[10000]`}>
               <ThemedGlassmorphismPanel 
                 className="rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 ring-1 ring-black/5 dark:ring-white/10 -ml-10"
               >
@@ -91,7 +92,7 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
                        <span className="p-2 bg-primary/10 text-primary rounded-lg text-lg">
                            {icon}
                        </span>
-                       <span className="font-extrabold text-sm uppercase tracking-tight truncate" style={{ color: theme.popup.textColor || undefined }}>
+                       <span className="font-extrabold text-sm uppercase tracking-tight truncate" style={{ color: theme.popup.headerTextColor || undefined }}>
                            {title}
                        </span>
                   </div>

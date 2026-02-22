@@ -1,11 +1,11 @@
 
-import PanelContainer from '../../../components/Panels/PanelContainer'
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 
 const FilterChangeDb = () => {
   return (
-    <PanelContainer title='Filter Change Dashboard'>
+    <ThemedPanelContainer title='Filter Change Dashboard'>
         <></>
-    </PanelContainer>
+    </ThemedPanelContainer>
   )
 }
 

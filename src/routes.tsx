@@ -73,7 +73,16 @@ import MasterCompetency from './pages/MasterData/Competency/MasterCompetency';
 import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
 import InfrastructureInspection from './pages/Reporting/Infrastructure/InfrastructureInspection';
 
-const routes = [
+export interface AppRoute {
+  path: string;
+  component: React.ReactNode;
+  title?: string;
+  allowedRoles?: string[];
+  isPublic?: boolean;
+  keywords?: string[];
+}
+
+const routes: AppRoute[] = [
   {
     path: '/',
     component: (
@@ -81,471 +90,531 @@ const routes = [
         <LandingPage />
       </PublicRoute>
     ),
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['landing', 'home', 'public']
   },
   {
     path: '/dashboard',
     component: <Dashboard />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['dashboard', 'home', 'overview', 'main']
   },
-
   {
     path: '/auth/signin',
     component: <SignIn />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['login', 'signin', 'auth', 'authentication']
   },
   {
     path: '/auth/signup',
     component: <SignUp />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['register', 'signup', 'auth', 'create account']
   },
   {
     path: '/auth/forgotpassword',
     component: <ForgotPassword />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['forgot password', 'reset', 'auth', 'recovery']
   },
   {
     path: '/auth/resetpassword/:token',
     component: <ResetPassword />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['reset password', 'auth']
   },
-
-
   {
     path: '/auth/registrationlist',
     component: <RegistrationList />,
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['registration list', 'approve users', 'admin', 'users']
   },
-
   {
     path: '/fuelcons',
     component: <FuelConsumption />,
     title: 'FFF | Fuel Consumption',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['fuel', 'consumption', 'dashboard', 'usage']
   },
-
-
   {
     path: '/trip',
     component: <FuelTripManagement />,
     title: 'FFF | Trip Management',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['trip', 'management', 'fuel truck', 'tracking', 'dashboard']
   },
-
   {
     path: '/stock',
     component: <StockManagement />,
     title: 'FFF | Stock Management',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
   },
   {
     path: '/operational',
     component: <Operational />,
     title: 'FFF | Operational Dashboard',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['operational', 'dashboard', 'operations']
   },
   {
     path: '/operational/ritation',
     component: <RefuelingAnomaly allowColumnsEdit />,
     title: 'FFF | Refueling Anomaly',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['refueling', 'anomaly', 'ritation', 'operational', 'alert']
   },
   {
     path: '/infrastructure',
     component: <Infrastructure />,
     title: 'FFF | Infrastructure',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['infrastructure', 'dashboard', 'plant', 'equipment']
   },
   {
     path: '/infrastructure/ftbacklog',
     component: <FuelTruckBacklog />,
     title: 'FFF | FT Backlog List',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'fuel truck', 'backlog', 'list', 'maintenance']
   },
   {
     path: '/infrastructure/ftbacklog/:unit_id',
     component: <FuelTruckBacklog />,
     title: 'FFF | FT Backlog List',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'fuel truck', 'backlog', 'list', 'maintenance']
   },
   {
     path: '/infrastructure/pressureless',
     component: <PressurelessSummary allowColumnsEdit />,
     title: 'FFF | Pressureless',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'pressureless', 'summary', 'equipment']
   },
   {
     path: '/infrastructure/inspection',
     component: <InfrastructureInspection />,
     title: 'FFF | Infrastructure Inspection',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'inspection', 'reporting', 'audit']
+  },
+  {
+    path: '/infrastructure/inspection/backlog',
+    component: <InfrastructureInspection />,
+    title: 'FFF | Infrastructure Backlogs',
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'inspection', 'backlogs', 'pending']
+  },
+  {
+    path: '/infrastructure/inspection/:id',
+    component: <InfrastructureInspection />,
+    title: 'FFF | Ongoing Infrastructure Inspection',
+    allowedRoles: ALL_ROLES,
+    keywords: ['infrastructure', 'inspection', 'detail']
   },
   {
     path: '/manpower',
     component: <Manpower />,
     title: 'FFF | Manpower',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['manpower', 'dashboard', 'personnel', 'hr']
   },
-
   {
     path: '/gardaloto',
     component: <GardaLotoDashboard />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['gardaloto', 'dashboard', 'loto', 'safety']
   },
-
   {
     path: '/gardaloto/sessions/:session_id',
     component: <GardaLotoSessionDetails />,
     allowedRoles: ALL_ROLES,
-    isPublic: true
+    isPublic: true,
+    keywords: ['gardaloto', 'session', 'details', 'loto']
   },
-
   {
     path: '/profile/:id',
     component: <Profile />,
     allowedRoles: ALL_ROLES,
-    isPublic: true
+    isPublic: true,
+    keywords: ['profile', 'user', 'account', 'manpower']
   },
-
   {
     path: '/profile/:id/edit',
     component: <ProfileEdit />,
     title: 'FFF | Edit Profile',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['profile', 'edit', 'account', 'settings']
   },
-
   {
     path: '/settings/:id',
     component: <Settings />,
     title: 'FFF | Settings',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['settings', 'preferences', 'configuration', 'user']
   },
-
   {
     path: '/plan/fuelritationplan',
     component: <FuelRitationPlan />,
     title: 'FFF | Fuel Ritation Plan',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['plan', 'fuel ritation', 'schedule', 'planning']
   },
-
   // Operational Routes
   { 
     path: '/operational/fleet',
     component: <FleetManagement />,
     title: 'FFF | Fleet Management',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['operational', 'fleet', 'management', 'vehicles']
   },
   {
     path: '/operational/delay',
     component: <FleetManagement />,
     title: 'FFF | Delay Refueling',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['operational', 'delay', 'refueling', 'fleet']
   },
   {
     path: '/operational/distribution',
     component: <RefuelingDistribution />,
     title: 'FFF | Refueling Distribution',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['operational', 'distribution', 'refueling']
   },
   {
     path: '/operational/hm',
     component: <HourMeterManagement />,
     title: 'FFF | Hour Meters',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['operational', 'hour meter', 'hm', 'equipment']
   },
   {
     path: '/operational/issuing',
     component: <IssuingFuel />,
     title: 'FFF | Issuing Fuel',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['operational', 'issuing', 'fuel']
   },
-
-
   // Reporting Routes
   {
     path: '/reporting/dailyreport',
     component: <DailyReport />,
     title: 'FFF | Daily Report',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'daily report', 'daily']
   },
   {
     path: '/reporting/adminreport',
     component: <AdminReport />,
     title: 'FFF | Admin Report',
-    allowedRoles: ADMIN
+    allowedRoles: ADMIN,
+    keywords: ['reporting', 'admin', 'report', 'summary']
   },
   {
     path: '/reporting/logsheet',
     component: <Logsheet />,
     title: 'FFF | Logsheet',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'logsheet', 'logs']
   },
   {
     path: '/reporting/stock',
     component: <StockReporting />,
     title: 'FFF | Stock Reporting',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'stock', 'inventory']
   },
   {
     path: '/reporting/stocktaking',
     component: <StockTaking />,
     title: 'FFF | Stock Taking',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'stock taking', 'inventory audit']
   },
   {
     path: '/reporting/ritation',
     component: <RitationReport />,
     title: 'FFF | Ritation Report',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'ritation', 'fuel trip']
   },
   {
     path: '/reporting/ritation/:id',
     component: <RitationReport />,
     title: 'FFF | Ritation Detail',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'ritation', 'detail']
   },
   {
     path: '/reporting/tmr',
     component: <TMRReport />,
     title: 'FFF | TMR Report',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'tmr', 'report']
   },
   {
     path: '/reporting/pressureless',
     component: <PressurelessReport />,
     title: 'FFF | Pressureless Reporting',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'pressureless', 'infrastructure']
   },
   {
     path: '/reporting/ftbdrfu',
     component: <BreakdownRfuReport />,
-    // title: 'FFF | FT Breakdown - RFU',
-    // allowedRoles: FUEL_ROLES
+    keywords: ['reporting', 'breakdown', 'rfu', 'fuel truck']
   },
   {
     path: '/reporting/ftbacklogreq',
     component: <FuelTruckBacklogRequest />,
     title: 'FFF | FT Backlog Request',
-    allowedRoles: FUEL_ROLES
+    allowedRoles: FUEL_ROLES,
+    keywords: ['reporting', 'backlog', 'request', 'fuel truck']
   },
   {
     path: '/reporting/gardaloto',
     component: <GardaLotoReport />,
     title: 'FFF | Garda Loto Report',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['reporting', 'gardaloto', 'loto', 'safety']
   },
-
   // Partner Reporting Routes
   {
     path: '/partner/fuel',
     component: <FuelPartnerDashboard />,
     title: 'FFF | Fuel Partner Dashboard',
-    allowedRoles: FUEL_PARTNER
+    allowedRoles: FUEL_PARTNER,
+    keywords: ['partner', 'dashboard', 'fuel']
   },
   {
     path: '/partner/fuel/ritation',
     component: <FuelPartnerRitation />,
     title: 'FFF | Fuel Partner Ritation',
-    allowedRoles: FUEL_PARTNER
+    allowedRoles: FUEL_PARTNER,
+    keywords: ['partner', 'ritation', 'fuel']
   },
-    {
+  {
     path: '/partner/fuel/stock',
     component: <FuelPartnerStock />,
     title: 'FFF | Fuel Partner stock',
-    allowedRoles: FUEL_PARTNER
+    allowedRoles: FUEL_PARTNER,
+    keywords: ['partner', 'stock', 'fuel']
   },
   {
     path: '/partner/fuel/additive',
     component: <AdditiveMonitoring />,
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['partner', 'additive', 'monitoring', 'fuel']
   },
-
   // Oil Reporting Routes
-   {
+  {
     path: '/oil/storagemgmt',
     component: <StorageManagement />,
     title: 'FFF | Oil Storage Management',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['oil', 'storage', 'management']
   },
   {
     path: '/oil/dst',
     component: <DailyStockTakingOil />,
     title: 'FFF | Daily Stock Taking Oil',
-    allowedRoles: OIL_ROLES
+    allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'dst', 'daily stock taking']
   },
-
   {
-  path: '/oil/dst/:alias',   // ← warehouse jadi path param
-  component: <DailyStockTakingOil />,
-  allowedRoles: ALL_ROLES,
+    path: '/oil/dst/:alias',
+    component: <DailyStockTakingOil />,
+    allowedRoles: ALL_ROLES,
+    keywords: ['oil', 'dst', 'daily stock taking']
   },
-   {
+  {
     path: '/oil/dstreport',
     component: <DstOilReport />,
     title: 'FFF | Daily Stock Taking Oil Report',
-    allowedRoles: OIL_ROLES
+    allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'dst', 'report', 'daily stock taking']
   },
-      {
+  {
     path: '/oil/grease',
     component: <GreaseMonitoring />,
     title: 'FFF | Grease Monitoring',
     allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'grease', 'monitoring']
   },
-
-    {
+  {
     path: '/oil/housekeeping',
     component: <HousekeepingOil />,
     title: 'FFF | Housekeeping Oil',
-    allowedRoles: OIL_ROLES
+    allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'housekeeping', 'cleanliness']
   },
-
-
   // Plant Reporting Routes
-   {
+  {
     path: '/plant/filterchange',
     component: <FilterChange />,
     title: 'FFF | Filter Change',
-    allowedRoles: PLANT
+    allowedRoles: PLANT,
+    keywords: ['plant', 'filter', 'change', 'maintenance']
   },
-   {
+  {
     path: '/plant/filterchangedb',
     component: <FilterChangeDb />,
     title: 'FFF | Filter Change Dashboard',
-    allowedRoles: PLANT
+    allowedRoles: PLANT,
+    keywords: ['plant', 'filter', 'change', 'dashboard']
   },
   {
     path: '/plant/bacleanliness',
     component: <BaCleanliness />,
     title: 'FFF | Berita Acara Cleanliness',
-    allowedRoles: PLANT
+    allowedRoles: PLANT,
+    keywords: ['plant', 'ba', 'cleanliness', 'berita acara']
   },
-
-
   // Export Routes
   {
     path: '/export/bastfuel',
     component: <BastFuel />,
     title: 'FFF | Export BAST Fuel',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['export', 'bast', 'fuel', 'berita acara']
   },
   {
     path: '/export/bastoli',
     component: <BastOli />,
     title: 'FFF | Export BAST Oli',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['export', 'bast', 'oli', 'oil', 'berita acara']
   },
   {
     path: '/export/reconcilefuelowner',
     component: <BaReconcile />,
     title: 'FFF | Export BA Reconcile Owner',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['export', 'reconcile', 'ba', 'fuel owner', 'berita acara']
   },
   // Master Data Routes
   {
     path: '/master/library',
     component: <ComponentLibrary />,
     title: 'FFF | Component Library',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'library', 'component', 'data']
   },
-
   {
     path: '/master/manpower',
     component: <MasterManpower />,
     title: 'FFF | Master Manpower',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'manpower', 'personnel', 'hr', 'employees']
   },
-   {
+  {
     path: '/master/competency',
     component: <MasterCompetency />,
     title: 'FFF | Master Competency',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'competency', 'skills', 'certification']
   },
   {
     path: '/master/storage/fuel',
     component: <MasterStorageFuel />,
     title: 'FFF | Master Storage Fuel',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'storage', 'fuel', 'tanks']
   },
   {
     path: '/master/materials',
     component: <Materials />,
     title: 'FFF | Materials',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'materials', 'items', 'inventory']
   },
   {
     path: '/master/materials/add',
     component: <Materials />,
     title: 'FFF | Add Material',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'add material', 'items']
   },
-{
+  {
     path: '/master/manpower/add',
     component: <ManpowerRegistration />,
     title: 'FFF | Master Manpower',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'add manpower', 'registration']
   },
   {
     path: '/master/schedule/refueling',
     component: <RefuelingSchedule />,
     title: 'FFF | Refueling Schedule',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'schedule', 'refueling']
   },
   {
     path: '/master/mrp',
     component: <MaterialRequirementPlanning />,
     title: 'FFF | MRP Database',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['master', 'mrp', 'material requirement', 'planning']
   },
-
-  //UI ROUTES
+  // UI ROUTES
   {
     path: '/chart',
     component: <Chart />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['chart', 'ui', 'components', 'visuals']
   },
   {
     path: '/calendar',
     component: <Calendar />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['calendar', 'ui', 'events', 'schedule']
   },
   {
     path: '/forms/form-elements',
     component: <FormElements />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['forms', 'elements', 'inputs', 'ui']
   },
   {
     path: '/forms/form-layout',
     component: <FormElements />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['forms', 'layout', 'ui']
   },
   {
     path: '/tables',
     component: <Tables />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['tables', 'grids', 'data', 'ui']
   },
   {
     path: '/ui/alerts',
     component: <Alerts />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['alerts', 'ui', 'notifications', 'warnings']
   },
   {
     path: '/ui/buttons',
     component: <Buttons />,
     title: 'FFF | Fuel Feasibility for Fleet',
-    allowedRoles: SUPERVISOR
+    allowedRoles: SUPERVISOR,
+    keywords: ['buttons', 'ui', 'interactive']
   },
   {
     path: '/plant-dashboard',
     component: <PlantDashboard />,
     title: 'FFF | PLANT Dashboard',
-    allowedRoles: ALL_ROLES
+    allowedRoles: ALL_ROLES,
+    keywords: ['plant', 'dashboard', 'overview']
   },
 ];
 

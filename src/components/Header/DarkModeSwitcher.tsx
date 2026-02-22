@@ -4,8 +4,10 @@ const DarkModeSwitcher = () => {
   const { appliedTheme, trialTheme, colorMode, setColorMode } = useTheme();
   const activeTheme = trialTheme || appliedTheme;
 
-  const isDisabled = !activeTheme.isSystem;
-  const isHidden = !activeTheme.isSystem;
+  // Disable/hide switcher if the theme forces a specific mode (i.e. 'dark' or 'light')
+  const isFixedMode = activeTheme.baseTheme === 'dark' || activeTheme.baseTheme === 'light';
+  const isDisabled = isFixedMode;
+  const isHidden = isFixedMode;
 
   return (
     <li className={isHidden ? 'hidden' : ''}>

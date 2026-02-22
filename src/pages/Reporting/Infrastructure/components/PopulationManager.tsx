@@ -37,6 +37,7 @@ const PopulationManager: React.FC<PopulationManagerProps> = ({ onClose }) => {
   const [populations, setPopulations] = useState<Population[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Flow / Form State
   const [locationId, setLocationId] = useState('');
@@ -93,6 +94,14 @@ const PopulationManager: React.FC<PopulationManagerProps> = ({ onClose }) => {
     setBatchItems([...batchItems, { name: '', active: true }]);
   };
 
+  // Autofocus new row
+  useEffect(() => {
+    if (showBatchForm && batchItems.length > 0) {
+      const lastIdx = batchItems.length - 1;
+      inputRefs.current[lastIdx]?.focus();
+    }
+  }, [batchItems.length, showBatchForm]);
+
   const removeBatchRow = (index: number) => {
     if (batchItems.length === 1) {
       setBatchItems([{ name: '', active: true }]);
@@ -106,6 +115,21 @@ const PopulationManager: React.FC<PopulationManagerProps> = ({ onClose }) => {
     // @ts-ignore
     newItems[index][field] = value;
     setBatchItems(newItems);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      addBatchRow();
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Backspace' || e.key === 'Delete')) {
+      if (batchItems.length > 1) {
+        e.preventDefault();
+        removeBatchRow(index);
+        // Focus previous item if available
+        const prevIdx = Math.max(0, index - 1);
+        setTimeout(() => inputRefs.current[prevIdx]?.focus(), 0);
+      }
+    }
   };
 
   const validateItems = () => {
@@ -232,7 +256,7 @@ const PopulationManager: React.FC<PopulationManagerProps> = ({ onClose }) => {
 
         {/* Dynamic Batch Form */}
         <div className={`transition-all duration-500 ease-in-out bg-black/5 dark:bg-black/20 overflow-hidden ${showBatchForm ? 'max-h-[600px] opacity-100 border-b border-white/10' : 'max-h-0 opacity-0'}`}>
-          <div className="p-8">
+          <div className="p-8 max-h-[600px] overflow-y-auto custom-scrollbar">
             <div className="max-w-4xl mx-auto">
               {/* Step 1: Location Selection */}
               <div className="mb-8">
@@ -266,14 +290,24 @@ const PopulationManager: React.FC<PopulationManagerProps> = ({ onClose }) => {
                     </button>
                   </div>
 
-                  <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  {/* Keyboard Shortcut Hint */}
+                  <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-xl">
+                    <FaExclamationCircle className="text-indigo-500 shrink-0" size={12} />
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 italic">
+                      <span className="font-bold text-indigo-500">Pro Tip:</span> Use <kbd className="px-1.5 py-0.5 rounded border border-slate-300 dark:border-white/20 bg-white/50 dark:bg-black/20 font-sans not-italic">⌘ + Enter</kbd> to quickly add a new row, and <kbd className="px-1.5 py-0.5 rounded border border-slate-300 dark:border-white/20 bg-white/50 dark:bg-black/20 font-sans not-italic">⌘ + Del</kbd> to remove one.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 pr-2 custom-scrollbar mb-2">
                     {batchItems.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-3 animate-fade-in group">
                         <div className="flex-1 relative">
                           <input 
+                            ref={el => inputRefs.current[idx] = el}
                             type="text" 
                             value={item.name} 
                             onChange={e => updateBatchRow(idx, 'name', e.target.value)}
+                            onKeyDown={e => handleKeyDown(e, idx)}
                             placeholder={`Population name #${idx + 1}`}
                             className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-black/40 py-3.5 px-4 text-sm font-bold text-black dark:text-white outline-none focus:border-indigo-500 transition-all uppercase"
                           />

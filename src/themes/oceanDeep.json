@@ -37,9 +37,9 @@
   },
   "popup": {
     "backgroundColor": "#0c4a6e",
-    "opacity": 0.4,
+    "opacity": 0.05,
     "borderRadius": "0.5rem",
-    "backdropBlur": "sm",
+    "backdropBlur": "md",
     "blurDepth": "20",
     "backdropGrayscale": false,
     "shadeGradient": "",

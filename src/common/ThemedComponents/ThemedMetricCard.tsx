@@ -1,14 +1,14 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-interface MetricCardProps {
+export interface ThemedMetricCardProps {
   title: string;
   value: string | number;
   unit?: string;
   className?: string;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, unit = '', className = '' }) => {
+export const ThemedMetricCard: React.FC<ThemedMetricCardProps> = ({ title, value, unit = '', className = '' }) => {
   const { activeTheme } = useTheme();
   const theme = activeTheme;
   const isDark = theme.baseTheme === 'dark';
@@ -16,7 +16,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, unit = '', classN
 
   return (
     <div 
-      className={`p-4 transition-all duration-300 hover:scale-[1.02] flex flex-col gap-1 ${className}`}
+      className={`p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col gap-1 ${className}`}
       style={{
         backgroundColor: isDark 
           ? `rgba(0, 0, 0, ${cardTheme.opacity})` 
@@ -40,4 +40,4 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, unit = '', classN
   );
 };
 
-export default MetricCard;
+export default ThemedMetricCard;

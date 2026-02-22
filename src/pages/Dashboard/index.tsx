@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DatePickerOne from '../../components/Forms/DatePicker/DatePickerOne';
 import { formatDateToString } from '../../Utils/DateUtility';
 import ShiftDropdown from '../../components/Forms/SelectGroup/ShiftDropdown';
-import PanelContainer from '../../components/Panels/PanelContainer';
+import ThemedPanelContainer from '../../common/ThemedComponents/ThemedPanelContainer';
 import ATRDetail from './common/Modals/ATRDetail';
 import RosterDetail from './common/Modals/RosterDetail';
 import ContractDetail from './common/Modals/ContractDetail';
@@ -215,7 +215,7 @@ const Dashboard = () => {
     <>
     
           {/* ... existing dashboard content ... */}
-          <PanelContainer
+          <ThemedPanelContainer
             title="Dashboard Overview"
             className=""
             actions={
@@ -800,7 +800,7 @@ const Dashboard = () => {
             <div className="my-6">
               <BoardDetail />
             </div>
-          </PanelContainer>
+          </ThemedPanelContainer>
       
 
       {modalOpen && (

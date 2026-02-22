@@ -533,6 +533,13 @@ const ManpowerDetail = ({ date, shift, initialPrefill, onClearPrefill }: Manpowe
                     paginationPageSize={10}
                     domLayout='autoHeight'
                     getRowId={(params) => params.data.id}
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        '--ag-background-color': 'transparent',
+                        '--ag-foreground-color': 'rgba(255, 255, 255, 0.7)',
+                        '--ag-header-foreground-color': '#FFFFFF',
+                        '--ag-secondary-foreground-color': 'rgba(255, 255, 255, 0.5)',
+                    } as any}
                     className={document.body.classList.contains('dark') ? 'ag-theme-alpine-dark w-full' : 'ag-theme-alpine w-full'}
                 />
              )}

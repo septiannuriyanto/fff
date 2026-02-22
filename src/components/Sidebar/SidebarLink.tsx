@@ -9,8 +9,7 @@ interface SidebarLinkProps {
 }
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, label, mini }) => {
-  const { appliedTheme, trialTheme } = useTheme();
-  const theme = trialTheme || appliedTheme;
+  const { activeTheme: theme } = useTheme();
 
   return (
     <li>

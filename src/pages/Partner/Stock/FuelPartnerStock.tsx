@@ -1,12 +1,12 @@
 import React from 'react'
-import PanelContainer from '../../../components/Panels/PanelContainer'
+import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import FuelStockManagement from '../../Dashboard/StockManagement/pages/FuelStockManagement'
 
 const FuelPartnerStock = () => {
   return (
-    <PanelContainer title="Fuel Partner Stock">
+    <ThemedPanelContainer title="Fuel Partner Stock">
         <FuelStockManagement/>
-    </PanelContainer>
+    </ThemedPanelContainer>
   )
 }
 
