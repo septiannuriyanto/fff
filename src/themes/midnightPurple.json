@@ -1,16 +1,26 @@
 {
-  "id": "midnight-purple",
-  "name": "Midnight Purple",
-  "baseTheme": "dark",
-  "isSystem": false,
+  "core": {
+    "id": "midnight-purple",
+    "name": "Midnight Purple",
+    "baseTheme": "dark",
+    "isSystem": false
+  },
   "background": {
-    "type": "gradient",
-    "gradient": "linear-gradient(135deg, #4c1d95, #2e1065)",
+    "mode": "gradient",
+    "gradient": {
+      "stops": [
+        "#4c1d95",
+        "#2e1065"
+      ],
+      "from": "TopLeft",
+      "to": "BottomRight",
+      "reverse": false
+    },
     "useSystem": false
   },
   "header": {
     "color": "#4c1d95",
-    "opacity": 1,
+    "opacity": 0.05,
     "textColor": "#e9d5ff",
     "iconColor": "#e9d5ff",
     "iconSize": "1.25rem",

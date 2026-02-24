@@ -12,6 +12,25 @@ const themes: ThemePreset[] = [
   midnightPurple as unknown as ThemePreset,
 ];
 
+// Helper to get effective theme properties (supports both core and legacy root-level structures)
+const getThemeCore = (theme: ThemePreset) => {
+  if (theme.core) {
+    return theme.core;
+  }
+  // Legacy fallback - use root-level properties
+  return {
+    id: theme.id || 'unknown',
+    name: theme.name || 'Unknown Theme',
+    baseTheme: theme.baseTheme || 'dark',
+    isSystem: theme.isSystem || false
+  };
+};
+
+// Helper to get theme id
+const getThemeId = (theme: ThemePreset): string => {
+  return getThemeCore(theme).id;
+};
+
 import useColorMode from '../hooks/useColorMode';
 
 interface ThemeContextType {
@@ -31,6 +50,7 @@ interface ThemeContextType {
   clearUndo: () => void;
   updateTrialTheme: (updates: any) => void;
   resetTrial: () => void;
+  getBackgroundCss: (bg: any) => string;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -47,12 +67,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
   // Initialize appliedTheme based on the persisted ID
   const [appliedTheme, setAppliedTheme] = useState<ThemePreset>(() => {
-    return themes.find(t => t.id === currentThemeId) || (systemTheme as ThemePreset);
+    return themes.find(t => getThemeId(t) === currentThemeId) || (systemTheme as ThemePreset);
   });
   const [trialTheme, setTrialTheme] = useState<ThemePreset | null>(null);
   
   // Compute the current active base theme to pass into useColorMode
-  const currentBaseTheme = (trialTheme || appliedTheme).baseTheme;
+  const currentBaseTheme = (trialTheme || appliedTheme).baseTheme || getThemeCore(trialTheme || appliedTheme).baseTheme;
 
   // Use generic hook to get color mode, now passing the active base theme
   const [colorMode, setColorMode] = useColorMode(currentBaseTheme) as [string, (mode: string) => void];
@@ -73,11 +93,32 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
        // but here we might want to respect the theme's intent.
        // For now, let's only resolve if baseTheme is 'both' OR if we want to support universal dark mode.
        // The user request specific to system.json which is 'both'.
-       if (theme.baseTheme === 'light' || theme.baseTheme === 'dark') return theme;
+       const themeBase = theme.core?.baseTheme || theme.baseTheme;
+       if (themeBase === 'light' || themeBase === 'dark') return theme;
     }
 
     const isDark = mode === 'dark';
-    if (!isDark) return theme;
+
+    const ensureNewBackground = (bg: any) => {
+      if (!bg || (typeof bg === 'object' && bg.mode)) return bg;
+      const type = bg.type || (bg.gradient && typeof bg.gradient === 'string' ? 'gradient' : 'solid');
+      return {
+        mode: type,
+        color: bg.color || (typeof bg === 'string' ? bg : '#F1F5F9'),
+        colorDark: bg.colorDark,
+        gradient: typeof bg.gradient === 'object' ? bg.gradient : {
+          stops: [bg.color || '#4f46e5', '#9333ea'],
+          from: 'TopLeft',
+          to: 'BottomRight',
+          reverse: false
+        },
+        useSystem: bg.useSystem ?? true
+      };
+    };
+
+    const resolvedBackground = ensureNewBackground(theme.background);
+
+    if (!isDark) return { ...theme, background: resolvedBackground };
 
     // Helper to resolve a set of properties
     const resolveProps = (props: any, mappings: Record<string, string>) => {
@@ -93,10 +134,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return {
       ...theme,
-      baseTheme: isDark ? 'dark' : theme.baseTheme === 'both' ? 'light' : theme.baseTheme,
-      background: resolveProps(theme.background, { color: 'colorDark', gradient: 'gradientDark' }),
+      baseTheme: isDark ? 'dark' : (theme.core?.baseTheme || theme.baseTheme || 'light'),
+      background: {
+        ...resolvedBackground,
+        color: resolvedBackground.colorDark || resolvedBackground.color
+      },
       header: resolveProps(theme.header, { 
-         color: 'colorDark', 
+        color: 'colorDark', 
          textColor: 'textColorDark', 
          iconColor: 'iconColorDark' 
       }),
@@ -176,6 +220,31 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   }, []);
 
+  const getBackgroundCss = useCallback((bg: any) => {
+    if (!bg) return '';
+    if (bg.mode === 'gradient' && bg.gradient) {
+      const { stops, to, reverse } = bg.gradient;
+      if (!stops || stops.length < 2) return bg.color || '';
+      
+      const posMap: any = {
+        'TopLeft': 'to bottom right',
+        'TopCenter': 'to bottom',
+        'TopRight': 'to bottom left',
+        'CenterLeft': 'to right',
+        'Center': 'to right',
+        'CenterRight': 'to left',
+        'BottomLeft': 'to top right',
+        'BottomCenter': 'to top',
+        'BottomRight': 'to top left'
+      };
+
+      const direction = posMap[to] || 'to bottom right';
+      const colorStops = reverse ? [...stops].reverse().join(', ') : stops.join(', ');
+      return `linear-gradient(${direction}, ${colorStops})`;
+    }
+    return bg.color || '';
+  }, []);
+
   // Compute active theme based on trial/applied and color mode
   const rawActiveTheme = trialTheme || appliedTheme;
   const activeTheme = React.useMemo(() => {
@@ -185,10 +254,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // ... (existing helper functions: setCurrentTheme, setSelectedTheme, etc.)
 
   const setCurrentTheme = useCallback((id: string) => {
-    let themeToApply = themes.find(t => t.id === id) || (systemTheme as ThemePreset);
+    let themeToApply = themes.find(t => getThemeId(t) === id) || (systemTheme as ThemePreset);
     
     setTrialTheme((prevTrial) => {
-      if (prevTrial && prevTrial.id === id) {
+      if (prevTrial && getThemeId(prevTrial) === id) {
         themeToApply = { ...prevTrial };
       }
       return null;
@@ -200,7 +269,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [setCurrentThemeId]);
 
   const setSelectedTheme = useCallback((id: string) => {
-    const theme = themes.find(t => t.id === id);
+    const theme = themes.find(t => getThemeId(t) === id);
     setSelectedThemeId(id);
     if (theme) {
       setTrialTheme(theme);
@@ -209,10 +278,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const applyThemeWithUndo = useCallback((id: string) => {
     setAppliedTheme((prevApplied) => {
-      let themeToApply = themes.find(t => t.id === id) || (systemTheme as ThemePreset);
+      let themeToApply = themes.find(t => getThemeId(t) === id) || (systemTheme as ThemePreset);
       
       setTrialTheme((prevTrial) => {
-        if (prevTrial && prevTrial.id === id) {
+        if (prevTrial && getThemeId(prevTrial) === id) {
           themeToApply = { ...prevTrial };
         }
         return null;
@@ -239,41 +308,23 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, []);
 
   const updateTrialTheme = useCallback((updates: any) => {
+    const deepMerge = (target: any, source: any) => {
+      const output = { ...target };
+      if (typeof target === 'object' && target !== null && typeof source === 'object' && source !== null) {
+        Object.keys(source).forEach(key => {
+          if (typeof source[key] === 'object' && source[key] !== null && key in target) {
+            output[key] = deepMerge(target[key], source[key]);
+          } else {
+            output[key] = source[key];
+          }
+        });
+      }
+      return output;
+    };
+
     setTrialTheme((prev) => {
       const base = prev || appliedTheme;
-      
-      // Handle special nested cases manually
-      const newTheme = { ...base };
-      
-      if (updates.container) {
-        newTheme.container = { ...base.container, ...updates.container };
-      }
-      if (updates.card) {
-        newTheme.card = { ...base.card, ...updates.card };
-      }
-      if (updates.background) {
-        newTheme.background = { ...base.background, ...updates.background };
-      }
-      if (updates.ui) {
-        newTheme.ui = { ...base.ui, ...updates.ui };
-      }
-      if (updates.grid) {
-        newTheme.grid = { ...base.grid, ...updates.grid };
-      }
-      if (updates.popup) {
-        newTheme.popup = { ...base.popup, ...updates.popup };
-      }
-      if (updates.sidebar) {
-        newTheme.sidebar = { ...base.sidebar, ...updates.sidebar };
-      }
-      if (updates.header) {
-        newTheme.header = { ...base.header, ...updates.header };
-      }
-      
-      // Top level updates
-      return { ...newTheme, ...Object.fromEntries(
-        Object.entries(updates).filter(([k]) => !['container', 'card', 'background', 'ui', 'grid', 'popup', 'sidebar', 'header'].includes(k))
-      )};
+      return deepMerge(base, updates);
     });
   }, [appliedTheme]);
 
@@ -299,7 +350,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       undoThemeChange,
       updateTrialTheme,
       clearUndo,
-      resetTrial
+      resetTrial,
+      getBackgroundCss
     }}>
       {children}
     </ThemeContext.Provider>

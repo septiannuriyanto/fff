@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
-import LabeledInput from '../../../components/LabeledInput';
+import LabeledInput from '../../../common/ThemedComponents/ThemedLabeledInput';
 import SelectGroupOne from '../../../components/Forms/SelectGroup/SelectGroupOne';
 import DatePickerOne from '../../../components/Forms/DatePicker/DatePickerOne';
 import { ComboBoxItem } from '../../../types/ComboboxItem';

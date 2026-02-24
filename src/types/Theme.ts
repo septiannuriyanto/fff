@@ -1,15 +1,30 @@
-export interface ThemePreset {
+export interface ThemeCore {
     id: string;
     name: string;
     baseTheme: 'light' | 'dark' | 'both';
     isSystem: boolean;
+}
+
+export interface ThemePreset {
+    // New structure: core metadata (optional for backward compatibility)
+    core?: ThemeCore;
+    // Legacy structure: root-level properties
+    id?: string;
+    name?: string;
+    baseTheme?: 'light' | 'dark' | 'both';
+    isDark?: boolean;
+    isSystem?: boolean;
     isCustom?: boolean;
     background: {
-        type: 'solid' | 'gradient' | 'image';
+        mode: 'solid' | 'gradient' | 'image';
         color?: string;
         colorDark?: string;
-        gradient?: string;
-        gradientDark?: string;
+        gradient?: {
+            stops: string[];
+            from: string;
+            to: string;
+            reverse: boolean;
+        };
         image?: string;
         useSystem: boolean;
     };
@@ -22,6 +37,7 @@ export interface ThemePreset {
         iconColor: string;
         iconColorDark?: string;
         iconSize: string;
+        detached?: boolean;
         backdropBlur: string;
     };
     sidebar: {

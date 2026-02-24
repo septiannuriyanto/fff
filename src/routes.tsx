@@ -26,6 +26,7 @@ import RitationReport from './pages/Reporting/RitationReport/RitationReport';
 import TMRReport from './pages/Reporting/TMRReport/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
 import BreakdownRfuReport from './pages/Reporting/Breakdown/BreakdownRfuReport';
+import FuelmanReport from './pages/Reporting/FuelmanReport/FuelmanReport';
 
 import BastFuel from './pages/Export/BastFuel/BastFuel';
 import BastOli from './pages/Export/BastOli/BastOli';
@@ -263,7 +264,7 @@ const routes: AppRoute[] = [
     keywords: ['plan', 'fuel ritation', 'schedule', 'planning']
   },
   // Operational Routes
-  { 
+  {
     path: '/operational/fleet',
     component: <FleetManagement />,
     title: 'FFF | Fleet Management',
@@ -304,7 +305,16 @@ const routes: AppRoute[] = [
     component: <DailyReport />,
     title: 'FFF | Daily Report',
     allowedRoles: FUEL_ROLES,
+    isPublic: true,
     keywords: ['reporting', 'daily report', 'daily']
+  },
+  {
+    path: '/reporting/fuelmanreport',
+    component: <FuelmanReport />,
+    title: 'FFF | Fuelman Report',
+    allowedRoles: FUEL_ROLES,
+    isPublic: true,
+    keywords: ['reporting', 'fuelman', 'daily report', 'daily']
   },
   {
     path: '/reporting/adminreport',
@@ -339,6 +349,7 @@ const routes: AppRoute[] = [
     component: <RitationReport />,
     title: 'FFF | Ritation Report',
     allowedRoles: FUEL_ROLES,
+    isPublic: true,
     keywords: ['reporting', 'ritation', 'fuel trip']
   },
   {
@@ -361,6 +372,14 @@ const routes: AppRoute[] = [
     title: 'FFF | Pressureless Reporting',
     allowedRoles: FUEL_ROLES,
     keywords: ['reporting', 'pressureless', 'infrastructure']
+  },
+  {
+    path: '/reporting/fuelman',
+    component: <FuelmanReport />,
+    title: 'FFF | Fuelman Report',
+    allowedRoles: ALL_ROLES,
+    isPublic: true,
+    keywords: ['reporting', 'fuelman', 'daily', 'report']
   },
   {
     path: '/reporting/ftbdrfu',

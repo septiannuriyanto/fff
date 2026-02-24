@@ -9,10 +9,13 @@ import UndoToast from '../common/UndoToast/UndoToast';
 
 const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { authToken, currentUser, loading, preparing } = useAuth();
-  const { activeTheme, showUndoToast, undoThemeChange, clearUndo } = useTheme();
+  const { activeTheme, showUndoToast, undoThemeChange, clearUndo, getBackgroundCss } = useTheme();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
+  const isSidebarDetached = activeTheme.sidebar.detached === true;
+  const sidebarConfig = localStorage.getItem('sidebar-config') as 'full' | 'mini' | 'auto' | null;
+  const isSidebarMini = sidebarConfig === 'mini' || (sidebarConfig === 'auto' && false); // Simplified for now
 
   // Display a loading screen if:
   // 1. Initial auth state is still being determined (loading)
@@ -24,9 +27,9 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   // Determine active theme (priority: trial > applied)
   // Active theme is now resolved by context including dark mode mappings
-  const activeBackground = activeTheme.background.type === 'gradient' 
-    ? activeTheme.background.gradient 
-    : activeTheme.background.color;
+  const activeBackground = !activeTheme.background.useSystem 
+    ? getBackgroundCss(activeTheme.background)
+    : '';
 
   // Sync dark mode based on theme base
   React.useEffect(() => {
@@ -40,7 +43,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <div 
       className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen w-full transition-all duration-700 ease-in-out"
-      style={!activeTheme.background.useSystem ? { background: activeBackground, backgroundSize: 'cover' } : {}}
+      style={!activeTheme.background.useSystem ? { background: activeBackground, backgroundSize: 'cover', minHeight: '100vh' } : {}}
     >
       {/* Undo Toast for Theme Changes */}
       {showUndoToast && (
@@ -66,7 +69,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
         <div className="relative flex flex-1 flex-col overflow-y-auto">
           {/* Header */}
           {authToken && !isLandingPage && (
-            <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+            <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} sidebarDetached={isSidebarDetached} />
           )}
 
           {/* Main Content */}

@@ -1,11 +1,23 @@
 {
-  "id": "ocean-deep",
-  "name": "Ocean Deep",
-  "baseTheme": "dark",
-  "isSystem": false,
+  "core": {
+    "id": "ocean-deep",
+    "name": "Ocean Deep",
+    "baseTheme": "dark",
+    "isSystem": false
+  },
   "background": {
-    "type": "gradient",
-    "gradient": "linear-gradient(135deg, #0c4a6e, #082f49)",
+    "mode": "gradient",
+    "gradient": {
+      "stops": [
+        "#0c4a6e",
+        "#082f49"
+      ],
+      "from": "TopLeft",
+      "to": "BottomRight",
+      "reverse": false
+    },
+    "color": "",
+    "image": "",
     "useSystem": false
   },
   "header": {
@@ -14,6 +26,7 @@
     "textColor": "#e0f2fe",
     "iconColor": "#e0f2fe",
     "iconSize": "1.25rem",
+    "detached": true,
     "backdropBlur": "none"
   },
   "sidebar": {

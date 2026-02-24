@@ -1,13 +1,14 @@
 {
-  "id": "system",
-  "name": "System Default",
-  "baseTheme": "both",
-  "isSystem": true,
+  "core": {
+    "id": "system",
+    "name": "System Default",
+    "baseTheme": "both",
+    "isSystem": true
+  },
   "background": {
-    "type": "solid",
+    "mode": "solid",
     "color": "#F1F5F9",
     "colorDark": "#1A222C",
-    "gradient": "transparent",
     "useSystem": true
   },
   "header": {

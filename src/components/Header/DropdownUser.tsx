@@ -5,25 +5,22 @@ import ThemedGlassmorphismPanel from '../../common/ThemedComponents/ThemedGlassm
 import ClickOutside from '../ClickOutside';
 import UserOne from '../../images/user/user-01.png';
 import { supabase } from '../../db/SupabaseClient';
-import ThemeDialog from '../../common/ThemedComponents/ThemeDialog';
-import ColorWheel from '../../images/icon/colorwheel.svg';
+import ThemedThemingSheet from '../../common/ThemedComponents/ThemedThemingSheet';
 
 const DropdownUser = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [themeDialogOpen, setThemeDialogOpen] = useState(false);
+  const [themeSheetOpen, setThemeSheetOpen] = useState(false);
   const { activeTheme } = useTheme();
   const { popup } = activeTheme;
   const [nama, setNama] = useState('');
   const [position, setPosition] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
 
-  const trigger = useRef<any>(null);
   const dropdown = useRef<any>(null);
 
   const nrp = localStorage.getItem('nrp');
 
   const fetchImage = async() =>{
-
     const { data, error } = await supabase
     .from('manpower')
     .select('nama, position, photo_url, incumbent(incumbent)')
@@ -35,26 +32,23 @@ const DropdownUser = () => {
       return;
     }
 
-    setNama(data.nama);
-    // Handle incumbent data which might be an object or an array depending on the query result
-    const incumbentData = data.incumbent as any;
+    setNama(data?.nama || '');
+    const incumbentData = data?.incumbent as any;
     const roleTitle = Array.isArray(incumbentData) 
       ? incumbentData[0]?.incumbent 
       : incumbentData?.incumbent;
       
     setPosition(roleTitle || '');
-    setPhotoUrl(data.photo_url);
+    setPhotoUrl(data?.photo_url || '');
   }
 
   useEffect(()=>{
-
     fetchImage();
-
   },[])
 
   const handleLogout = () => {
-    localStorage.clear(); // Clear all data
-    window.location.href = '/auth/signin'; // Redirect to login
+    localStorage.clear(); 
+    window.location.href = '/auth/signin';
   };
 
   return (
@@ -138,7 +132,7 @@ const DropdownUser = () => {
             <li>
               <button
                 onClick={() => {
-                  setThemeDialogOpen(true);
+                  setThemeSheetOpen(true);
                   setDropdownOpen(false);
                 }}
                 className="flex items-center gap-3.5 text-sm font-medium duration-300 ease-in-out lg:text-base w-full overflow-hidden"
@@ -146,18 +140,20 @@ const DropdownUser = () => {
                 onMouseEnter={(e) => (e.currentTarget.style.color = popup.textHoverColor || '')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = popup.textColor || '')}
               >
-                <img 
-                  src={ColorWheel} 
-                  alt="Appearance" 
-                  className="w-5.5 h-5.5" 
-                />
+                <svg 
+                  className="w-5.5 h-5.5 fill-current" 
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.75-.39-1.02-.23-.27-.38-.63-.38-1.03 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9s1.5.67 1.5 1.5S7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
                 Appearance
               </button>
             </li>
           </ul>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3.5 px-6 py-4 text-sm font-medium duration-300 ease-in-out lg:text-base"
+            className="flex items-center gap-3.5 px-6 py-4 text-sm font-medium duration-300 ease-in-out lg:text-base w-full"
             style={{ color: popup.textColor || undefined }}
             onMouseEnter={(e) => (e.currentTarget.style.color = popup.textHoverColor || '')}
             onMouseLeave={(e) => (e.currentTarget.style.color = popup.textColor || '')}
@@ -185,8 +181,8 @@ const DropdownUser = () => {
       )}
       {/* <!-- Dropdown End --> */}
 
-      {themeDialogOpen && (
-        <ThemeDialog onClose={() => setThemeDialogOpen(false)} />
+      {themeSheetOpen && (
+        <ThemedThemingSheet isOpen={themeSheetOpen} onClose={() => setThemeSheetOpen(false)} />
       )}
     </ClickOutside>
   );

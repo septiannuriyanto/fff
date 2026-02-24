@@ -19,7 +19,8 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
     updateTrialTheme,
     trialTheme,
     resetTrial,
-    themes
+    themes,
+    getBackgroundCss
   } = useTheme();
 
   const [createOptions, setCreateOptions] = useState<NewThemeOptions>({
@@ -110,24 +111,29 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
           {(activeTab === 'preset' || activeTab === 'mine') && (
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(activeTab === 'preset' ? themes : []).map((p) => (
+                {(activeTab === 'preset' ? themes : []).map((p) => {
+                  // Support both core and legacy root-level structures
+                  const themeId = p.core?.id || p.id || 'unknown';
+                  const themeName = p.core?.name || p.name || 'Unknown Theme';
+                  const themeIsSystem = p.core?.isSystem ?? p.isSystem;
+                  return (
                   <div 
-                    key={p.id}
-                    onClick={() => setSelectedTheme(p.id)}
+                    key={themeId}
+                    onClick={() => setSelectedTheme(themeId)}
                     className={`group relative cursor-pointer rounded-[2rem] border-2 p-2 transition-all hover:-translate-y-1 hover:shadow-xl ${
-                      selectedThemeId === p.id 
+                      selectedThemeId === themeId 
                         ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-lg shadow-primary/10' 
                         : 'border-stroke dark:border-white/10 bg-slate-50/50 dark:bg-white/5'
                     }`}
                   >
                     {/* Status Badges */}
                     <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-                      {currentThemeId === p.id && (
+                      {currentThemeId === themeId && (
                         <span className="px-3 py-1 bg-green-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">
                           Current
                         </span>
                       )}
-                      {selectedThemeId === p.id && currentThemeId !== p.id && (
+                      {selectedThemeId === themeId && currentThemeId !== themeId && (
                         <span className="px-3 py-1 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">
                           Selected
                         </span>
@@ -135,7 +141,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                     </div>
 
                     {/* Checkmark for selected */}
-                    {selectedThemeId === p.id && (
+                    {selectedThemeId === themeId && (
                       <div className="absolute top-4 right-4 z-20 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white shadow-lg">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -144,14 +150,14 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                     )}
 
                     <div 
-                      className={`h-32 w-full rounded-[1.5rem] mb-4 overflow-hidden relative border border-stroke dark:border-white/10 ${!p.isSystem ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
-                      style={p.isSystem ? {} : { 
-                        background: p.background.type === 'gradient' ? p.background.gradient : p.background.color 
+                      className={`h-32 w-full rounded-[1.5rem] mb-4 overflow-hidden relative border border-stroke dark:border-white/10 ${!themeIsSystem ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                      style={themeIsSystem ? {} : { 
+                        background: getBackgroundCss(p.background)
                       }}
                     >
-                      {!p.isSystem && <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />}
+                      {!themeIsSystem && <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />}
                       
-                      {p.isSystem ? (
+                      {themeIsSystem ? (
                         <div className="absolute inset-0 flex">
                           <div className="absolute inset-0 bg-gradient-to-br from-white to-slate-200" style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }} />
                           <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 100%)' }} />
@@ -163,14 +169,14 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                       )}
                     </div>
                     <div className="px-3 pb-2 flex justify-between items-center">
-                      <span className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">{p.name}</span>
+                      <span className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">{themeName}</span>
                       <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.ui.primaryColor }} />
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
 
-              {activeTab === 'mine' && themes.filter(t => t.id !== 'system' && !themes.includes(t)).length === 0 && (
+              {activeTab === 'mine' && themes.filter(t => (t.core?.id || t.id) !== 'system' && !themes.includes(t)).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 bg-slate-50/50 dark:bg-white/5 rounded-[2.5rem] border border-dashed border-stroke dark:border-white/10">
                    <p className="text-xs font-bold text-slate-400">No saved presets found.</p>
                 </div>
@@ -195,7 +201,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                     min="0" 
                     max="1" 
                     step="0.01"
-                    value={trialTheme?.container.opacity ?? themes.find(t => t.id === selectedThemeId)?.container.opacity ?? 0.05}
+                    value={trialTheme?.container.opacity ?? themes.find(t => (t.core?.id || t.id) === selectedThemeId)?.container.opacity ?? 0.05}
                     onChange={(e) => {
                       updateTrialTheme({ container: { opacity: parseFloat(e.target.value) } });
                     }}
@@ -224,7 +230,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                     min="0" 
                     max="1" 
                     step="0.01"
-                    value={trialTheme?.card.opacity ?? themes.find(t => t.id === selectedThemeId)?.card.opacity ?? 0.05}
+                    value={trialTheme?.card.opacity ?? themes.find(t => (t.core?.id || t.id) === selectedThemeId)?.card.opacity ?? 0.05}
                     onChange={(e) => {
                       updateTrialTheme({ card: { opacity: parseFloat(e.target.value) } });
                     }}
@@ -353,7 +359,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
                       const customTheme: any = {
                         id: 'custom-' + Date.now(),
                         name: 'Custom Theme',
-                        baseTheme: appliedTheme.baseTheme,
+                        baseTheme: appliedTheme.core?.baseTheme || appliedTheme.baseTheme,
                         background: {
                           type: createOptions.background.type,
                           color: createOptions.background.type === 'color' ? createOptions.background.value : undefined,
@@ -407,14 +413,14 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                  Active: {themes.find(p => p.id === currentThemeId)?.name || 'Custom'}
+                  Active: {themes.find(p => (p.core?.id || p.id) === currentThemeId)?.name || 'Custom'}
                 </span>
               </div>
             </div>
             
             <button 
               disabled={(() => {
-                const currentTheme = themes.find(t => t.id === currentThemeId);
+                const currentTheme = themes.find(t => (t.core?.id || t.id) === currentThemeId);
                 const isModified = trialTheme && (
                   trialTheme.container.opacity !== currentTheme?.container.opacity ||
                   trialTheme.card.opacity !== currentTheme?.card.opacity
@@ -428,7 +434,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
               style={
                 (() => {
                    const isActive = !((() => {
-                      const currentTheme = themes.find(t => t.id === currentThemeId);
+                      const currentTheme = themes.find(t => (t.core?.id || t.id) === currentThemeId);
                       const isModified = trialTheme && (
                         trialTheme.container.opacity !== currentTheme?.container.opacity ||
                         trialTheme.card.opacity !== currentTheme?.card.opacity
@@ -451,7 +457,7 @@ const ThemeDialog: React.FC<ThemeDialogProps> = ({ onClose }) => {
               }
               className={`px-8 py-3 text-xs font-black uppercase tracking-widest transition-all ${
                 (() => {
-                  const currentTheme = themes.find(t => t.id === currentThemeId);
+                  const currentTheme = themes.find(t => (t.core?.id || t.id) === currentThemeId);
                   const isModified = trialTheme && (
                     trialTheme.container.opacity !== currentTheme?.container.opacity ||
                     trialTheme.card.opacity !== currentTheme?.card.opacity

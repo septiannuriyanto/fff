@@ -7,7 +7,7 @@ const bucketUrl = `https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/pu
 const supabaseStorageName = 'ritation_upload';
 const baseStorageUrl = `https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/${supabaseStorageName}`;
 const profileImageBaseUrl = 'https://fylkjewedppsariokvvl.supabase.co/storage/v1/object/public/images/profile';
- const uploadImage = async (
+const uploadImage = async (
   file: File,
   fileTitle: string,
   folderName: string,
@@ -61,7 +61,7 @@ const profileImageBaseUrl = 'https://fylkjewedppsariokvvl.supabase.co/storage/v1
 
     imageUrl = data.publicUrl;
     return { imageUrl, error };
-  } catch (err) {
+  } catch (err: unknown) {
     return { imageUrl, error: `Upload failed: ${err.message}` };
   }
 };
@@ -80,10 +80,10 @@ const checkImageUrl = async (url: string): Promise<boolean> => {
 const getFileFromUrl = async (url: any) => {
   try {
     const response = await fetch(url);
-    if(response.status==400){
+    if (response.status == 400) {
       return null;
     }
-    
+
     const blob = await response.blob(); // Get the blob from the response
     const fileName = url.split('/').pop(); // Extract the filename from the URL
     const file = new File([blob], fileName, { type: blob.type }); // Create a File object
@@ -96,7 +96,7 @@ const getFileFromUrl = async (url: any) => {
 
 
 const uploadImageGeneral = async (file: File, bucketName: string, fullPath: string) => {
-  const { data, error } = await supabase.storage.from(bucketName).upload(fullPath, file,  {
+  const { data, error } = await supabase.storage.from(bucketName).upload(fullPath, file, {
     cacheControl: '3600', // optional, set cache control if needed
     upsert: true // Enable overwriting existing file
   });
@@ -141,4 +141,43 @@ const uploadImageGeneralGetUrl = async (file: File, bucketName: string, fullPath
 
 
 
-export { uploadImage, checkImageUrl, getFileFromUrl, baseStorageUrl,profileImageBaseUrl, uploadImageGeneral, uploadImageGeneralGetUrl , bucketUrl }
+const deleteImageGeneral = async (bucketName: string, path: string) => {
+  const { data, error } = await supabase.storage.from(bucketName).remove([path]);
+  if (error) {
+    toast.error(`Error deleting file: ${error.message}`);
+    return false;
+  }
+  return true;
+};
+
+const deleteImageFromUrl = async (url: string) => {
+  try {
+    // Strip query parameters if they exist
+    const cleanUrl = url.split('?')[0];
+
+    const parts = cleanUrl.split('/storage/v1/object/public/');
+    if (parts.length < 2) return false;
+
+    const pathParts = parts[1].split('/');
+    const bucketName = pathParts[0];
+    const filePath = pathParts.slice(1).join('/');
+
+    return await deleteImageGeneral(bucketName, filePath);
+  } catch (err) {
+    console.error("Error parsing URL for deletion:", err);
+    return false;
+  }
+};
+
+export {
+  uploadImage,
+  checkImageUrl,
+  getFileFromUrl,
+  baseStorageUrl,
+  profileImageBaseUrl,
+  uploadImageGeneral,
+  uploadImageGeneralGetUrl,
+  bucketUrl,
+  deleteImageGeneral,
+  deleteImageFromUrl
+}

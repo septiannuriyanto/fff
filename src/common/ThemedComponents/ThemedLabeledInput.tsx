@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LabeledInputProps {
   label: string;
@@ -11,9 +11,10 @@ interface LabeledInputProps {
   type?: string;
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
-const LabeledInput: React.FC<LabeledInputProps> = ({
+const ThemedLabeledInput: React.FC<LabeledInputProps> = ({
   label,
   value,
   onChange,
@@ -23,6 +24,7 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
   type = 'text',
   placeholder = '',
   className = 'mb-4.5',
+  id,
 }) => {
   const { activeTheme } = useTheme();
   const theme = activeTheme;
@@ -30,7 +32,7 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
 
   return (
     <div className={className}>
-      <label className="mb-2.5 block text-black dark:text-white">
+      <label className="mb-2.5 block" style={{ color: inputTheme.textColor }}>
         {label}
         {required && (
           <span className="ml-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
@@ -38,6 +40,7 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
       </label>
       <div className="relative">
         <input
+          id={id}
           placeholder={placeholder}
           autoFocus={autoFocus}
           value={value}
@@ -51,8 +54,8 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
             borderRadius: inputTheme.borderRadius,
             boxShadow: inputTheme.shadow,
             opacity: inputTheme.opacity,
-            backdropFilter: inputTheme.backdropBlur !== 'none' 
-              ? `blur(${inputTheme.backdropBlur === 'sm' ? '4px' : inputTheme.backdropBlur === 'md' ? '8px' : inputTheme.backdropBlur === 'lg' ? '12px' : inputTheme.backdropBlur === 'xl' ? '20px' : '0px'})` 
+            backdropFilter: inputTheme.backdropBlur !== 'none'
+              ? `blur(${inputTheme.backdropBlur === 'sm' ? '4px' : inputTheme.backdropBlur === 'md' ? '8px' : inputTheme.backdropBlur === 'lg' ? '12px' : inputTheme.backdropBlur === 'xl' ? '20px' : '0px'})`
               : undefined,
           }}
           className="w-full outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:focus:border-primary px-5 py-3"
@@ -84,4 +87,4 @@ const LabeledInput: React.FC<LabeledInputProps> = ({
   );
 };
 
-export default LabeledInput;
+export default ThemedLabeledInput;

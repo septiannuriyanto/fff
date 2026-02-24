@@ -1,16 +1,26 @@
 {
-  "id": "emerald-night",
-  "name": "Emerald Night",
-  "baseTheme": "dark",
-  "isSystem": false,
+  "core": {
+    "id": "emerald-night",
+    "name": "Emerald Night",
+    "baseTheme": "dark",
+    "isSystem": false
+  },
   "background": {
-    "type": "gradient",
-    "gradient": "linear-gradient(135deg, #064e3b, #022c22)",
+    "mode": "gradient",
+    "gradient": {
+      "stops": [
+        "#064e3b",
+        "#022c22"
+      ],
+      "from": "TopLeft",
+      "to": "BottomRight",
+      "reverse": false
+    },
     "useSystem": false
   },
   "header": {
     "color": "#064e3b",
-    "opacity": 1,
+    "opacity": 0.05,
     "textColor": "#FFFFFF",
     "iconColor": "#FFFFFF",
     "iconSize": "1.25rem",

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import LabeledInput from '../../../components/LabeledInput';
+import LabeledInput from '../../../common/ThemedComponents/ThemedLabeledInput';
 import LabeledDateInput from '../../../components/LabeledDateInput';
 import { supabase } from '../../../db/SupabaseClient';
 import LabeledComboBox from '../../../components/LabeledCombobox';

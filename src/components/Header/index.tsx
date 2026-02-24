@@ -12,13 +12,19 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
   setSidebarOpen: (arg0: boolean) => void;
+  sidebarDetached?: boolean;
 }) => {
 
   const { activeTheme } = useTheme();
+  const isDetached = activeTheme.header.detached === true;
+  
+  // Get sidebar config from localStorage to determine if mini or full
+  const sidebarConfig = typeof window !== 'undefined' ? localStorage.getItem('sidebar-config') as 'full' | 'mini' | 'auto' | null : 'full';
+  const isSidebarMini = sidebarConfig === 'mini';
 
   return (
     <header
-      className="sticky top-0 z-[998] flex w-full shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 transition-all duration-700"
+      className={`sticky top-0 z-[998] flex w-full shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 transition-all duration-700 ${isDetached ? 'lg:m-4 lg:rounded-2xl lg:border' : ''}`}
       style={{
         backgroundColor: activeTheme.header.color,
         opacity: activeTheme.header.opacity,
@@ -26,6 +32,7 @@ const Header = (props: {
           ? `blur(${activeTheme.header.backdropBlur === 'sm' ? '4px' : activeTheme.header.backdropBlur === 'md' ? '8px' : activeTheme.header.backdropBlur === 'lg' ? '12px' : activeTheme.header.backdropBlur === 'xl' ? '20px' : '0px'})`
           : undefined,
         color: activeTheme.header.textColor,
+        borderColor: isDetached ? activeTheme.container.borderColor : undefined,
       }}
     >
       {/* 3-column flex: [mobile controls] [centered search] [right icons] */}
