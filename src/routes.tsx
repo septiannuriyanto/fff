@@ -27,6 +27,7 @@ import TMRReport from './pages/Reporting/TMRReport/TMRReport';
 import PressurelessReport from './pages/Reporting/PressurelessReport';
 import BreakdownRfuReport from './pages/Reporting/Breakdown/BreakdownRfuReport';
 import FuelmanReport from './pages/Reporting/FuelmanReport/FuelmanReport';
+import CoordinatorReport from './pages/Reporting/FuelmanReport/CoordinatorReport';
 
 import BastFuel from './pages/Export/BastFuel/BastFuel';
 import BastOli from './pages/Export/BastOli/BastOli';
@@ -315,6 +316,14 @@ const routes: AppRoute[] = [
     allowedRoles: FUEL_ROLES,
     isPublic: true,
     keywords: ['reporting', 'fuelman', 'daily report', 'daily']
+  },
+  {
+    path: '/reporting/coordinatorreport',
+    component: <CoordinatorReport />,
+    title: 'FFF | Coordinator Report',
+    allowedRoles: FUEL_ROLES,
+    isPublic: true,
+    keywords: ['reporting', 'coordinator', 'daily report', 'daily']
   },
   {
     path: '/reporting/adminreport',

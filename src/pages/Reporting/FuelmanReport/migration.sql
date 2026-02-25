@@ -1,7 +1,6 @@
 -- Fuelman Report Tables
 create table public.fuelman_reports (
   id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null,
   report_date date not null,
   shift int not null,
   fuelman_id uuid not null,
@@ -13,7 +12,6 @@ create table public.fuelman_reports (
   updated_at timestamptz not null default now()
 );
 
-create index idx_fuelman_reports_org on public.fuelman_reports(organization_id);
 create index idx_fuelman_reports_date on public.fuelman_reports(report_date);
 create index idx_fuelman_reports_created_by on public.fuelman_reports(created_by);
 
@@ -59,11 +57,21 @@ create table public.fuelman_report_tmr (
   created_at timestamptz not null default now()
 );
 
+create table public.fuelman_report_stock (
+  id uuid primary key default gen_random_uuid(),
+  report_id uuid not null references public.fuelman_reports(id) on delete cascade,
+  unit_number text not null,
+  sonding_awal text not null,
+  sonding_akhir text not null,
+  created_at timestamptz not null default now()
+);
+
 alter table public.fuelman_reports enable row level security;
 alter table public.fuelman_report_ritasi enable row level security;
 alter table public.fuelman_report_transfers enable row level security;
 alter table public.fuelman_report_flowmeter enable row level security;
 alter table public.fuelman_report_tmr enable row level security;
+alter table public.fuelman_report_stock enable row level security;
 
 -- Policies
 create policy "select own reports" on public.fuelman_reports for select using (true);
@@ -75,3 +83,20 @@ create policy "ritasi access" on public.fuelman_report_ritasi for all using (tru
 create policy "transfers access" on public.fuelman_report_transfers for all using (true);
 create policy "flowmeter access" on public.fuelman_report_flowmeter for all using (true);
 create policy "tmr access" on public.fuelman_report_tmr for all using (true);
+create policy "stock access" on public.fuelman_report_stock for all using (true);
+
+create table public.fuelman_report_readiness (
+  id uuid not null default gen_random_uuid(),
+  report_id uuid null,
+  warehouse_id text not null,
+  status text not null,
+  location text null,
+  created_at timestamp with time zone not null default now(),
+  remark text null,
+  constraint fuelman_report_readiness_pkey primary key (id),
+  constraint fuelman_report_readiness_report_id_fkey foreign KEY (report_id) references fuelman_reports (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+alter table public.fuelman_report_readiness enable row level security;
+create policy "readiness access" on public.fuelman_report_readiness for all using (true);
+create index idx_readiness_report_id on public.fuelman_report_readiness(report_id);

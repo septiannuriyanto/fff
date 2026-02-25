@@ -11,6 +11,7 @@ interface ThemedAutoSuggestProps {
   required?: boolean;
   autoFocus?: boolean;
   className?: string;
+  disabled?: boolean;
 }
 
 const ThemedAutoSuggest: React.FC<ThemedAutoSuggestProps> = ({
@@ -22,6 +23,7 @@ const ThemedAutoSuggest: React.FC<ThemedAutoSuggestProps> = ({
   required = false,
   autoFocus = false,
   className = 'mb-4',
+  disabled = false,
 }) => {
   const { activeTheme } = useTheme();
   const inputTheme = activeTheme.input;
@@ -78,9 +80,11 @@ const ThemedAutoSuggest: React.FC<ThemedAutoSuggestProps> = ({
     const inputLength = inputValue.length;
     if (inputLength === 0 || !suggestions) return [];
 
-    return suggestions.filter(suggestion =>
-      suggestion && suggestion.toUpperCase().includes(inputValue)
-    );
+    return suggestions
+      .filter(suggestion =>
+        suggestion && suggestion.toUpperCase().includes(inputValue)
+      )
+      .sort((a, b) => a.localeCompare(b));
   };
 
   const filteredSuggestions = getSuggestions(value);
@@ -128,12 +132,16 @@ const ThemedAutoSuggest: React.FC<ThemedAutoSuggestProps> = ({
             setIsFocused(true);
             setShowSuggestions(true);
           }}
+          disabled={disabled}
+          readOnly={disabled}
           style={{
-            backgroundColor: inputTheme.color,
+            backgroundColor: disabled ? 'rgba(128, 128, 128, 0.1)' : inputTheme.color,
             color: inputTheme.textColor,
-            borderColor: isFocused ? activeTheme.ui.primaryColor : inputTheme.borderColor,
+            borderColor: isFocused && !disabled ? activeTheme.ui.primaryColor : inputTheme.borderColor,
             borderWidth: inputTheme.borderWidth,
             borderRadius: inputTheme.borderRadius,
+            opacity: disabled ? 0.7 : 1,
+            cursor: disabled ? 'not-allowed' : 'text',
           }}
           className="w-full outline-none transition px-5 py-3"
         />

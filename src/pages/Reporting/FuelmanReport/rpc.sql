@@ -1,13 +1,17 @@
 create or replace function public.create_fuelman_report(
   p_report_date date,
   p_report_shift int,
+  p_master_report_id uuid,
   p_fuelman_id uuid,
   p_operator_id uuid,
   p_ft_number text,
   p_ritasi jsonb,
   p_transfers jsonb,
   p_flowmeter jsonb,
-  p_tmr jsonb
+  p_tmr jsonb,
+  p_stock jsonb default '[]'::jsonb,
+  p_readiness jsonb default '[]'::jsonb,
+  p_issuing jsonb default '[]'::jsonb
 )
 returns uuid
 language plpgsql
@@ -15,20 +19,10 @@ security definer
 as $$
 declare
   v_report_id uuid;
-  v_organization_id uuid;
 begin
-  -- Fetch organization_id from manpower
-  select organization_id into v_organization_id 
-  from public.manpower 
-  where user_id = p_fuelman_id
-  limit 1;
-
-  if v_organization_id is null then
-    raise exception 'Organization ID not found for fuelman %', p_fuelman_id;
-  end if;
   -- 1. Insert Master Report
   insert into public.fuelman_reports (
-    organization_id,
+    master_report_id,
     report_date,
     shift,
     fuelman_id,
@@ -37,7 +31,7 @@ begin
     created_by
   )
   values (
-    v_organization_id,
+    p_master_report_id,
     p_report_date,
     p_report_shift,
     p_fuelman_id,
@@ -121,6 +115,58 @@ begin
       (x->>'inside_rest_time')::boolean,
       (x->>'is_slippery')::boolean
     from jsonb_array_elements(p_tmr) as x;
+  end if;
+
+  -- 6. Insert Stock
+  if p_stock is not null and jsonb_array_length(p_stock) > 0 then
+    insert into public.fuelman_report_stock (
+        report_id,
+        unit_number,
+        sonding_awal,
+        sonding_akhir
+    )
+    select
+        v_report_id,
+        (x->>'unit_number'),
+        (x->>'sonding_awal')::numeric,
+        (x->>'sonding_akhir')::numeric
+    from jsonb_array_elements(p_stock) as x;
+  end if;
+
+  -- 7. Insert Readiness
+  if p_readiness is not null and jsonb_array_length(p_readiness) > 0 then
+    insert into public.fuelman_report_readiness (
+      report_id,
+      warehouse_id,
+      status,
+      location,
+      remark
+    )
+    select
+      v_report_id,
+      (x->>'warehouse_id'),
+      (x->>'status'),
+      (x->>'location'),
+      nullif(x->>'remark', '')
+    from jsonb_array_elements(p_readiness) as x;
+  end if;
+
+  -- 8. Insert Issuing
+  if p_issuing is not null and jsonb_array_length(p_issuing) > 0 then
+    insert into public.fuelman_report_issuing (
+      report_id,
+      unit_number,
+      jumlah_unit_support,
+      jumlah_unit_hd,
+      total_refueling
+    )
+    select
+      v_report_id,
+      (x->>'unit_number'),
+      (x->>'jumlah_unit_support')::numeric,
+      (x->>'jumlah_unit_hd')::numeric,
+      (x->>'total_refueling')::numeric
+    from jsonb_array_elements(p_issuing) as x;
   end if;
 
   return v_report_id;
