@@ -703,9 +703,9 @@ export default function FuelmanReport() {
   };
 
   return (
-    <div className="min-h-screen flex justify-center p-4">
+    <div className="flex justify-center p-4">
       <Toaster />
-      <div className="flex flex-col gap-4 p-4 pb-12 min-h-screen" style={{ backgroundColor: activeTheme.popup.backgroundColor }}>
+      <div className="flex flex-col gap-4 p-4 pb-12 w-full max-w-lg rounded-3xl shadow-2xl backdrop-blur-xl" style={{ backgroundColor: activeTheme.popup.backgroundColor }}>
         <style>{`
         @keyframes pageIn {
           from { opacity: 0; transform: translateY(10px); }
