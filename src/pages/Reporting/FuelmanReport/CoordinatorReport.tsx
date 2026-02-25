@@ -51,19 +51,46 @@ export default function CoordinatorReport() {
 
     // FT Readiness state
     const [ftReadiness, setFtReadiness] = useState<any[]>([]);
-    const [isLoadingFT, setIsLoadingFT] = useState(false);
 
-    // Filters for Readiness
     const [filterDate, setFilterDate] = useState<Date>(getOperationalDate());
     const [filterShift, setFilterShift] = useState<boolean>(getOperationalShift() === 1);
+
+    // Master report state
+    const [masterReport, setMasterReport] = useState<any | null | 'not_found'>(null);
+    const [loadingMaster, setLoadingMaster] = useState(false);
 
     useEffect(() => {
         fetchRecentReports();
         fetchFTReadiness();
+        fetchMasterReport();
     }, [filterDate, filterShift]);
 
+    const fetchMasterReport = async () => {
+        if (!filterDate) return;
+        setLoadingMaster(true);
+        setMasterReport(null);
+        try {
+            const { data } = await supabase
+                .from('fuelman_master_report')
+                .select('id')
+                .eq('report_date', formatDateForSupabase(filterDate))
+                .eq('report_shift', filterShift ? 1 : 2)
+                .maybeSingle();
+
+            if (data?.id) {
+                setMasterReport(data);
+            } else {
+                setMasterReport('not_found');
+            }
+        } catch (err) {
+            console.error('fetchMasterReport error:', err);
+            setMasterReport('not_found');
+        } finally {
+            setLoadingMaster(false);
+        }
+    };
+
     const fetchFTReadiness = async () => {
-        setIsLoadingFT(true);
         try {
             const targetDate = formatDateForSupabase(filterDate);
             const targetShift = filterShift ? 1 : 2;
@@ -105,7 +132,7 @@ export default function CoordinatorReport() {
             console.error("Failed to fetch FT readiness:", err);
             toast.error("Failed to fetch FT readiness data.");
         } finally {
-            setIsLoadingFT(false);
+            // done
         }
     };
 
@@ -187,17 +214,21 @@ export default function CoordinatorReport() {
 
             const reportIds = reportsData.map((r: any) => r.id);
 
-            const [ritasiRes, transfersRes, flowmeterRes, stockRes] = await Promise.all([
+            const [ritasiRes, transfersRes, flowmeterRes, stockRes, issuingRes, tmrRes] = await Promise.all([
                 supabase.from('fuelman_report_ritasi').select('ft_number, value').in('report_id', reportIds),
                 supabase.from('fuelman_report_transfers').select('transfer_from, destination, transfer_out').in('report_id', reportIds),
                 supabase.from('fuelman_report_flowmeter').select('unit_number, fm_awal, fm_akhir, usage').in('report_id', reportIds),
                 supabase.from('fuelman_report_stock').select('unit_number, sonding_awal, sonding_akhir').in('report_id', reportIds),
+                supabase.from('fuelman_report_issuing').select('total_refueling, jumlah_unit_support, jumlah_unit_hd').in('report_id', reportIds),
+                supabase.from('fuelman_report_tmr').select('loader_id, time_refueling, area_id(major_area), location_detail').in('report_id', reportIds),
             ]);
 
-            const ritasi = ritasiRes.data || [];
-            const transfers = transfersRes.data || [];
-            const flowmeter = flowmeterRes.data || [];
-            const stock = stockRes.data || [];
+            const ritasi = (ritasiRes as any).data || [];
+            const transfers = (transfersRes as any).data || [];
+            const flowmeter = (flowmeterRes as any).data || [];
+            const stock = (stockRes as any).data || [];
+            const issuing = (issuingRes as any).data || [];
+            const tmr = (tmrRes as any).data || [];
 
             toast.dismiss();
 
@@ -206,21 +237,40 @@ export default function CoordinatorReport() {
             msg += `*SHIFT : ${targetShift}*\n\n`;
 
             msg += `*ISSUING OUT (LITER)*\n`;
-            flowmeter?.forEach(f => {
+            flowmeter?.forEach((f: any) => {
                 msg += `${f.unit_number} = ${formatDots(f.usage || 0)}\n`;
             });
-            const totalOutValue = flowmeter?.reduce((acc, f) => acc + Number(f.usage || 0), 0) || 0;
+            const totalOutValue = flowmeter?.reduce((acc: number, f: any) => acc + Number(f.usage || 0), 0) || 0;
             msg += `*TOTAL FUEL OUT = ${formatDots(totalOutValue)} (LITER)*\n\n`;
 
+            if (issuing.length > 0) {
+                msg += `*DETAIL ISSUING*\n`;
+                const totalSupport = issuing.reduce((acc: number, i: any) => acc + Number(i.jumlah_unit_support || 0), 0);
+                const totalHD = issuing.reduce((acc: number, i: any) => acc + Number(i.jumlah_unit_hd || 0), 0);
+                const totalQty = issuing.reduce((acc: number, i: any) => acc + Number(i.total_refueling || 0), 0);
+                msg += `- Total Qty: ${formatDots(totalQty)} L\n`;
+                msg += `- Total Unit Support: ${totalSupport}\n`;
+                msg += `- Total Unit HD: ${totalHD}\n\n`;
+            }
+
             msg += `*RITASI (LITER)*\n`;
-            ritasi?.forEach(r => {
+            ritasi?.forEach((r: any) => {
                 msg += `${r.ft_number} = ${formatDots(r.value || 0)}\n`;
             });
-            const totalInValue = ritasi?.reduce((acc, r) => acc + Number(r.value || 0), 0) || 0;
+            const totalInValue = ritasi?.reduce((acc: number, r: any) => acc + Number(r.value || 0), 0) || 0;
             msg += `*TOTAL FUEL IN = ${formatDots(totalInValue)} LITER*\n\n`;
 
+            if (tmr.length > 0) {
+                msg += `*TMR / MAINTENANCE REPORTING*\n`;
+                tmr.forEach((item: any) => {
+                    const areaObj = Array.isArray(item.area_id) ? item.area_id[0] : item.area_id;
+                    msg += `- ${item.loader_id} (${item.time_refueling}) @ ${areaObj?.major_area || ''} ${item.location_detail || ''}\n`;
+                });
+                msg += `\n`;
+            }
+
             msg += `*WAREHOUSE TRANSFER*\n`;
-            transfers?.forEach(t => {
+            transfers?.forEach((t: any) => {
                 msg += `${t.transfer_from} > ${t.destination} = ${formatDots(t.transfer_out || 0)} (LTR)\n`;
             });
             msg += `\n`;
@@ -229,17 +279,17 @@ export default function CoordinatorReport() {
             ftReadiness.forEach((ft: any) => {
                 msg += `${ft.unit_id} = ${ft.readiness} (${ft.location})\n`;
             });
-            const rfuCount = ftReadiness.filter(ft => ft.readiness === 'RFU').length;
+            const rfuCount = ftReadiness.filter((ft: any) => ft.readiness === 'RFU').length;
             msg += `*TOTAL FT RFU : ${rfuCount} UNIT*\n\n`;
 
             msg += `*SONDING AWAL - AKHIR (CM)*\n`;
-            stock?.forEach(s => {
+            stock?.forEach((s: any) => {
                 msg += `${s.unit_number} = ${s.sonding_awal} - ${s.sonding_akhir}\n`;
             });
             msg += `\n`;
 
             msg += `*FLOWMETER AWAL - AKHIR*\n`;
-            flowmeter?.forEach(f => {
+            flowmeter?.forEach((f: any) => {
                 msg += `${f.unit_number} = ${formatDots(f.fm_awal || 0)}-${formatDots(f.fm_akhir || 0)}\n`;
             });
             msg += `\n`;
@@ -276,18 +326,60 @@ export default function CoordinatorReport() {
             <Toaster />
             <div className="w-full max-w-md space-y-6">
                 <ThemedGlassmorphismPanel className="p-4 space-y-4">
-                    <h1 className="text-lg font-semibold" style={{ color: activeTheme.popup.textColor }}>
-                        Coordinator Dashboard
-                    </h1>
-                    <p className="text-sm opacity-60" style={{ color: activeTheme.popup.textColor }}>
-                        Monitoring and verifying fuelman reports for the current shift.
-                    </p>
+                    <div className="flex flex-col">
+                        <h1 className="text-lg font-bold" style={{ color: activeTheme.popup.textColor }}>
+                            Coordinator Dashboard
+                        </h1>
+                        <p className="text-xs opacity-60" style={{ color: activeTheme.popup.textColor }}>
+                            Monitoring and verification
+                        </p>
+                    </div>
+
+                    {/* Date & Shift Pickers */}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col md:flex-row gap-2">
+                            <div className="flex-1">
+                                <DatePickerOne
+                                    enabled={true}
+                                    handleChange={(d) => d && setFilterDate(d)}
+                                    setValue={formatDateToString(filterDate)}
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <ShiftDropdown value={filterShift} onChange={setFilterShift} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Master Record Status Chip */}
+                    {loadingMaster && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-[10px]" style={{ color: activeTheme.popup.textColor }}>
+                            <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            Checking master record...
+                        </div>
+                    )}
+                    {!loadingMaster && masterReport === 'not_found' && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] text-red-400 font-medium">
+                            <span>⚠</span>
+                            Master Record not found for this shift.
+                        </div>
+                    )}
+                    {!loadingMaster && masterReport && masterReport !== 'not_found' && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-[10px] text-green-400">
+                            <span>✓</span>
+                            <div className="flex flex-col">
+                                <span className="font-bold">Master Record Active</span>
+                                <span className="opacity-60 font-mono tracking-tighter truncate max-w-[200px]">{masterReport.id}</span>
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         onClick={fetchRecentReports}
-                        className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-xs font-semibold"
+                        className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-xs font-bold"
                         style={{ color: activeTheme.popup.textColor }}
                     >
-                        Refresh Reports
+                        Refresh Monitoring
                     </button>
                 </ThemedGlassmorphismPanel>
 
@@ -303,50 +395,15 @@ export default function CoordinatorReport() {
                     </div>
                 </LocalSection>
 
-                {/* FT READINESS SUMMARY (VIEW ONLY) */}
-                <LocalSection title="FT Readiness Summary">
-                    <div className="space-y-4">
-                        {isLoadingFT ? (
-                            <div className="py-4 text-center flex flex-col items-center gap-2 opacity-50">
-                                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs">Fetching readiness...</span>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {ftReadiness.length > 0 ? (
-                                    ftReadiness.map((ft, idx) => (
-                                        <div key={ft.unit_id || idx} className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-col gap-1">
-                                            <div className="flex justify-between items-center text-xs">
-                                                <span className="font-bold" style={{ color: activeTheme.popup.textColor }}>
-                                                    {ft.warehouse_id}
-                                                </span>
-                                                <span className={`font-bold ${ft.readiness === 'BD' ? 'text-red-500' : 'text-green-500'}`}>
-                                                    {ft.readiness}
-                                                </span>
-                                            </div>
-                                            <div className="text-[10px] opacity-60" style={{ color: activeTheme.popup.textColor }}>
-                                                {ft.location || 'No Location'}
-                                                {ft.remark && <span className="text-orange-400 ml-1 italic">- {ft.remark}</span>}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="py-4 text-center text-xs opacity-50" style={{ color: activeTheme.popup.textColor }}>
-                                        No readiness data submitted yet.
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <button
-                            onClick={handleShareDailyReport}
-                            className="w-full py-3 mt-4 flex items-center justify-center gap-2 bg-green-600/20 text-green-500 border border-green-500/20 rounded-xl hover:bg-green-600 hover:text-white transition-all font-semibold"
-                        >
-                            <FaWhatsapp size={20} />
-                            Send Daily Report to Group
-                        </button>
-                    </div>
-                </LocalSection>
+                <div className="px-4 pb-12 overflow-y-auto">
+                    <button
+                        onClick={handleShareDailyReport}
+                        className="w-full py-4 flex items-center justify-center gap-2 bg-green-600/20 text-green-500 border border-green-500/20 rounded-2xl hover:bg-green-600 hover:text-white transition-all font-bold shadow-lg shadow-green-500/10"
+                    >
+                        <FaWhatsapp size={24} />
+                        Share Aggregated Report to WhatsApp
+                    </button>
+                </div>
 
                 {/* SELECTED REPORT DETAIL MODAL */}
                 {
