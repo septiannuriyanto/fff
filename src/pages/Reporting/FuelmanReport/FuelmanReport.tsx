@@ -719,11 +719,8 @@ export default function FuelmanReport() {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-3">
-              <img
-                src={activeTheme.baseTheme === 'dark' ? LogoIconDark : LogoIcon}
-                alt="Logo"
-                className="h-10 w-auto"
-              />
+              <img src={LogoIcon} alt="Logo" className="h-10 w-auto dark:hidden" />
+              <img src={LogoIconDark} alt="Logo" className="h-10 w-auto hidden dark:block" />
               <div className="flex flex-col">
                 <h1 className="text-xl font-bold leading-tight" style={{ color: activeTheme.popup.textColor }}>
                   Fuelman Report
@@ -778,7 +775,7 @@ export default function FuelmanReport() {
                     </h1>
 
                     {/* Date & Shift */}
-                    <div className="flex flex-row gap-2 w-full">
+                    <div className="flex flex-col md:flex-row gap-2 w-full">
                       <div className="flex-1">
                         <DatePickerOne
                           enabled={true}
@@ -894,9 +891,9 @@ export default function FuelmanReport() {
                             {form.ritasi.map((item: any, i: number) => (
                               <Card key={i}>
                                 <div className="flex flex-row justify-between align-baseline gap-4">
-                                  <div className="w-2/3">
+                                  <div className="w-1/2">
                                     <ThemedAutoSuggest
-                                      label="FT Number"
+                                      label="FT"
                                       autoFocus={i === form.ritasi.length - 1 && i !== 0 && item.ft_number === ""}
                                       value={item.ft_number}
                                       onChange={(val) => {
@@ -910,9 +907,9 @@ export default function FuelmanReport() {
                                       disabled={i === 0}
                                     />
                                   </div>
-                                  <div className="w-1/3">
+                                  <div className="w-1/2">
                                     <ThemedNumericInput
-                                      label="Value (Liter)"
+                                      label="Qty (L)"
                                       value={item.value}
                                       onChange={(raw) => {
                                         const updated = [...form.ritasi];
@@ -921,7 +918,7 @@ export default function FuelmanReport() {
                                       }}
                                     />
                                   </div>
-                                  <div className="flex center align-middle justify-center">
+                                  <div className="flex center align-middle justify-center w-1/4">
                                     <RemoveButton onClick={() => removeItem('ritasi', i)} />
                                   </div>
                                 </div>
@@ -975,7 +972,7 @@ export default function FuelmanReport() {
                                         disabled={i === 0}
                                       />
                                       <ThemedNumericInput
-                                        label="Total Refueling Qty (Liter)"
+                                        label="Qty (L)"
                                         value={item.total_refueling}
                                         onChange={(raw) => {
                                           const updated = [...form.issuing];
@@ -1261,7 +1258,7 @@ export default function FuelmanReport() {
                                         borderWidth: activeTheme.input.borderWidth,
                                         borderRadius: activeTheme.input.borderRadius,
                                       }}
-                                      className="w-full outline-none transition px-4 py-2 text-sm"
+                                      className="w-full outline-none transition px-4 py-3 text-sm"
                                     />
                                   </div>
                                   <div className="pb-1">
@@ -1594,7 +1591,7 @@ export default function FuelmanReport() {
                                           updated[i].status = e.target.value;
                                           setForm({ ...form, readiness: updated });
                                         }}
-                                        className="w-full bg-white/10 border rounded-lg px-2 py-2 text-xs outline-none focus:border-primary transition-colors cursor-pointer"
+                                        className="w-full bg-white/10 border rounded-lg px-2 py-3 text-xs outline-none focus:border-primary transition-colors cursor-pointer"
                                         style={{
                                           color: activeTheme.popup.textColor,
                                           borderColor: activeTheme.input.borderColor,
@@ -1617,7 +1614,7 @@ export default function FuelmanReport() {
                                           updated[i].location = e.target.value.toUpperCase();
                                           setForm({ ...form, readiness: updated });
                                         }}
-                                        className="w-full bg-white/10 border rounded-lg px-3 py-2 text-xs outline-none focus:border-primary transition-colors placeholder:opacity-30"
+                                        className="w-full bg-white/10 border rounded-lg px-3 py-3 text-xs outline-none focus:border-primary transition-colors placeholder:opacity-30"
                                         style={{
                                           color: activeTheme.popup.textColor,
                                           borderColor: activeTheme.input.borderColor,
@@ -1767,74 +1764,76 @@ export default function FuelmanReport() {
             )
           }
 
-          {/* Area Selection Modal */}
-          {
-            showAreaModal.active && (
-              <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <ThemedGlassmorphismPanel className="w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
-                  <div className="p-4 flex justify-between items-center" style={{ borderBottom: `1px solid ${activeTheme.popup.separatorColor || 'rgba(255,255,255,0.1)'}` }}>
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold" style={{ color: activeTheme.popup.textColor }}>Select Location</h3>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          localStorage.removeItem(CACHE_KEY);
-                          await loadSuggestions();
-                          toast.success("Suggestions refreshed!");
-                        }}
-                        className="p-1 px-2 text-xs rounded-md transition-colors flex items-center gap-1"
-                        style={{
-                          color: activeTheme.popup.textColor,
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                        }}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setShowAreaModal({ active: false, index: -1 })}
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                      style={{ color: activeTheme.popup.textColor }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="overflow-y-auto p-2">
-                    <div className="grid grid-cols-1 gap-1">
-                      {areaList.map((area, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            const location_id = area.id;
-                            setForm((prev: any) => {
-                              const updated = [...prev.tmr];
-                              updated[showAreaModal.index].location = area.major_area;
-                              updated[showAreaModal.index].location_id = location_id;
-                              return { ...prev, tmr: updated };
-                            });
-                            setShowAreaModal({ active: false, index: -1 });
-                          }}
-                          className="text-left px-4 py-3 rounded-lg transition-colors flex justify-between items-center group hover:bg-white/10"
-                          style={{ color: activeTheme.popup.textColor }}
-                        >
-                          <span className="font-medium group-hover:text-primary transition-colors">{area.major_area}</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </ThemedGlassmorphismPanel>
-              </div>
-            )}
         </div>
+
       </div>
+
+      {/* Area Selection Modal */}
+      {showAreaModal.active && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <ThemedGlassmorphismPanel className="w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-4 flex justify-between items-center" style={{ borderBottom: `1px solid ${activeTheme.popup.separatorColor || 'rgba(255,255,255,0.1)'}` }}>
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold" style={{ color: activeTheme.popup.textColor }}>Select Location</h3>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    localStorage.removeItem(CACHE_KEY);
+                    await loadSuggestions();
+                    toast.success("Suggestions refreshed!");
+                  }}
+                  className="p-1 px-2 text-xs rounded-md transition-colors flex items-center gap-1"
+                  style={{
+                    color: activeTheme.popup.textColor,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <button
+                onClick={() => setShowAreaModal({ active: false, index: -1 })}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                style={{ color: activeTheme.popup.textColor }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-2">
+              <div className="grid grid-cols-1 gap-1">
+                {areaList.map((area, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      const location_id = area.id;
+                      setForm((prev: any) => {
+                        const updated = [...prev.tmr];
+                        updated[showAreaModal.index].location = area.major_area;
+                        updated[showAreaModal.index].location_id = location_id;
+                        return { ...prev, tmr: updated };
+                      });
+                      setShowAreaModal({ active: false, index: -1 });
+                    }}
+                    className="text-left px-4 py-3 rounded-lg transition-colors flex justify-between items-center group hover:bg-white/10"
+                    style={{ color: activeTheme.popup.textColor }}
+                  >
+                    <span className="font-medium group-hover:text-primary transition-colors">{area.major_area}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </ThemedGlassmorphismPanel>
+        </div>
+      )}
+
     </div>
   );
 };
