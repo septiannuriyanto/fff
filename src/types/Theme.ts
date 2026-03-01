@@ -39,6 +39,12 @@ export interface ThemePreset {
         iconSize: string;
         detached?: boolean;
         backdropBlur: string;
+        border: string;
+        borderRadius: string;
+        borderWidth: string;
+        borderOpacity: number;
+        borderColor: string;
+        borderColorDark?: string;
     };
     sidebar: {
         color: string;
@@ -52,6 +58,12 @@ export interface ThemePreset {
         iconSize: string;
         detached: boolean;
         backdropBlur: string;
+        border: string;
+        borderRadius: string;
+        borderWidth: string;
+        borderOpacity: number;
+        borderColor: string;
+        borderColorDark?: string;
     };
     container: {
         color: string;

@@ -20,7 +20,13 @@
     "iconColor": "#64748B",
     "iconColorDark": "#DEE4EE",
     "iconSize": "1.25rem",
-    "backdropBlur": "none"
+    "backdropBlur": "none",
+    "border": "none",
+    "borderRadius": "0.5rem",
+    "borderWidth": "0px",
+    "borderOpacity": 1,
+    "borderColor": "transparent",
+    "borderColorDark": "transparent"
   },
   "sidebar": {
     "color": "#FFFFFF",
@@ -33,7 +39,13 @@
     "iconColorDark": "#DEE4EE",
     "iconSize": "1.5rem",
     "detached": false,
-    "backdropBlur": "none"
+    "backdropBlur": "none",
+    "border": "none",
+    "borderRadius": "0.5rem",
+    "borderWidth": "0px",
+    "borderOpacity": 1,
+    "borderColor": "transparent",
+    "borderColorDark": "transparent"
   },
   "container": {
     "color": "#FFFFFF",

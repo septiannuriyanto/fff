@@ -4,22 +4,20 @@ import { useTheme } from "../../contexts/ThemeContext";
 interface SidebarButtonProps {
   label: string;
   onClick: React.MouseEventHandler<HTMLButtonElement>;
-  mini?: boolean;
 }
 
-const SidebarButton: React.FC<SidebarButtonProps> = ({ label, onClick, mini }) => {
+const SidebarButton: React.FC<SidebarButtonProps> = ({ label, onClick }) => {
   const { activeTheme } = useTheme();
   const theme = activeTheme;
 
-  if (mini) return null;
   return (
     <li>
-      <button 
-        className="pl-4 hover:underline font-medium transition-colors" 
+      <button
+        className="pl-4 hover:underline font-medium transition-colors flex items-center"
         style={{ color: theme.sidebar.textColor }}
         onClick={onClick}
       >
-        {label}
+        <span className="sidebar-label">{label}</span>
       </button>
     </li>
   );

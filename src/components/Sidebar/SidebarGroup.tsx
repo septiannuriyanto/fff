@@ -11,8 +11,8 @@ interface SidebarGroupProps {
   roles: string[]; // Array of roles allowed to view this group
   currentRole: string; // The current user's role
   children: ReactNode;
-  mini?: boolean;
   align?: 'top' | 'bottom';
+  mini?: boolean;
 }
 
 const SidebarGroup: React.FC<SidebarGroupProps> = ({
@@ -23,7 +23,6 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
   roles,
   currentRole,
   children,
-  mini,
   align = 'top'
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -53,19 +52,18 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
           color: isActive ? theme.ui.primaryColor : theme.sidebar.textColor,
           backgroundColor: isActive ? 'rgba(255,255,255, 0.05)' : 'transparent',
         }}
-        className={`group relative flex items-center ${mini ? 'justify-center h-12 w-12 mx-auto mb-1' : 'gap-2.5 px-4 py-2'} rounded-xl font-medium duration-300 ease-in-out hover:bg-white/5 transition-all outline-none focus:outline-none`}
+        className={`group relative flex items-center sidebar-group-item gap-2.5 px-4 py-2 rounded-xl font-medium duration-300 ease-in-out hover:bg-white/5 transition-all outline-none focus:outline-none`}
         onClick={(e) => {
           e.preventDefault();
-          if(!mini) handleToggle();
+          // We only toggle if it's NOT in fixed mini mode
+          handleToggle();
         }}
       >
-        <span className={mini ? 'text-2xl' : ''}>{icon}</span>
-        {!mini && <span className="animate-in fade-in slide-in-from-left-2 duration-300 whitespace-nowrap">{title}</span>}
-        {!mini && (
+        <span className="text-xl">{icon}</span>
+        <span className="sidebar-label whitespace-nowrap">{title}</span>
+        <span className="sidebar-arrow absolute right-4 top-1/2 -translate-y-1/2 transition-transform duration-300">
           <svg
-            className={`absolute right-4 top-1/2 -translate-y-1/2 fill-current ${
-              isExpanded && "rotate-180"
-            }`}
+            className={`fill-current ${isExpanded && "rotate-180"}`}
             width="20"
             height="20"
             viewBox="0 0 20 20"
@@ -79,47 +77,35 @@ const SidebarGroup: React.FC<SidebarGroupProps> = ({
               fill=""
             />
           </svg>
-        )}
+        </span>
       </NavLink>
 
-      {/* Mini Mode Hover Overlay */}
-      {mini && (
-          <div className={`absolute left-full ${align === 'bottom' ? '-bottom-4' : '-top-4'} pl-10 hidden group-hover/group:block animate-in fade-in slide-in-from-left-4 duration-300 z-[10000]`}>
-              <ThemedGlassmorphismPanel 
-                className="rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 ring-1 ring-black/5 dark:ring-white/10 -ml-10"
-              >
-                  <div className="pb-2 mb-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                       <span className="p-2 bg-primary/10 text-primary rounded-lg text-lg">
-                           {icon}
-                       </span>
-                       <span className="font-extrabold text-sm uppercase tracking-tight truncate" style={{ color: theme.popup.headerTextColor || undefined }}>
-                           {title}
-                       </span>
-                  </div>
-                  <ul className="flex flex-col gap-1">
-                      {/* We need to pass mini=false to children in overlay so labels are shown */}
-                      {React.Children.map(children, (child) => {
-                          if (React.isValidElement(child)) {
-                              // Type assertion for SidebarLink/Button props
-                              return React.cloneElement(child as React.ReactElement<any>, { mini: false });
-                          }
-                          return child;
-                      })}
-                  </ul>
-              </ThemedGlassmorphismPanel>
+      <div className={`sidebar-popup absolute left-full ${align === 'bottom' ? '-bottom-4' : '-top-4'} pl-10 hidden group-hover/group:block animate-in fade-in slide-in-from-left-4 duration-300 z-[10000]`}>
+        <ThemedGlassmorphismPanel
+          className="rounded-2xl shadow-2xl p-4 w-56 flex flex-col gap-2 ring-1 ring-black/5 dark:ring-white/10 -ml-10"
+        >
+          <div className="pb-2 mb-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
+            <span className="p-2 bg-primary/10 text-primary rounded-lg text-lg">
+              {icon}
+            </span>
+            <span className="font-extrabold text-sm uppercase tracking-tight truncate" style={{ color: theme.popup.headerTextColor || undefined }}>
+              {title}
+            </span>
           </div>
-      )}
+          <ul className="flex flex-col gap-1">
+            {/* Labels are hidden by CSS classes if in sidebar-mini mode */}
+            {children}
+          </ul>
+        </ThemedGlassmorphismPanel>
+      </div>
 
       {/* Standard Dropdown Menu (Full Mode) */}
-      {!mini && (
-        <div
-            className={`translate transform overflow-hidden transition-all duration-300 ${
-            !isExpanded && "hidden"
-            }`}
-        >
-            <ul className="mt-2 mb-4 flex flex-col gap-1.5 pl-6">{children}</ul>
-        </div>
-      )}
+      <div
+        className={`sidebar-submenu translate transform overflow-hidden transition-all duration-300 sidebar-label ${!isExpanded && "hidden"
+          }`}
+      >
+        <ul className="mt-2 mb-4 flex flex-col gap-1.5 pl-6">{children}</ul>
+      </div>
     </div>
   );
 };

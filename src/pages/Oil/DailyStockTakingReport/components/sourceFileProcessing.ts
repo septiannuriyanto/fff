@@ -4,9 +4,9 @@ import * as XLSX from 'xlsx';
 
 
 
-async function detectAndUpload(file: File) {
+async function detectAndUpload(file: File, dstDate: string | Date) {
   try {
-    console.log("Detecting and uploading file:", file.name);
+    console.log("Detecting and uploading file:", file.name, "for date:", dstDate);
 
     const extension = file.name.split(".").pop()?.toLowerCase();
 
@@ -14,7 +14,7 @@ async function detectAndUpload(file: File) {
       const text = await file.text();
       const firstLine = text.split("\n")[0].trim();
       if (firstLine.startsWith("PID")) {
-        return handleFailedPosting(text); // handler CSV pipe
+        return handleFailedPosting(text, dstDate); // handler CSV pipe
       }
       throw new Error("Format CSV/TXT tidak dikenali");
     }
@@ -31,9 +31,9 @@ async function detectAndUpload(file: File) {
       const json = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
 
       if (cellA1 && cellA1.trim().toUpperCase() === "DISTRICT") {
-        return handleSohTactys(json);
+        return handleSohTactys(json, dstDate);
       } else {
-        return handleSohSAP(json);
+        return handleSohSAP(json, dstDate);
       }
     }
 
@@ -45,7 +45,7 @@ async function detectAndUpload(file: File) {
   }
 }
 
-async function handleFailedPosting(text: string) {
+async function handleFailedPosting(text: string, dstDate: string | Date) {
   console.log("Handling FAILED_POSTING file");
 
   // pisahkan baris dan ambil header
@@ -103,7 +103,7 @@ async function handleFailedPosting(text: string) {
   // insert ke dst_system
   return supabase.from("dst_system").insert(
     filtered.map(r => ({
-      dst_date: new Date(), // kalau ada selectedDate ganti di sini
+      dst_date: dstDate,
       warehouse_id: r.warehouse_id,
       qty: r.qty,
       type: "FAILED_POSTING",
@@ -112,23 +112,35 @@ async function handleFailedPosting(text: string) {
   );
 }
 
-
+const padMaterialCode = (code: string | number) => {
+  const s = String(code).trim();
+  if (!s) return "";
+  // Jika semuanya angka, pad ke 18 digit (standar SAP)
+  if (/^\d+$/.test(s)) {
+    return s.padStart(18, '0');
+  }
+  return s;
+};
 
 // SOH SAP: file seperti Plant / Material / Total Stock
-async function handleSohSAP(json: any[]) {
+async function handleSohSAP(json: any[], dstDate: string | Date) {
   console.log("Handling SOH_SAP file");
-  
+
   const validMaterials = await getValidMaterials();
 
   const rows = json.map(row => ({
-    material_code: row['Material Number'] ?? row['Material'] ?? '',
-    warehouse_id: row['Storage Location'] ?? row['Plant'] ?? '',
-    qty: Number(row['Total Stock'] ?? 0),
-  })).filter(r => validMaterials.has(r.material_code));
+    material_code: padMaterialCode(row['Material Number'] ?? row['Material'] ?? row['Material number'] ?? ''),
+    warehouse_id: row['Storage Location'] ?? row['Plant'] ?? row['Storage location'] ?? '',
+    qty: Number(row['Total Stock'] ?? row['Unrestricted'] ?? 0),
+  })).filter(r => validMaterials.has(r.material_code) && r.qty !== 0);
+
+  if (rows.length === 0) {
+    throw new Error("Tidak ada data valid yang ditemukan (cek kolom Material/Plant/Total Stock atau kecocokan Material Code)");
+  }
 
   return supabase.from('dst_system').insert(
     rows.map(r => ({
-      dst_date: new Date(),        // pakai selectedDate kalau ada
+      dst_date: dstDate,
       warehouse_id: r.warehouse_id,
       material_code: r.material_code,
       qty: r.qty,
@@ -138,7 +150,7 @@ async function handleSohSAP(json: any[]) {
 }
 
 // SOH TACTYS: file seperti DISTRICT / WAREHOUSE / STOCKCODE / SOH
-async function handleSohTactys(json: any[]) {
+async function handleSohTactys(json: any[], dstDate: string | Date) {
   console.log("Handling SOH_TACTYS file");
 
   const validMaterials = await getValidMaterials();
@@ -146,17 +158,21 @@ async function handleSohTactys(json: any[]) {
   // mapping dan filtering langsung
   const rows = json
     .map(row => ({
-      material_code: row["STOCKCODE"] ?? "",
+      material_code: padMaterialCode(row["STOCKCODE"] ?? ""),
       warehouse_id: row["WAREHOUSE"] ?? "",
       qty: Number(row["SOH"] ?? 0),
     }))
     // hanya material valid dan qty > 0
     .filter(r => validMaterials.has(r.material_code) && r.qty > 0);
 
+  if (rows.length === 0) {
+    throw new Error("Tidak ada data valid yang ditemukan (cek kolom STOCKCODE/WAREHOUSE/SOH)");
+  }
+
   // insert ke Supabase
   return supabase.from("dst_system").insert(
     rows.map(r => ({
-      dst_date: new Date(), // pakai selectedDate kalau ada
+      dst_date: dstDate,
       warehouse_id: r.warehouse_id,
       material_code: r.material_code,
       qty: r.qty,

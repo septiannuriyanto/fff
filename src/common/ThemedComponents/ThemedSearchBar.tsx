@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, hexToRgba } from '../../contexts/ThemeContext';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import routes, { AppRoute } from '../../routes';
@@ -14,13 +14,13 @@ export const ThemedSearchBar: React.FC = () => {
   const { activeTheme } = useTheme();
   const theme = activeTheme;
   const isDark = theme.baseTheme === 'dark';
-  
+
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -77,9 +77,9 @@ export const ThemedSearchBar: React.FC = () => {
         score += (route.keywords?.filter(kw => kw.toLowerCase().includes(lq)).length ?? 0) * 2;
         return { route, score };
       })
-      .filter(r => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+        .filter(r => r.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
       setResults(matched);
       setIsSearching(false);
     }, 400);
@@ -91,14 +91,15 @@ export const ThemedSearchBar: React.FC = () => {
     closeSearch();
   };
 
-  // Colors
-  const overlayBg = 'rgba(0,0,0,0.65)';
-  const modalBg = isDark ? 'rgba(12,12,20,0.98)' : 'rgba(255,255,255,0.98)';
-  const borderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
-  const rowHoverBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)';
-  const pillBg = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.06)';
-  const kbdBg = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
-  const textColor = theme.header.textColor;
+  // Theme-aware Colors
+  const overlayBg = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)';
+  const modalBg = theme.popup.backgroundColor ? hexToRgba(theme.popup.backgroundColor, 0.75) : (isDark ? 'rgba(20,20,28,0.7)' : 'rgba(255,255,255,0.7)');
+  const borderColor = theme.popup.borderColor || (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)');
+  const rowHoverBg = (theme.popup.textHoverColor ? hexToRgba(theme.popup.textHoverColor, 0.1) : undefined) || (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)');
+  const pillBg = theme.popup.separatorColor || (isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.06)');
+  const kbdBg = (theme.popup.backgroundColor ? hexToRgba(theme.popup.backgroundColor, 1.2) : undefined) || (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)');
+  const textColor = theme.popup.textColor || theme.header.textColor;
+
 
   return (
     <>
@@ -130,17 +131,19 @@ export const ThemedSearchBar: React.FC = () => {
           opacity-induced stacking context so z-[99999] actually wins */}
       {isOpen && ReactDOM.createPortal(
         <div
-          className="fixed inset-0 z-[99999] flex items-start justify-center pt-[10vh] px-4"
-          style={{ backgroundColor: overlayBg, backdropFilter: 'blur(10px)' }}
+          className="fixed inset-0 z-[99999] flex items-start justify-center pt-[10vh] px-4 overflow-hidden"
+          style={{ backgroundColor: overlayBg, backdropFilter: 'blur(16px)' }}
           onClick={closeSearch}
         >
           <div
-            className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col border transition-all duration-300"
             style={{
               backgroundColor: modalBg,
+              backdropFilter: 'blur(20px)',
+              borderColor: borderColor,
               boxShadow: isDark
-                ? '0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08)'
-                : '0 30px 80px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.07)',
+                ? '0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 30px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
               color: textColor,
             }}
             onClick={e => e.stopPropagation()}
@@ -148,7 +151,7 @@ export const ThemedSearchBar: React.FC = () => {
             {/* ── Input Row ── */}
             <div
               className="flex items-center px-5 py-4 gap-3"
-              style={{ borderBottom: `1px solid ${borderColor}` }}
+              style={{ borderBottom: `1px solid ${borderColor || 'transparent'}` }}
             >
               <MagnifyingGlassIcon className="w-5 h-5 flex-shrink-0 opacity-50" />
               <input
@@ -175,7 +178,7 @@ export const ThemedSearchBar: React.FC = () => {
                 <p className="text-sm">Type anything to search the FFF application</p>
                 <div className="flex items-center gap-1.5 text-xs mt-1">
                   <span>Use</span>
-                  <kbd className="px-1.5 py-0.5 rounded border text-[11px]" style={{ borderColor }}>⌘K</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded border text-[11px]" style={{ borderColor: borderColor || 'transparent' }}>⌘K</kbd>
                   <span>anywhere to open search</span>
                 </div>
               </div>
@@ -204,8 +207,8 @@ export const ThemedSearchBar: React.FC = () => {
                         <button
                           key={i}
                           onClick={() => handleSelectRoute(route.path)}
-                          className="flex flex-col items-start w-full px-3 py-3 rounded-xl text-left transition-colors"
-                          style={{ borderBottom: `1px solid ${borderColor}` }}
+                          className="flex flex-col items-start w-full px-3 py-2 rounded-xl text-left transition-colors"
+                          style={{ borderBottom: `1px solid ${borderColor || 'transparent'}` }}
                           onMouseEnter={e => (e.currentTarget.style.backgroundColor = rowHoverBg)}
                           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                         >
@@ -244,10 +247,10 @@ export const ThemedSearchBar: React.FC = () => {
             {/* ── Footer ── */}
             <div
               className="flex justify-between items-center px-5 py-2 text-[10px] opacity-40"
-              style={{ borderTop: `1px solid ${borderColor}` }}
+              style={{ borderTop: `1px solid ${borderColor || 'transparent'}` }}
             >
               <div className="flex gap-3">
-                {[['↑','↓','navigate'], ['↵','','select'], ['esc','','close']].map(([k1, k2, label]) => (
+                {[['↑', '↓', 'navigate'], ['↵', '', 'select'], ['esc', '', 'close']].map(([k1, k2, label]) => (
                   <span key={label} className="flex items-center gap-1">
                     <kbd className="px-1 rounded" style={{ backgroundColor: kbdBg }}>{k1}</kbd>
                     {k2 && <kbd className="px-1 rounded" style={{ backgroundColor: kbdBg }}>{k2}</kbd>}
@@ -259,7 +262,7 @@ export const ThemedSearchBar: React.FC = () => {
             </div>
           </div>
         </div>
-      , document.body)}
+        , document.body)}
     </>
   );
 };

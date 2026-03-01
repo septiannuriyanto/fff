@@ -60,23 +60,23 @@ import useLocalStorage from '../hooks/useLocalStorage';
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Persist currentThemeId in localStorage
   const [currentThemeId, setCurrentThemeId] = useLocalStorage<string>('current-theme-id', 'system');
-  
+
   // Selected theme in the dialog doesn't strictly need persistence, but we can if desired.
   // For now, let's keep it in state, initializing with currentThemeId
   const [selectedThemeId, setSelectedThemeId] = useState<string>(currentThemeId);
-  
+
   // Initialize appliedTheme based on the persisted ID
   const [appliedTheme, setAppliedTheme] = useState<ThemePreset>(() => {
     return themes.find(t => getThemeId(t) === currentThemeId) || (systemTheme as ThemePreset);
   });
   const [trialTheme, setTrialTheme] = useState<ThemePreset | null>(null);
-  
+
   // Compute the current active base theme to pass into useColorMode
   const currentBaseTheme = (trialTheme || appliedTheme).baseTheme || getThemeCore(trialTheme || appliedTheme).baseTheme;
 
   // Use generic hook to get color mode, now passing the active base theme
   const [colorMode, setColorMode] = useColorMode(currentBaseTheme) as [string, (mode: string) => void];
-  
+
   // Undo State
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [previousThemeId, setPreviousThemeId] = useState<string>('system');
@@ -87,14 +87,14 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Actually, if it's 'both', we check mode.
     // However, user might expect even fixed themes to have some behavior? 
     // Usually 'both' themes adapt, others are static.
-    
+
     if (theme.baseTheme !== 'both' && theme.baseTheme !== mode) {
-       // If a theme is explicitly 'light', it stays light even in dark mode usually, 
-       // but here we might want to respect the theme's intent.
-       // For now, let's only resolve if baseTheme is 'both' OR if we want to support universal dark mode.
-       // The user request specific to system.json which is 'both'.
-       const themeBase = theme.core?.baseTheme || theme.baseTheme;
-       if (themeBase === 'light' || themeBase === 'dark') return theme;
+      // If a theme is explicitly 'light', it stays light even in dark mode usually, 
+      // but here we might want to respect the theme's intent.
+      // For now, let's only resolve if baseTheme is 'both' OR if we want to support universal dark mode.
+      // The user request specific to system.json which is 'both'.
+      const themeBase = theme.core?.baseTheme || theme.baseTheme;
+      if (themeBase === 'light' || themeBase === 'dark') return theme;
     }
 
     const isDark = mode === 'dark';
@@ -124,10 +124,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const resolveProps = (props: any, mappings: Record<string, string>) => {
       const newProps = { ...props };
       Object.keys(mappings).forEach(key => {
-         const darkKey = mappings[key];
-         if (props[darkKey]) {
-            newProps[key] = props[darkKey];
-         }
+        const darkKey = mappings[key];
+        if (props[darkKey]) {
+          newProps[key] = props[darkKey];
+        }
       });
       return newProps;
     };
@@ -139,83 +139,85 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         ...resolvedBackground,
         color: resolvedBackground.colorDark || resolvedBackground.color
       },
-      header: resolveProps(theme.header, { 
-        color: 'colorDark', 
-         textColor: 'textColorDark', 
-         iconColor: 'iconColorDark' 
+      header: resolveProps(theme.header, {
+        color: 'colorDark',
+        textColor: 'textColorDark',
+        iconColor: 'iconColorDark',
+        borderColor: 'borderColorDark'
       }),
-      sidebar: resolveProps(theme.sidebar, { 
-         color: 'colorDark', 
-         textColor: 'textColorDark',
-         iconColor: 'iconColorDark'
+      sidebar: resolveProps(theme.sidebar, {
+        color: 'colorDark',
+        textColor: 'textColorDark',
+        iconColor: 'iconColorDark',
+        borderColor: 'borderColorDark'
       }),
       container: resolveProps(theme.container, {
-         color: 'colorDark',
-         textColor: 'textColorDark',
-         iconColor: 'iconColorDark',
-         borderColor: 'borderColorDark'
+        color: 'colorDark',
+        textColor: 'textColorDark',
+        iconColor: 'iconColorDark',
+        borderColor: 'borderColorDark'
       }),
       card: resolveProps(theme.card, {
-         shadow: 'shadowDark',
-         borderColor: 'borderColorDark',
-         textColor: 'textColorDark',
-         iconColor: 'iconColorDark'
+        shadow: 'shadowDark',
+        borderColor: 'borderColorDark',
+        textColor: 'textColorDark',
+        iconColor: 'iconColorDark'
       }),
       input: resolveProps(theme.input, {
-         color: 'colorDark',
-         textColor: 'textColorDark',
-         borderColor: 'borderColorDark',
-         shadow: 'shadowDark'
+        color: 'colorDark',
+        textColor: 'textColorDark',
+        borderColor: 'borderColorDark',
+        shadow: 'shadowDark'
       }),
       button: {
-         primary: resolveProps(theme.button.primary, { 
-             color: 'colorDark', 
-             textColor: 'textColorDark', 
-             borderColor: 'borderColorDark', 
-             shadow: 'shadowDark' 
-         }),
-         secondary: resolveProps(theme.button.secondary, { 
-             color: 'colorDark', 
-             textColor: 'textColorDark', 
-             borderColor: 'borderColorDark', 
-             shadow: 'shadowDark' 
-         }),
-         tertiary: resolveProps(theme.button.tertiary, { 
-             color: 'colorDark', 
-             textColor: 'textColorDark', 
-             borderColor: 'borderColorDark', 
-             shadow: 'shadowDark' 
-         }),
+        primary: resolveProps(theme.button.primary, {
+          color: 'colorDark',
+          textColor: 'textColorDark',
+          borderColor: 'borderColorDark',
+          shadow: 'shadowDark'
+        }),
+        secondary: resolveProps(theme.button.secondary, {
+          color: 'colorDark',
+          textColor: 'textColorDark',
+          borderColor: 'borderColorDark',
+          shadow: 'shadowDark'
+        }),
+        tertiary: resolveProps(theme.button.tertiary, {
+          color: 'colorDark',
+          textColor: 'textColorDark',
+          borderColor: 'borderColorDark',
+          shadow: 'shadowDark'
+        }),
       },
-      grid: resolveProps(theme.grid, { 
-         backgroundColor: 'backgroundColorDark',
-         borderColor: 'borderColorDark',
-         headerColor: 'headerColorDark',
-         primaryTextColor: 'primaryTextColorDark',
-         headerTextColor: 'headerTextColorDark',
-         secondaryTextColor: 'secondaryTextColorDark',
-         headerHoverColor: 'headerHoverColorDark',
-         headerMovingColor: 'headerMovingColorDark',
-         showWrapperBorder: 'showWrapperBorderDark',
-         showHeaderRowBorder: 'showHeaderRowBorderDark',
-         rowBorderStyle: 'rowBorderStyleDark',
-         rowBorderWidth: 'rowBorderWidthDark',
-         rowBorderColor: 'rowBorderColorDark',
-         columnBorderStyle: 'columnBorderStyleDark',
-         columnBorderWidth: 'columnBorderWidthDark',
-         columnBorderColor: 'columnBorderColorDark'
+      grid: resolveProps(theme.grid, {
+        backgroundColor: 'backgroundColorDark',
+        borderColor: 'borderColorDark',
+        headerColor: 'headerColorDark',
+        primaryTextColor: 'primaryTextColorDark',
+        headerTextColor: 'headerTextColorDark',
+        secondaryTextColor: 'secondaryTextColorDark',
+        headerHoverColor: 'headerHoverColorDark',
+        headerMovingColor: 'headerMovingColorDark',
+        showWrapperBorder: 'showWrapperBorderDark',
+        showHeaderRowBorder: 'showHeaderRowBorderDark',
+        rowBorderStyle: 'rowBorderStyleDark',
+        rowBorderWidth: 'rowBorderWidthDark',
+        rowBorderColor: 'rowBorderColorDark',
+        columnBorderStyle: 'columnBorderStyleDark',
+        columnBorderWidth: 'columnBorderWidthDark',
+        columnBorderColor: 'columnBorderColorDark'
       }),
       ui: resolveProps(theme.ui, { primaryColor: 'primaryColorDark' }),
       popup: resolveProps(theme.popup, {
-         backgroundColor: 'backgroundColorDark',
-         borderColor: 'borderColorDark',
-         textColor: 'textColorDark',
-         textActiveColor: 'textActiveColorDark',
-         textHoverColor: 'textHoverColorDark',
-         iconColor: 'iconColorDark',
-         separatorColor: 'separatorColorDark',
-         headerIconColor: 'headerIconColorDark',
-         headerTextColor: 'headerTextColorDark'
+        backgroundColor: 'backgroundColorDark',
+        borderColor: 'borderColorDark',
+        textColor: 'textColorDark',
+        textActiveColor: 'textActiveColorDark',
+        textHoverColor: 'textHoverColorDark',
+        iconColor: 'iconColorDark',
+        separatorColor: 'separatorColorDark',
+        headerIconColor: 'headerIconColorDark',
+        headerTextColor: 'headerTextColorDark'
       })
     };
   }, []);
@@ -225,7 +227,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (bg.mode === 'gradient' && bg.gradient) {
       const { stops, to, reverse } = bg.gradient;
       if (!stops || stops.length < 2) return bg.color || '';
-      
+
       const posMap: any = {
         'TopLeft': 'to bottom right',
         'TopCenter': 'to bottom',
@@ -248,14 +250,14 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Compute active theme based on trial/applied and color mode
   const rawActiveTheme = trialTheme || appliedTheme;
   const activeTheme = React.useMemo(() => {
-     return resolveTheme(rawActiveTheme, colorMode);
+    return resolveTheme(rawActiveTheme, colorMode);
   }, [rawActiveTheme, colorMode, resolveTheme]);
 
   // ... (existing helper functions: setCurrentTheme, setSelectedTheme, etc.)
 
   const setCurrentTheme = useCallback((id: string) => {
     let themeToApply = themes.find(t => getThemeId(t) === id) || (systemTheme as ThemePreset);
-    
+
     setTrialTheme((prevTrial) => {
       if (prevTrial && getThemeId(prevTrial) === id) {
         themeToApply = { ...prevTrial };
@@ -279,7 +281,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const applyThemeWithUndo = useCallback((id: string) => {
     setAppliedTheme((prevApplied) => {
       let themeToApply = themes.find(t => getThemeId(t) === id) || (systemTheme as ThemePreset);
-      
+
       setTrialTheme((prevTrial) => {
         if (prevTrial && getThemeId(prevTrial) === id) {
           themeToApply = { ...prevTrial };
@@ -289,7 +291,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       setPreviousThemeId(currentThemeId);
       setPreviousTheme(prevApplied);
-      
+
       setCurrentThemeId(id); // writes to localStorage
       setShowUndoToast(true);
       return themeToApply;
@@ -334,9 +336,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [currentThemeId]);
 
   return (
-    <ThemeContext.Provider value={{ 
-      currentThemeId, 
-      selectedThemeId, 
+    <ThemeContext.Provider value={{
+      currentThemeId,
+      selectedThemeId,
       appliedTheme,
       trialTheme,
       activeTheme, // Export activeTheme
@@ -344,7 +346,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setColorMode, // Export setColorMode
       showUndoToast,
       themes,
-      setCurrentTheme, 
+      setCurrentTheme,
       setSelectedTheme,
       applyThemeWithUndo,
       undoThemeChange,

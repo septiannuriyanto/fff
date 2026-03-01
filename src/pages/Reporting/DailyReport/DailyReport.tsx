@@ -1,6 +1,7 @@
 import StockReporting from './components/StockReporting'
 import TmrReporting from '../TMRReport/TMRReport'
 import FuelmanReport from '../FuelmanReport/FuelmanReport'
+import CoordinatorReport from '../FuelmanReport/CoordinatorReport'
 
 const DailyReport = () => {
   return (
@@ -10,8 +11,9 @@ const DailyReport = () => {
           Daily Report
         </h2>
       </div>
-      <div className="content-container">
-        <FuelmanReport/>
+      <div className="content-container flex flex-row gap-4 w-full justify-center">
+        <FuelmanReport />
+        <CoordinatorReport />
       </div>
     </div>
   )

@@ -74,6 +74,7 @@ import StockManagement from './pages/Dashboard/StockManagement/StockManagement';
 import MasterCompetency from './pages/MasterData/Competency/MasterCompetency';
 import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
 import InfrastructureInspection from './pages/Reporting/Infrastructure/InfrastructureInspection';
+import OilHystoricalReport from './pages/Oil/HystoricalReport/OilHystoricalReport';
 
 export interface AppRoute {
   path: string;
@@ -478,6 +479,13 @@ const routes: AppRoute[] = [
     title: 'FFF | Housekeeping Oil',
     allowedRoles: OIL_ROLES,
     keywords: ['oil', 'housekeeping', 'cleanliness']
+  },
+  {
+    path: '/oil/historical',
+    component: <OilHystoricalReport />,
+    title: 'FFF | Oil Historical Stock Deviation',
+    allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'historical', 'deviation', 'report']
   },
   // Plant Reporting Routes
   {

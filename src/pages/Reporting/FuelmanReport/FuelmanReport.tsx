@@ -543,10 +543,12 @@ export default function FuelmanReport() {
       });
 
       form.transfers.forEach((t: any, idx: number) => {
-        if (!t.transfer_from) errors.push(`Transfer #${idx + 1}: Dari belum diisi`);
-        if (!t.destination) errors.push(`Transfer #${idx + 1}: Tujuan belum diisi`);
-        if (!t.transfer_out || Number(t.transfer_out) <= 0) errors.push(`Transfer #${idx + 1}: Qty harus > 0`);
-        if (!t.synchronized) errors.push(`Transfer #${idx + 1}: Mohon konfirmasi 'Sudah disinkronisasi'`);
+        // Only validate if a destination is provided (making it optional)
+        if (t.destination && t.destination.trim() !== "") {
+          if (!t.transfer_from) errors.push(`Transfer #${idx + 1}: Dari belum diisi`);
+          if (!t.transfer_out || Number(t.transfer_out) <= 0) errors.push(`Transfer #${idx + 1}: Qty harus > 0`);
+          if (!t.synchronized) errors.push(`Transfer #${idx + 1}: Mohon konfirmasi 'Sudah disinkronisasi'`);
+        }
       });
 
       // Flowmeter Validations
@@ -627,12 +629,14 @@ export default function FuelmanReport() {
           value: Number(r.value || 0),
           ft_number: (r.ft_number || "").toUpperCase()
         })),
-        p_transfers: form.transfers.map((t: any) => ({
-          ...t,
-          transfer_from: (t.transfer_from || "").toUpperCase(),
-          destination: (t.destination || "").toUpperCase(),
-          transfer_out: Number(t.transfer_out || 0)
-        })),
+        p_transfers: form.transfers
+          .filter((t: any) => t.destination && t.destination.trim() !== "")
+          .map((t: any) => ({
+            ...t,
+            transfer_from: (t.transfer_from || "").toUpperCase(),
+            destination: (t.destination || "").toUpperCase(),
+            transfer_out: Number(t.transfer_out || 0)
+          })),
         p_flowmeter: form.flowmeter.map((f: any) => ({
           ...f,
           fm_awal: Number(f.fm_awal || 0),
@@ -641,8 +645,13 @@ export default function FuelmanReport() {
         })),
         p_tmr: form.tmr.map((item: any) => {
           const insideRest = isInsideRestTime(item.time_refueling);
+          let processedLoaderId = (item.loader_id || "").toUpperCase();
+          if (/^\d+$/.test(processedLoaderId)) {
+            processedLoaderId = `EX${processedLoaderId}`;
+          }
+
           return {
-            loader_id: (item.loader_id || "").toUpperCase(),
+            loader_id: processedLoaderId,
             time_refueling: item.time_refueling || "",
             reason: item.reason || "",
             evidence_url: item.evidence_url || "",
@@ -1037,7 +1046,7 @@ export default function FuelmanReport() {
                       transition={{ duration: 0.2 }}
                       layout
                     >
-                      <Section title="Transfers (OB)">
+                      <Section title="Fuel Transfer">
                         {form.transfers.length > 0 ? (
                           <div className="space-y-4">
                             {form.transfers.map((item: any, i: number) => (

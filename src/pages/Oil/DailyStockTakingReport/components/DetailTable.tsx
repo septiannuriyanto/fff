@@ -9,9 +9,6 @@ import { detectAndUpload } from './sourceFileProcessing';
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import UploadModal from './UploadModal';
 import { exportToExcel } from '../utils/exportToExcel';
-import IBCEngine from '../../../images/icon/ibc-engine.png';
-import IBCTransmission from '../../../../images/icon/ibc-transmission.png';
-import IBCHydraulic from '../../../../images/icon/ibc-hydraulic.png';
 import BufferStockPanel from './BufferStockInfo';
 
 interface DetailTableProps {
@@ -47,29 +44,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
   const [uoiFilter, setUoiFilter] = useState<string>('');
   const [locationFilter, setLocationFilter] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const [liquidMeters, setLiquidMeters] = useState<any[]>([]); // data special_monitoring
-
-  useEffect(() => {
-    // fetch storage_oil_setup untuk LiquidMeter
-    const fetchLiquidMeterData = async () => {
-      const { data, error } = await supabase
-        .from('storage_oil_setup')
-        .select('*')
-        .not('special_monitor', 'is', null); // hanya yang punya angka
-
-      if (!error && data) {
-        // urutkan sesuai angka special_monitor
-        const sorted = data.sort(
-          (a, b) => (a.special_monitor ?? 0) - (b.special_monitor ?? 0),
-        );
-        setLiquidMeters(sorted);
-      } else {
-        console.error(error);
-      }
-    };
-
-    fetchLiquidMeterData();
-  }, []);
 
   // Autofocus modal
   useEffect(() => {
@@ -109,8 +83,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
   };
 
   // Save modal
-  // ubah signature jadi menerima typeDst
-  // saat save:
   const saveModal = async () => {
     const record = records.find((r) => r.id === modalRecordId);
     if (!record) return;
@@ -233,7 +205,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
   let lastWarehouse = '';
   let isOddGroup = false;
 
-  // Tambah state di atas (sebelum return)
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<
     'system1' | 'system2' | 'failed_posting' | null
@@ -252,26 +223,25 @@ const DetailTable: React.FC<DetailTableProps> = ({
 
   // handle file selection
   const handleFileSelect = (fileList: FileList | null) => {
-    if (!fileList) return;
-    // ubah FileList → array File
+    if (!fileList || fileList.length === 0) return;
     const filesArray = Array.from(fileList);
     setSelectedFiles(filesArray);
+    setSelectedFile(filesArray[0]); // Penting: set selectedFile juga untuk UI modal single upload
   };
 
   const handleUpload = async () => {
     if (!selectedFile || !uploadTarget) return;
 
     try {
-      // proses upload
-      await detectAndUpload(selectedFile);
+      // proses upload dengan menyertakan selectedDate
+      await detectAndUpload(selectedFile, selectedDate);
       // refresh data setelah upload
       await fetchRecords(selectedDate);
       // tutup modal
       setUploadModalOpen(false);
+      setSelectedFile(null); // Reset setelah sukses
     } catch (err) {
-      // tangkap error dari detectAndUpload atau fetchRecords
       console.error('Upload error:', err);
-      // tampilkan ke user sesuai UI kamu
       alert(
         err instanceof Error
           ? `Gagal upload: ${err.message}`
@@ -280,14 +250,15 @@ const DetailTable: React.FC<DetailTableProps> = ({
     }
   };
 
-  const handleUploadMultiple = async () => {
-    // pastikan ada file & target
-    if (!selectedFiles?.length || !uploadTarget) return;
+  const handleUploadMultiple = async (files?: File[]) => {
+    // Gunakan files dari argument (dari UploadModal) atau dari state
+    const filesToUpload = files || selectedFiles;
+    if (!filesToUpload?.length) return;
 
     try {
       // jalankan detectAndUpload untuk semua file secara berurutan
-      for (const file of selectedFiles) {
-        await detectAndUpload(file);
+      for (const file of filesToUpload) {
+        await detectAndUpload(file, selectedDate);
       }
 
       // setelah semua upload selesai refresh data
@@ -295,6 +266,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
 
       // tutup modal
       setUploadModalOpen(false);
+      setSelectedFiles([]); // Reset setelah sukses
     } catch (err) {
       console.error('Upload error:', err);
       alert(
@@ -304,6 +276,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
       );
     }
   };
+
   async function handleExportToExcel(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): Promise<void> {
     await exportToExcel({
       selectedDate,
@@ -312,6 +285,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
     event.stopPropagation();
     event.preventDefault();
   }
+
   return (
     <div>
       <StockLevelMonitoring
@@ -323,10 +297,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
         <BufferStockPanel records={records} />
       </div>
 
-
       <div className="chart__and-summary p-4 border rounded mb-4">
-        {/* Chart summary */}
-
         <div className="mb-4">
           <StockTakingOilChart
             sohFisik={sohFisik}
@@ -337,7 +308,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
           />
         </div>
 
-        {/* Summary numbers */}
         <div className="w-full flex justify-between mb-4 px-2">
           <div>
             <h1 className="font-bold">Stock Fisik</h1>
@@ -358,9 +328,8 @@ const DetailTable: React.FC<DetailTableProps> = ({
           <div>
             <h1 className="font-bold">Difference</h1>
             <h1
-              className={`${
-                diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
-              }`}
+              className={`${diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : ''
+                }`}
             >
               {diff.toLocaleString('id-ID')}
             </h1>
@@ -377,24 +346,21 @@ const DetailTable: React.FC<DetailTableProps> = ({
         <div className="buttons__border border border-slate-200 rounded-md p-2 bg-slate-200 dark:bg-boxdark-2">
           <button
             onClick={() => setViewMode('SOH')}
-            className={`px-4 py-1 rounded ${
-              viewMode === 'SOH' ? 'bg-slate-400 text-white' : 'bg-gray-200'
-            }`}
+            className={`px-4 py-1 rounded ${viewMode === 'SOH' ? 'bg-slate-400 text-white' : 'bg-gray-200'
+              }`}
           >
             SOH
           </button>
           <button
             onClick={() => setViewMode('Pending')}
-            className={`px-4 py-1 rounded ${
-              viewMode === 'Pending' ? 'bg-slate-400 text-white' : 'bg-gray-200'
-            }`}
+            className={`px-4 py-1 rounded ${viewMode === 'Pending' ? 'bg-slate-400 text-white' : 'bg-gray-200'
+              }`}
           >
             Pending
           </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <div className="flex gap-2 mb-2">
           <button
@@ -422,7 +388,6 @@ const DetailTable: React.FC<DetailTableProps> = ({
 
         <table className="min-w-full border-collapse border border-slate-400 dark:border-slate-300">
           <thead className="bg-slate-200 dark:bg-slate-800">
-            {/* Baris 1: Headers */}
             <tr>
               <th className="px-3 py-2 border text-center">No</th>
               <th className="px-3 py-2 border text-center">Warehouse</th>
@@ -436,9 +401,8 @@ const DetailTable: React.FC<DetailTableProps> = ({
                 {viewMode === 'SOH' ? 'Qty' : 'Pending'}
               </th>
             </tr>
-            {/* Baris 2: Filters */}
             <tr>
-              <th className="px-3 py-1 border"></th> {/* No */}
+              <th className="px-3 py-1 border"></th>
               <th className="px-3 py-1 border">
                 <select
                   className="w-full border rounded px-1 text-sm"
@@ -543,11 +507,7 @@ const DetailTable: React.FC<DetailTableProps> = ({
               </th>
               {viewMode === 'SOH' ? (
                 <>
-                  <th className="px-3 py-1 border">
-                    <div className="flex flex-col items-center">
-                      <span>Fisik</span>
-                    </div>
-                  </th>
+                  <th className="px-3 py-1 border">Fisik</th>
                   <th className="px-3 py-1 border">
                     <div className="flex flex-col items-center">
                       <span>System1</span>
@@ -708,10 +668,10 @@ const DetailTable: React.FC<DetailTableProps> = ({
               {uploadTarget === 'system1'
                 ? 'System 1'
                 : uploadTarget === 'system2'
-                ? 'System 2'
-                : uploadTarget === 'failed_posting'
-                ? 'Failed Posting'
-                : ''}
+                  ? 'System 2'
+                  : uploadTarget === 'failed_posting'
+                    ? 'Failed Posting'
+                    : 'Semua'}
             </h4>
 
             <div

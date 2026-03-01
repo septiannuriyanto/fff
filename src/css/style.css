@@ -80,6 +80,168 @@
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Premium Hover Glow Utility */
+.premium-glow {
+  transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.premium-glow:hover {
+  border-color: var(--primary-color) !important;
+  z-index: 1001; /* Ensure glow stays on top of neighbors */
+}
+
+/* Use pseudo-element for shadow to avoid conflict with base shadows */
+.premium-glow::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0px transparent;
+  transition: box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.premium-glow:hover::after {
+  box-shadow: 0 0 15px var(--glow-color);
+}
+
+/* Sidebar CSS-based Expansion */
+:root {
+  --sidebar-width-mini: 5rem;
+  --sidebar-width-full: 16.25rem;
+  --sidebar-width: var(--sidebar-width-full);
+}
+
+body:not(.sidebar-expanded) {
+  --sidebar-width: var(--sidebar-width-mini);
+}
+
+.sidebar-main {
+  width: var(--sidebar-width) !important;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s, border-color 0.3s !important;
+}
+
+.sidebar-main.sidebar-mini {
+  width: var(--sidebar-width-mini) !important;
+}
+
+/* Hover expansion for auto mode */
+.sidebar-main.sidebar-mini-auto:hover {
+  width: var(--sidebar-width-full) !important;
+}
+
+/* Label & Arrow Visibility */
+.sidebar-main .sidebar-label,
+.sidebar-main .sidebar-arrow {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s !important;
+  opacity: 1;
+  width: auto;
+  display: block;
+}
+
+.sidebar-main.sidebar-mini .sidebar-label,
+.sidebar-main.sidebar-mini .sidebar-arrow,
+.sidebar-main.sidebar-mini .sidebar-submenu {
+  display: none;
+}
+
+/* Ensure labels in popups are always visible even if parent is sidebar-mini */
+.sidebar-main.sidebar-mini .sidebar-popup .sidebar-label {
+  display: inline-block;
+  opacity: 1;
+  width: auto;
+  height: auto;
+}
+
+.sidebar-main.sidebar-mini-auto:hover .sidebar-label,
+.sidebar-main.sidebar-mini-auto:hover .sidebar-arrow,
+.sidebar-main.sidebar-mini-auto:hover .sidebar-submenu {
+  display: block;
+  opacity: 1;
+  width: auto;
+  pointer-events: auto;
+}
+
+.sidebar-main.sidebar-mini-auto:hover .sidebar-submenu {
+  display: block !important;
+}
+
+/* Adjust group items in mini mode - more breathing room */
+.sidebar-main.sidebar-mini .sidebar-group-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-main.sidebar-mini-auto:hover .sidebar-group-item {
+  justify-content: flex-start;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0px;
+}
+
+/* Tighter spacing inside popups */
+.sidebar-popup ul {
+  gap: 0.1rem !important;
+}
+
+.sidebar-popup .sidebar-label {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
+.sidebar-popup .sidebar-group-item {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+/* Header & Nav Padding Adjustments */
+.sidebar-main .sidebar-header-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  transition: justify-content 0.3s, padding 0.3s;
+}
+
+.sidebar-main.sidebar-mini .sidebar-header-container {
+  justify-content: center;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.sidebar-main.sidebar-mini-auto:hover .sidebar-header-container {
+  justify-content: space-between;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.sidebar-main nav {
+  transition: padding 0.3s;
+}
+
+.sidebar-main.sidebar-mini nav {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.sidebar-main.sidebar-mini-auto:hover nav {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Secondary Hover Glow for Sidebar Items */
+.sidebar-group-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
 /* third-party libraries CSS */
 
 .tableCheckbox:checked ~ div span {

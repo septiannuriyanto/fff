@@ -5,16 +5,16 @@ const DarkModeSwitcher = () => {
   const activeTheme = trialTheme || appliedTheme;
 
   // Disable/hide switcher if the theme forces a specific mode (i.e. 'dark' or 'light')
-  const isFixedMode = activeTheme.baseTheme === 'dark' || activeTheme.baseTheme === 'light';
+  const themeBase = activeTheme.core?.baseTheme || activeTheme.baseTheme;
+  const isFixedMode = themeBase === 'dark' || themeBase === 'light';
   const isDisabled = isFixedMode;
   const isHidden = isFixedMode;
 
   return (
     <li className={isHidden ? 'hidden' : ''}>
       <label
-        className={`relative m-0 block h-7.5 w-14 rounded-full transition-all duration-300 ${
-          colorMode === 'dark' ? 'bg-primary' : 'bg-stroke'
-        } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+        className={`relative m-0 block h-7.5 w-14 rounded-full transition-all duration-300 ${colorMode === 'dark' ? 'bg-primary' : 'bg-stroke'
+          } ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
       >
         <input
           type="checkbox"
@@ -27,9 +27,8 @@ const DarkModeSwitcher = () => {
           className="dur absolute top-0 z-50 h-full w-full cursor-pointer opacity-0"
         />
         <span
-          className={`absolute top-1/2 left-[3px] flex h-6 w-6 -translate-y-1/2 translate-x-0 items-center justify-center rounded-full bg-white shadow-switcher duration-75 ease-linear ${
-            colorMode === 'dark' && '!right-[3px] !translate-x-full'
-          }`}
+          className={`absolute top-1/2 left-[3px] flex h-6 w-6 -translate-y-1/2 translate-x-0 items-center justify-center rounded-full bg-white shadow-switcher duration-75 ease-linear ${colorMode === 'dark' && '!right-[3px] !translate-x-full'
+            }`}
         >
           <span className="dark:hidden">
             <svg

@@ -21,13 +21,19 @@
     "useSystem": false
   },
   "header": {
-    "color": "#0c4a6e",
+    "color": "#082f49",
     "opacity": 1,
     "textColor": "#e0f2fe",
     "iconColor": "#e0f2fe",
     "iconSize": "1.25rem",
     "detached": true,
-    "backdropBlur": "none"
+    "backdropBlur": "none",
+    "border": "solid",
+    "borderRadius": "0.5rem",
+    "borderWidth": "1px",
+    "borderOpacity": 1,
+    "borderColor": "#0ea5e9",
+    "borderColorDark": "#0ea5e9"
   },
   "sidebar": {
     "color": "#082f49",
@@ -37,7 +43,13 @@
     "iconColor": "#e0f2fe",
     "iconSize": "1.5rem",
     "detached": true,
-    "backdropBlur": "none"
+    "backdropBlur": "none",
+    "border": "solid",
+    "borderRadius": "1rem",
+    "borderWidth": "1px",
+    "borderOpacity": 1,
+    "borderColor": "#0ea5e9",
+    "borderColorDark": "#0ea5e9"
   },
   "container": {
     "color": "#082f49",

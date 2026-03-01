@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import DropdownMessage from './DropdownMessage';
 import DropdownNotification from './DropdownNotification';
@@ -5,7 +6,7 @@ import DropdownUser from './DropdownUser';
 import LogoIcon from '../../images/logo/logo-icon.svg';
 import LogoIconDark from '../../images/logo/logo-icon-dark.svg';
 import DarkModeSwitcher from './DarkModeSwitcher';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, hexToRgba } from '../../contexts/ThemeContext';
 import { ThemedSearchBar } from '../../common/ThemedComponents/ThemedSearchBar';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
@@ -16,27 +17,31 @@ const Header = (props: {
 }) => {
 
   const { activeTheme } = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
   const isDetached = activeTheme.header.detached === true;
-  
-  // Get sidebar config from localStorage to determine if mini or full
-  const sidebarConfig = typeof window !== 'undefined' ? localStorage.getItem('sidebar-config') as 'full' | 'mini' | 'auto' | null : 'full';
-  const isSidebarMini = sidebarConfig === 'mini';
 
   return (
     <header
-      className={`sticky top-0 z-[998] flex w-full shadow-sm border-b border-slate-200/50 dark:border-slate-800/50 transition-all duration-700 ${isDetached ? 'lg:m-4 lg:rounded-2xl lg:border' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`sticky top-0 z-[998] flex transition-all duration-700 ${isDetached ? 'm-4 lg:m-6 lg:rounded-2xl lg:border w-[calc(100%-2rem)] lg:w-[calc(100%-3rem)]' : 'w-full border-b'}`}
       style={{
-        backgroundColor: activeTheme.header.color,
-        opacity: activeTheme.header.opacity,
+        backgroundColor: hexToRgba(activeTheme.header.color, activeTheme.header.opacity),
         backdropFilter: activeTheme.header.backdropBlur !== 'none'
           ? `blur(${activeTheme.header.backdropBlur === 'sm' ? '4px' : activeTheme.header.backdropBlur === 'md' ? '8px' : activeTheme.header.backdropBlur === 'lg' ? '12px' : activeTheme.header.backdropBlur === 'xl' ? '20px' : '0px'})`
           : undefined,
         color: activeTheme.header.textColor,
-        borderColor: isDetached ? activeTheme.container.borderColor : undefined,
+        borderRadius: activeTheme.header.borderRadius,
+        border: activeTheme.header.border !== 'none'
+          ? `${activeTheme.header.borderWidth} ${activeTheme.header.border} ${isHovered ? activeTheme.ui.primaryColor : hexToRgba(activeTheme.header.borderColor, activeTheme.header.borderOpacity)}`
+          : 'none',
+        boxShadow: isHovered ? `0 0 15px ${hexToRgba(activeTheme.ui.primaryColor, 0.15)}` : undefined,
       }}
     >
       {/* 3-column flex: [mobile controls] [centered search] [right icons] */}
-      <div className="flex flex-grow items-center px-4 py-3 md:px-6 gap-4">
+      <div className="flex flex-grow items-center px-4 py-3 md:px-10 xl:px-14 gap-4 relative">
+        {/* Invisible spacer to balance the right icons and push center content to true center relative to screen if needed, 
+            but the user said "play with empty space on left", so let's add a dynamic spacer on the left of center content */}
 
         {/* LEFT — hamburger + logo (mobile / tablet only) */}
         <div className="flex items-center gap-2 sm:gap-4 lg:hidden flex-shrink-0">
@@ -67,10 +72,18 @@ const Header = (props: {
           </Link>
         </div>
 
+        {/* LEFT SPACER — This "plays with the empty space" to keep search bar from jittering */}
+        <div className="hidden lg:block lg:w-[10%] xl:w-[15%] flex-shrink-0" />
+
         {/* CENTER — search bar grows & sits centered */}
-        <div className="flex flex-1 items-center justify-center lg:ml-40 ">
-          <ThemedSearchBar />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="w-full max-w-[600px]">
+            <ThemedSearchBar />
+          </div>
         </div>
+
+        {/* RIGHT SPACER — Balances the left one to keep things centered and airy */}
+        <div className="hidden lg:block lg:w-[10%] xl:w-[15%] flex-shrink-0" />
 
         {/* RIGHT — icons (dark mode, mobile search loupe, notifications, messages, user) */}
         <div className="flex items-center gap-3 2xsm:gap-4 flex-shrink-0">

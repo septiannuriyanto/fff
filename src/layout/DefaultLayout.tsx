@@ -27,7 +27,7 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   // Determine active theme (priority: trial > applied)
   // Active theme is now resolved by context including dark mode mappings
-  const activeBackground = !activeTheme.background.useSystem 
+  const activeBackground = !activeTheme.background.useSystem
     ? getBackgroundCss(activeTheme.background)
     : '';
 
@@ -41,16 +41,16 @@ const DefaultLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [activeTheme.baseTheme]);
 
   return (
-    <div 
+    <div
       className="dark:bg-boxdark-2 dark:text-bodydark min-h-screen w-full transition-all duration-700 ease-in-out"
       style={!activeTheme.background.useSystem ? { background: activeBackground, backgroundSize: 'cover', minHeight: '100vh' } : {}}
     >
       {/* Undo Toast for Theme Changes */}
       {showUndoToast && (
-        <UndoToast 
-          message="Theme Applied" 
-          onUndo={undoThemeChange} 
-          onExpire={clearUndo} 
+        <UndoToast
+          message="Theme Applied"
+          onUndo={undoThemeChange}
+          onExpire={clearUndo}
         />
       )}
 

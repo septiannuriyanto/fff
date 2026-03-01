@@ -13,9 +13,10 @@ const useColorMode = (baseTheme?: 'light' | 'dark' | 'both') => {
     } else if (baseTheme === 'light') {
       activeMode = 'light';
     } else if (baseTheme === 'both') {
-      // Time-based logic: 6 PM (18:00) to 6 AM (06:00) is dark
-      const hour = new Date().getHours();
-      activeMode = (hour >= 18 || hour < 6) ? 'dark' : 'light';
+      // If "both", respect the stored preference.
+      // We only fallback to time-based if there's no stored preference OR we want to initialize it once.
+      // For this app, let's just let the storedColorMode drive it when baseTheme is both.
+      activeMode = storedColorMode;
     }
 
     setCurrentColorMode(activeMode);
