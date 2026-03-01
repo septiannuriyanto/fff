@@ -29,7 +29,7 @@ const CACHE_EXPIRY = 3 * 24 * 60 * 60 * 1000; // 3 days
 const BUILD_NUMBER_KEY = 'fff_app_build_number';
 const getDraftKey = (reportId: string) => `fuelman_draft_report_${reportId}`;
 
-const CLEANUP_AFTER_SUBMIT = false; // Switch for post-submit cleanup
+const CLEANUP_AFTER_SUBMIT = true; // Switch for post-submit cleanup
 const DEVELOPMENT_MODE = true; // For image upload implementation logic
 
 // Rest time helper
@@ -538,8 +538,12 @@ export default function FuelmanReport() {
 
       // Detailed Validations
       form.ritasi.forEach((r: any, idx: number) => {
-        if (!r.ft_number) errors.push(`Ritasi #${idx + 1}: FT Number belum diisi`);
-        if (!r.value || Number(r.value) <= 0) errors.push(`Ritasi #${idx + 1}: Value harus > 0`);
+        if (r.value && Number(r.value) > 0 && !r.ft_number) {
+          errors.push(`Ritasi #${idx + 1}: FT Number belum diisi untuk input ritasi`);
+        }
+        if (r.ft_number && (!r.value || Number(r.value) <= 0)) {
+          errors.push(`Ritasi #${idx + 1}: Value ritasi harus > 0 jika FT diisi`);
+        }
       });
 
       form.transfers.forEach((t: any, idx: number) => {
@@ -624,11 +628,13 @@ export default function FuelmanReport() {
         p_master_report_id: reportId,
         p_fuelman_id: resolvedFuelmanId,
         p_operator_id: resolvedOperatorId,
-        p_ft_number: (form.ritasi[0]?.ft_number || "").toUpperCase(),
-        p_ritasi: form.ritasi.map((r: any) => ({
-          value: Number(r.value || 0),
-          ft_number: (r.ft_number || "").toUpperCase()
-        })),
+        p_ft_number: (ftUnitSearch || form.ritasi[0]?.ft_number || "").toUpperCase(),
+        p_ritasi: form.ritasi
+          .filter((r: any) => r.ft_number && r.value && Number(r.value) > 0)
+          .map((r: any) => ({
+            value: Number(r.value || 0),
+            ft_number: (r.ft_number || "").toUpperCase()
+          })),
         p_transfers: form.transfers
           .filter((t: any) => t.destination && t.destination.trim() !== "")
           .map((t: any) => ({
