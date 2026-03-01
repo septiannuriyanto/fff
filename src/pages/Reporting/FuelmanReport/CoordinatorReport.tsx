@@ -254,10 +254,17 @@ export default function CoordinatorReport() {
             }
 
             msg += `*RITASI (LITER)*\n`;
-            ritasi?.forEach((r: any) => {
-                msg += `${r.ft_number} = ${formatDots(r.value || 0)}\n`;
+            const aggregatedRitasi = (ritasi || []).reduce((acc: Record<string, number>, curr: any) => {
+                const ft = curr.ft_number || 'UNKNOWN';
+                acc[ft] = (acc[ft] || 0) + Number(curr.value || 0);
+                return acc;
+            }, {});
+
+            Object.entries(aggregatedRitasi).forEach(([ft, value]) => {
+                msg += `${ft} = ${formatDots(value as number)}\n`;
             });
-            const totalInValue = ritasi?.reduce((acc: number, r: any) => acc + Number(r.value || 0), 0) || 0;
+
+            const totalInValue = Object.values(aggregatedRitasi).reduce((acc: number, val: any) => acc + Number(val), 0) || 0;
             msg += `*TOTAL FUEL IN = ${formatDots(totalInValue)} LITER*\n\n`;
 
             if (tmr.length > 0) {

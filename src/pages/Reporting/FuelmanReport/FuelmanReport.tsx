@@ -701,7 +701,11 @@ export default function FuelmanReport() {
       }
     } catch (err: any) {
       console.error("Submission error:", err);
-      toast.error(err.message || "Failed to create report");
+      if (err.message && (err.message.includes("duplicate key value") || err.message.includes("unique constraint"))) {
+        toast.error("Report sudah tercatat di database");
+      } else {
+        toast.error(err.message || "Failed to create report");
+      }
     } finally {
       setLoading(false);
     }
@@ -1697,9 +1701,16 @@ export default function FuelmanReport() {
                   opacity: loading ? 0.6 : 1,
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
-                className="w-full py-3 font-medium transition-all hover:opacity-90"
+                className="w-full py-3 font-medium transition-all flex items-center justify-center gap-2 hover:opacity-90"
               >
-                {loading ? "Saving..." : "Submit Report"}
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  "Submit Report"
+                )}
               </button>
             )
           }
