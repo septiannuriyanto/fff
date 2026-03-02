@@ -54,7 +54,7 @@ import ComponentLibrary from './pages/MasterData/ComponentLibrary/ComponentLibra
 import MaterialRequirementPlanning from './pages/MasterData/MaterialRequirementPlanning.tsx/MaterialRequirementPlanning';
 import GreaseMonitoring from './pages/Dashboard/Infrastructure/Grease/GreaseMonitoring';
 import MasterStorageFuel from './pages/MasterData/Storage/Fuel/MasterStorageFuel';
-import FleetManagement from './pages/Operational/FleetManagement/FleetManagement';
+
 import RefuelingDistribution from './pages/Operational/RefuelingDistribution/RefuelingDistribution';
 import HourMeterManagement from './pages/Operational/HourMeterManagement/HourMeterManagement';
 import IssuingFuel from './pages/Operational/IssuingFuel/IssuingFuel';
@@ -75,6 +75,7 @@ import MasterCompetency from './pages/MasterData/Competency/MasterCompetency';
 import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
 import InfrastructureInspection from './pages/Reporting/Infrastructure/InfrastructureInspection';
 import OilHystoricalReport from './pages/Oil/HystoricalReport/OilHystoricalReport';
+import RefuelingOutsideRest from './pages/Operational/FleetManagement/RefuelingOutsideRest';
 
 export interface AppRoute {
   path: string;
@@ -267,15 +268,15 @@ const routes: AppRoute[] = [
   },
   // Operational Routes
   {
-    path: '/operational/fleet',
-    component: <FleetManagement />,
-    title: 'FFF | Fleet Management',
+    path: '/operational',
+    component: <Operational />,
+    title: 'FFF | Operational',
     allowedRoles: SUPERVISOR,
     keywords: ['operational', 'fleet', 'management', 'vehicles']
   },
   {
     path: '/operational/delay',
-    component: <FleetManagement />,
+    component: <RefuelingOutsideRest />,
     title: 'FFF | Delay Refueling',
     allowedRoles: SUPERVISOR,
     keywords: ['operational', 'delay', 'refueling', 'fleet']

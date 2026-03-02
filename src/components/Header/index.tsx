@@ -39,7 +39,7 @@ const Header = (props: {
       }}
     >
       {/* 3-column flex: [mobile controls] [centered search] [right icons] */}
-      <div className="flex flex-grow items-center px-4 py-3 md:px-10 xl:px-14 gap-4 relative">
+      <div className="flex flex-grow items-center px-0 py-3 md:px-2 xl:px-2 gap-4 relative">
         {/* Invisible spacer to balance the right icons and push center content to true center relative to screen if needed, 
             but the user said "play with empty space on left", so let's add a dynamic spacer on the left of center content */}
 
@@ -72,12 +72,10 @@ const Header = (props: {
           </Link>
         </div>
 
-        {/* LEFT SPACER — This "plays with the empty space" to keep search bar from jittering */}
-        <div className="hidden lg:block lg:w-[10%] xl:w-[15%] flex-shrink-0" />
 
         {/* CENTER — search bar grows & sits centered */}
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-[600px]">
+        <div className="flex flex-1 items-center justify-left">
+          <div className="">
             <ThemedSearchBar />
           </div>
         </div>

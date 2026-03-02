@@ -268,6 +268,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 basePath="/operational"
                 mini={sidebarConfig === 'mini'}
               >
+                <SidebarLink to="/operational" label="Dashboard" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/operational/fleet" label="Fleet Mgmt" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/operational/delay" label="Delay Refueling" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/operational/distribution" label="Refueling Dist." mini={sidebarConfig === 'mini'} />
