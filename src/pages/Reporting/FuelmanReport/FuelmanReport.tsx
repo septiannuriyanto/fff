@@ -33,15 +33,26 @@ const CLEANUP_AFTER_SUBMIT = true; // Switch for post-submit cleanup
 const DEVELOPMENT_MODE = true; // For image upload implementation logic
 
 // Rest time helper
-const isInsideRestTime = (timeStr: string) => {
+// On Friday shift 1, the rest time is 12:30–13:30. Otherwise 12:00–13:00.
+const isInsideRestTime = (timeStr: string, reportDate?: Date | null, shift?: number) => {
   if (!timeStr) return true;
   const [hours, minutes] = timeStr.split(':').map(Number);
   const totalMinutes = hours * 60 + minutes;
 
   // 00:00 - 01:00 (0 - 60 mins)
   const rest1 = totalMinutes >= 0 && totalMinutes <= 60;
-  // 12:00 - 13:00 (720 - 780 mins)
-  const rest2 = totalMinutes >= 720 && totalMinutes <= 780;
+
+  // Determine lunch window based on day & shift
+  // Friday (getDay() === 5) shift 1 => 12:30 - 13:30
+  // All other cases              => 12:00 - 13:00
+  const isFridayShift1 =
+    reportDate instanceof Date &&
+    reportDate.getDay() === 5 &&
+    shift === 1;
+
+  const lunchStart = isFridayShift1 ? 750 : 720; // 12:30 or 12:00
+  const lunchEnd = isFridayShift1 ? 810 : 780; // 13:30 or 13:00
+  const rest2 = totalMinutes >= lunchStart && totalMinutes <= lunchEnd;
 
   return rest1 || rest2;
 };
@@ -598,7 +609,7 @@ export default function FuelmanReport() {
         if (!item.time_refueling) errors.push(`TMR #${idx + 1}: Waktu refueling belum diisi`);
         if (!item.location_id) errors.push(`TMR #${idx + 1}: Lokasi belum valid. Mohon pilih dari saran yang muncul.`);
 
-        const insideRest = isInsideRestTime(item.time_refueling);
+        const insideRest = isInsideRestTime(item.time_refueling, date ? new Date(date) : null, shift ? 1 : 2);
         if (!insideRest && item.is_slippery === false) {
           if (!item.reason) errors.push(`TMR #${idx + 1}: Alasan refueling non-slippery harus diisi`);
         }
@@ -650,7 +661,7 @@ export default function FuelmanReport() {
           usage: Number(f.fm_akhir || 0) - Number(f.fm_awal || 0)
         })),
         p_tmr: form.tmr.map((item: any) => {
-          const insideRest = isInsideRestTime(item.time_refueling);
+          const insideRest = isInsideRestTime(item.time_refueling, date ? new Date(date) : null, shift ? 1 : 2);
           let processedLoaderId = (item.loader_id || "").toUpperCase();
           if (/^\d+$/.test(processedLoaderId)) {
             processedLoaderId = `EX${processedLoaderId}`;
@@ -1333,7 +1344,7 @@ export default function FuelmanReport() {
                                   </div>
                                 </div>
 
-                                {!isInsideRestTime(item.time_refueling) && (
+                                {!isInsideRestTime(item.time_refueling, date ? new Date(date) : null, shift ? 1 : 2) && (
                                   <div className="space-y-4 pt-2 border-t border-white/5">
                                     <div className="flex flex-row gap-6 mb-2">
                                       <label className="flex items-center gap-2 cursor-pointer">

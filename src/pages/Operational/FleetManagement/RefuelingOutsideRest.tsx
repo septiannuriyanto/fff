@@ -6,8 +6,10 @@ import ThemedGrid from '../../../common/ThemedComponents/ThemedGrid';
 import { supabase } from '../../../db/SupabaseClient';
 import ApexCharts from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
+import ThemedMonthPicker from '../../../common/ThemedComponents/ThemedMonthPicker';
 
 // ─── Palette (matching Dashboard Operational vibes) ─────────────────────────
 const P = {
@@ -33,27 +35,35 @@ const RefuelingOutsideRest = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [selectedMonth, setSelectedMonth] = useState<Date>(startOfMonth(new Date()));
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      const start = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const end = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
+
       const { data: dbData, error } = await supabase
         .from('fuelman_report_tmr')
         .select(`
           *,
           area(major_area),
-          fuelman_reports(
+          fuelman_reports!inner(
+            report_date,
+            shift,
             fuelman:manpower!fuelman_reports_fuelman_id_fkey(nama, nickname),
             operator:manpower!fuelman_reports_operator_id_fkey(nama, nickname)
           )
         `)
-        .order('created_at', { ascending: false });
+        .gte('fuelman_reports.report_date', start)
+        .lte('fuelman_reports.report_date', end)
+        .order('fuelman_reports(report_date)', { ascending: false });
       if (error) console.error('Error fetching fuelman_report_tmr:', error);
       else setData(dbData || []);
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [selectedMonth]);
 
   // ─── Derived counts ──────────────────────────────────────────────────────
   const totalRecords = data.length;
@@ -90,14 +100,17 @@ const RefuelingOutsideRest = () => {
   const handleExportXlsx = () => {
     const rows = displayedData.map((d) => ({
       Date: d.created_at ? format(new Date(d.created_at), 'dd MMM yyyy HH:mm') : '-',
-      'Loader ID': d.loader_id || '-',
+      'Report Date': d.fuelman_reports?.report_date || '-',
+      'Report Shift': d.fuelman_reports?.shift || '-',
       'Time Refueling': d.time_refueling || '-',
+      'Loader CN': d.loader_id || '-',
       Area: d.area?.major_area || '-',
       'Location Detail': d.location_detail || '-',
       Reason: d.reason || '-',
       'Inside Rest?': d.inside_rest_time ? 'Yes' : 'No',
       'Slippery?': d.is_slippery ? 'Yes' : 'No',
       Evidence: d.evidence_url || '-',
+      'Validation Remark': d.validation_remark || '-',
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -107,17 +120,31 @@ const RefuelingOutsideRest = () => {
 
   // ─── Chart helpers ───────────────────────────────────────────────────────
   const loaderData = useMemo(() => {
-    const counts = displayedData.reduce((acc, d) => {
+    const raw = displayedData.reduce((acc, d) => {
       const k = d.loader_id || 'Unknown';
-      acc[k] = (acc[k] || 0) + 1; return acc;
-    }, {} as Record<string, number>);
-    return { labels: Object.keys(counts), series: Object.values(counts) as number[] };
+      if (!acc[k]) acc[k] = { inside: 0, outsideNonSlippery: 0, outsideSlippery: 0 };
+
+      if (d.inside_rest_time) {
+        acc[k].inside++;
+      } else {
+        if (d.is_slippery) acc[k].outsideSlippery++;
+        else acc[k].outsideNonSlippery++;
+      }
+      return acc;
+    }, {} as Record<string, { inside: number, outsideNonSlippery: number, outsideSlippery: number }>);
+
+    const labels = Object.keys(raw);
+    const insideSeries = labels.map(l => raw[l].inside);
+    const outsideNonSlipperySeries = labels.map(l => raw[l].outsideNonSlippery);
+    const outsideSlipperySeries = labels.map(l => raw[l].outsideSlippery);
+
+    return { labels, insideSeries, outsideNonSlipperySeries, outsideSlipperySeries };
   }, [displayedData]);
 
   const reasonData = useMemo(() => {
-    // Only outside rest time records
+    // Only outside rest time & non-slippery records
     const counts = displayedData
-      .filter((d) => !d.inside_rest_time)
+      .filter((d) => !d.inside_rest_time && !d.is_slippery)
       .reduce((acc, d) => {
         const k = d.reason?.trim() || 'No Reason';
         acc[k] = (acc[k] || 0) + 1; return acc;
@@ -148,6 +175,7 @@ const RefuelingOutsideRest = () => {
 
   const loaderChartOptions: ApexOptions = {
     ...glassBase('bar'),
+    chart: { ...glassBase('bar').chart, stacked: true },
     plotOptions: { bar: { columnWidth: '48%', borderRadius: 5 } },
     xaxis: {
       categories: loaderData.labels,
@@ -155,24 +183,25 @@ const RefuelingOutsideRest = () => {
     },
     yaxis: { labels: { style: { colors: '#94a3b8' } } },
     dataLabels: { enabled: false },
-    colors: [P.blue],
+    colors: [P.blue, P.amber, P.emerald], // Indigo, Amber, Emerald
     fill: {
       type: 'gradient',
       gradient: {
         shade: 'dark',
         type: 'vertical',
-        shadeIntensity: 0.4,
-        gradientToColors: [P.cyan],
+        shadeIntensity: 0.5,
+        gradientToColors: [P.sky, P.rose, P.cyan], // Targets: Sky, Rose, Cyan
         inverseColors: false,
         opacityFrom: 1,
         opacityTo: 0.85,
+        stops: [0, 100],
       },
     },
-    legend: { show: false },
+    legend: { position: 'top', horizontalAlign: 'right', labels: { colors: '#94a3b8' } },
     title: {
       text: '🔧 Refueling by Loader ID',
       align: 'left',
-      style: { color: '#e2e8f0', fontSize: '13px', fontWeight: '700' },
+      style: { color: '#f59e0b', fontSize: '12px', fontWeight: '700' },
     },
   };
 
@@ -210,7 +239,7 @@ const RefuelingOutsideRest = () => {
       title: {
         text: title,
         align: 'center',
-        style: { color: '#e2e8f0', fontSize: '12px', fontWeight: '700' },
+        style: { color: '#f59e0b', fontSize: '12px', fontWeight: '700' },
       },
       plotOptions: { pie: { donut: { size: '68%', labels: { show: true, total: { show: true, color: '#94a3b8' } } } } },
       dataLabels: {
@@ -224,14 +253,66 @@ const RefuelingOutsideRest = () => {
     };
   };
 
+  // ─── Inline edit: update reason in Supabase ─────────────────────────────
+  const onCellValueChanged = async (params: any) => {
+    const field = params.colDef.field;
+    const value = params.newValue;
+    const { id } = params.data;
+
+    const { error } = await supabase
+      .from('fuelman_report_tmr')
+      .update({ [field]: value })
+      .eq('id', id);
+
+    if (error) {
+      toast.error(`Gagal menyimpan ${field}. Perubahan dibatalkan.`);
+      params.node.setDataValue(field, params.oldValue);
+    } else {
+      toast.success(`${field === 'reason' ? 'Reason' : 'Validation Remark'} berhasil disimpan!`);
+      setData((prev) =>
+        prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+      );
+    }
+  };
+
   // ─── Grid columns ────────────────────────────────────────────────────────
   const columns = [
     {
       headerName: 'Date', field: 'created_at', minWidth: 150,
       valueFormatter: (p: any) => p.value ? format(new Date(p.value), 'dd MMM yyyy HH:mm') : '-',
     },
-    { headerName: 'Loader ID', field: 'loader_id', minWidth: 120 },
-    { headerName: 'Time Refueling', field: 'time_refueling', minWidth: 130 },
+    { headerName: 'Report Date', field: 'fuelman_reports.report_date', minWidth: 120 },
+    { headerName: 'Report Shift', field: 'fuelman_reports.shift', minWidth: 100 },
+    {
+      headerName: 'Time Refueling',
+      field: 'time_refueling',
+      minWidth: 130,
+      cellStyle: (p: any) => {
+        if (p.data?.inside_rest_time) {
+          return {
+            backgroundColor: 'rgba(99, 102, 241, 0.15)', // P.blue
+            borderLeft: `4px solid ${P.blue}`,
+            fontWeight: '700',
+            color: '#fff',
+          };
+        }
+        if (p.data?.is_slippery) {
+          return {
+            backgroundColor: 'rgba(16, 185, 129, 0.15)', // P.emerald
+            borderLeft: `4px solid ${P.emerald}`,
+            fontWeight: '700',
+            color: '#fff',
+          };
+        }
+        return {
+          backgroundColor: 'rgba(245, 158, 11, 0.15)', // P.amber
+          borderLeft: `4px solid ${P.amber}`,
+          fontWeight: '700',
+          color: '#fff',
+        };
+      }
+    },
+    { headerName: 'Loader CN', field: 'loader_id', minWidth: 120 },
     {
       headerName: 'Fuelman',
       field: 'fuelman_reports',
@@ -255,7 +336,18 @@ const RefuelingOutsideRest = () => {
       valueGetter: (p: any) => p.data?.area?.major_area || '-',
     },
     { headerName: 'Location Detail', field: 'location_detail', minWidth: 180 },
-    { headerName: 'Reason', field: 'reason', minWidth: 150 },
+    {
+      headerName: 'Reason ✏️',
+      field: 'reason',
+      minWidth: 200,
+      editable: true,
+      valueGetter: (p: any) => p.data?.reason || '',
+      cellStyle: {
+        cursor: 'text',
+        borderLeft: `2px solid ${P.amber}44`,
+        background: 'rgba(245, 158, 11, 0.04)',
+      },
+    },
     {
       headerName: 'Inside Rest?', field: 'inside_rest_time', minWidth: 120,
       valueFormatter: (p: any) => p.value ? 'Yes' : 'No',
@@ -271,6 +363,17 @@ const RefuelingOutsideRest = () => {
           <a href={p.value} target="_blank" rel="noopener noreferrer"
             style={{ color: P.sky, textDecoration: 'underline' }}>View</a>
         ) : '-',
+    },
+    {
+      headerName: 'Validation Remark ✏️',
+      field: 'validation_remark',
+      minWidth: 200,
+      editable: true,
+      cellStyle: {
+        cursor: 'text',
+        borderLeft: `2px solid ${P.emerald}44`,
+        background: 'rgba(16, 185, 129, 0.04)',
+      },
     },
   ];
 
@@ -308,7 +411,6 @@ const RefuelingOutsideRest = () => {
     {
       key: 'non_slippery_no_reason', title: 'Non-Slipp. No Reason', value: outsideRestNonSlipperyNoReason,
       bg: 'bg-rose-500/10', border: 'border-rose-500/25', glow: 'shadow-rose-500/20', activeBorder: 'border-rose-400',
-
     },
   ];
 
@@ -317,6 +419,13 @@ const RefuelingOutsideRest = () => {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <ThemedPanelContainer title="Refueling Outside Rest Dashboard">
+      <div className="flex justify-end mb-4 px-2">
+        <ThemedMonthPicker
+          value={selectedMonth}
+          onChange={setSelectedMonth}
+          className="w-full md:w-64"
+        />
+      </div>
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
@@ -359,7 +468,11 @@ const RefuelingOutsideRest = () => {
             <ThemedGlassmorphismPanel className="p-4 lg:col-span-2 shadow-xl">
               <ApexCharts
                 options={loaderChartOptions}
-                series={[{ name: 'Refuelings', data: loaderData.series }]}
+                series={[
+                  { name: 'Inside Rest', data: loaderData.insideSeries },
+                  { name: 'Outside (Non-Slippery)', data: loaderData.outsideNonSlipperySeries },
+                  { name: 'Outside (Slippery ❄️)', data: loaderData.outsideSlipperySeries },
+                ]}
                 type="bar"
                 height={300}
               />
@@ -440,6 +553,8 @@ const RefuelingOutsideRest = () => {
                 useGridFilter={true}
                 pagination={true}
                 paginationPageSize={10}
+                onCellValueChanged={onCellValueChanged}
+                stopEditingWhenCellsLoseFocus={true}
               />
             </div>
           </ThemedGlassmorphismPanel>
