@@ -290,25 +290,25 @@ const RefuelingOutsideRest = () => {
       cellStyle: (p: any) => {
         if (p.data?.inside_rest_time) {
           return {
-            backgroundColor: 'rgba(99, 102, 241, 0.15)', // P.blue
+            backgroundColor: 'rgba(99, 102, 241, 0.12)', // P.blue light
             borderLeft: `4px solid ${P.blue}`,
-            fontWeight: '700',
-            color: '#fff',
+            fontWeight: '800',
+            color: P.blue, // Adaptive & high contrast
           };
         }
         if (p.data?.is_slippery) {
           return {
-            backgroundColor: 'rgba(16, 185, 129, 0.15)', // P.emerald
+            backgroundColor: 'rgba(16, 185, 129, 0.12)', // P.emerald light
             borderLeft: `4px solid ${P.emerald}`,
-            fontWeight: '700',
-            color: '#fff',
+            fontWeight: '800',
+            color: P.emerald,
           };
         }
         return {
-          backgroundColor: 'rgba(245, 158, 11, 0.15)', // P.amber
+          backgroundColor: 'rgba(245, 158, 11, 0.12)', // P.amber light
           borderLeft: `4px solid ${P.amber}`,
-          fontWeight: '700',
-          color: '#fff',
+          fontWeight: '800',
+          color: P.amber,
         };
       }
     },
