@@ -37,7 +37,7 @@ const LocalSection = ({ title, children }: { title: string; children: React.Reac
 };
 
 export default function CoordinatorReport() {
-    const DEV_MODE = true; // Toggle this to bypass complete report requirements
+    const DEV_MODE = false; // Toggle this to bypass complete report requirements
 
     const { activeTheme } = useTheme();
     const [reports, setReports] = useState<any[]>([]);
