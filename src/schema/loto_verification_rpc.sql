@@ -155,3 +155,24 @@ BEGIN
   OFFSET p_offset;
 END;
 $$;
+
+-- RPC to get latest verification info (date and shift)
+-- Used for the sub-title status. Security definer allows public view of metadata.
+CREATE OR REPLACE FUNCTION public.get_latest_loto_verification()
+RETURNS TABLE (
+  issued_date date,
+  shift smallint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    lv.issued_date, 
+    lv.shift
+  FROM public.loto_verification lv
+  ORDER BY lv.issued_date DESC, lv.shift DESC
+  LIMIT 1;
+END;
+$$;

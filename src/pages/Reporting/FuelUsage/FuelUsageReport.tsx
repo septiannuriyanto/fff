@@ -24,7 +24,7 @@ const FuelUsageReport: React.FC = () => {
   // --- Data States ---
   const [rowData, setRowData] = useState<any[]>([]);
   const [totalInDatabase, setTotalInDatabase] = useState<number>(0);
-  const [grandTotalQty, setGrandTotalQty] = useState<number>(0);
+  const [latestInfo, setLatestInfo] = useState<{ date: string; shift: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [warehouseOptions, setWarehouseOptions] = useState<string[]>([]);
   const [egiOptions, setEgiOptions] = useState<string[]>([]);
@@ -32,6 +32,12 @@ const FuelUsageReport: React.FC = () => {
   // --- Fetch Initial Options ---
   useEffect(() => {
     const fetchOptions = async () => {
+      // Latest Info via RPC (Security Definer)
+      const { data: latestRecords } = await supabase.rpc('get_latest_loto_verification');
+      if (latestRecords && latestRecords.length > 0) {
+        setLatestInfo({ date: latestRecords[0].issued_date, shift: latestRecords[0].shift });
+      }
+
       // Fetch Warehouse Codes
       const { data: warehouseData } = await supabase
         .from('loto_verification')
@@ -106,7 +112,6 @@ const FuelUsageReport: React.FC = () => {
     if (error) throw error;
     if (data && data.length > 0) {
       setTotalInDatabase(Number(data[0].total_count));
-      setGrandTotalQty(Number(data[0].grand_total_qty));
       return { total: Number(data[0].total_count), grand_total: Number(data[0].grand_total_qty) };
     }
     return { total: 0, grand_total: 0 };
@@ -235,6 +240,15 @@ const FuelUsageReport: React.FC = () => {
 
   return (
     <PanelTemplate title="Fuel Usage Report">
+      <div className="px-4 -mt-4 mb-4">
+        {latestInfo ? (
+          <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
+            Latest data: {new Date(latestInfo.date).toLocaleDateString('id-ID')} | Shift {latestInfo.shift}
+          </span>
+        ) : (
+          <span className="text-[11px] font-medium opacity-40 italic">Loading latest update...</span>
+        )}
+      </div>
       <div className="space-y-6">
         {/* Segment 1: Data Slicers (Filters) */}
         <ThemedGlassmorphismPanel className="p-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">

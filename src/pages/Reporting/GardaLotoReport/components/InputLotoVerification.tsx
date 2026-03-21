@@ -176,15 +176,17 @@ const InputLotoVerification: React.FC = () => {
   }, []);
 
   const fetchLastVerification = async () => {
-    const { data, error } = await supabase
-      .from('loto_verification')
-      .select('session_code, issued_date, shift')
-      .order('session_code', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      setLastVerification(data);
+    try {
+      const { data, error } = await supabase.rpc('get_latest_loto_verification');
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setLastVerification(data[0]);
+      } else {
+        setLastVerification(null); // No data found
+      }
+    } catch (err: any) {
+      console.error("Error fetching last verification:", err);
+      setLastVerification(null); // Clear last verification on error
     }
   };
 
@@ -387,7 +389,19 @@ const InputLotoVerification: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Latest Info Subtitle */}
+      <div className="-mt-2 mb-2">
+        {lastVerification ? (
+          <span className="text-[11px] font-bold uppercase tracking-wider opacity-60">
+            Latest data: {new Date(lastVerification.issued_date).toLocaleDateString('id-ID')} | Shift {lastVerification.shift}
+          </span>
+        ) : (
+          <span className="text-[11px] font-medium opacity-40 italic">Loading latest update...</span>
+        )}
+      </div>
+
+      {/* --- Batch Stats Dashboard --- */}
       {lastVerification && (() => {
         const current = getCurrentShiftInfo();
         const diff = getShiftDifference(
@@ -404,6 +418,13 @@ const InputLotoVerification: React.FC = () => {
           <div className={`p-4 border rounded-md mb-4 ${colorClass} flex justify-between items-center`}>
             <div>
               <div className="font-bold">Last Verification</div>
+              {lastVerification ? (
+                <span className="text-xs font-medium opacity-60">
+                  Latest data: {new Date(lastVerification.issued_date).toLocaleDateString('id-ID')} shift {lastVerification.shift}
+                </span>
+              ) : (
+                <span className="text-xs font-medium opacity-40 italic">Loading latest data info...</span>
+              )}
               <div>
                 Date: {lastVerification.issued_date}, Shift: {lastVerification.shift}
               </div>
