@@ -76,6 +76,7 @@ import FuelPartnerStock from './pages/Partner/Stock/FuelPartnerStock';
 import InfrastructureInspection from './pages/Reporting/Infrastructure/InfrastructureInspection';
 import OilHystoricalReport from './pages/Oil/HystoricalReport/OilHystoricalReport';
 import RefuelingOutsideRest from './pages/Operational/FleetManagement/RefuelingOutsideRest';
+import FuelUsageReport from './pages/Reporting/FuelUsage/FuelUsageReport';
 
 export interface AppRoute {
   path: string;
@@ -349,6 +350,13 @@ const routes: AppRoute[] = [
     keywords: ['reporting', 'stock', 'inventory']
   },
   {
+    path: '/reporting/fuelusage',
+    component: <FuelUsageReport />,
+    // title: 'FFF | Fuel Usage Report',
+    allowedRoles: SUPERVISOR,
+    keywords: ['reporting', 'fuel usage', 'usage', 'database']
+  },
+  {
     path: '/reporting/stocktaking',
     component: <StockTaking />,
     title: 'FFF | Stock Taking',
@@ -596,6 +604,7 @@ const routes: AppRoute[] = [
     allowedRoles: SUPERVISOR,
     keywords: ['master', 'mrp', 'material requirement', 'planning']
   },
+
   // UI ROUTES
   {
     path: '/chart',

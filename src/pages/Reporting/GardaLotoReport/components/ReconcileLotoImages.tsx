@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AgGridReact } from 'ag-grid-react';
-import { ColDef } from 'ag-grid-community';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { supabase } from '../../../../db/SupabaseClient';
+import ThemedGrid from '../../../../common/ThemedComponents/ThemedGrid';
 import { ChevronDown, Trash2, X, Eraser, Plus } from 'lucide-react'; // Added Plus
 import { toast } from 'sonner';
 import Tesseract from 'tesseract.js';
@@ -548,7 +545,7 @@ const ReconcileLotoImages: React.FC = () => {
   }, [verifRows, filterText, filterMode]); 
 
   // --- Grid Cols (Verification Summary) ---
-  const columnDefs = useMemo<ColDef<VerificationSummary>[]>(
+  const columnDefs = useMemo<any[]>(
     () => [
       {
         field: 'session_code',
@@ -564,7 +561,7 @@ const ReconcileLotoImages: React.FC = () => {
         sortable: true,
         filter: true,
         width: 130, // Increased
-        valueFormatter: (p) => p.value ? p.value : '-'
+        valueFormatter: (p: any) => p.value ? p.value : '-'
       },
       {
         field: 'shift',
@@ -603,7 +600,7 @@ const ReconcileLotoImages: React.FC = () => {
         sortable: true,
         filter: true,
         width: 140,
-        valueFormatter: (p) => getWarehouseLabel(p.value)
+        valueFormatter: (p: any) => getWarehouseLabel(p.value)
       },
       {
         field: 'fuelman',
@@ -611,14 +608,14 @@ const ReconcileLotoImages: React.FC = () => {
         sortable: true,
         filter: true,
         filterValueGetter: (p: any) => getNameByNrp(p.data.fuelman, fuelmanOptions),
-        valueFormatter: (p) => getNameByNrp(p.value, fuelmanOptions)
+        valueFormatter: (p: any) => getNameByNrp(p.value, fuelmanOptions)
       },
       {
         field: 'operator',
         headerName: 'Operator',
         sortable: true,
         width: 150, // Decreased/Fixed width
-        valueFormatter: (p) => getNameByNrp(p.value, operatorOptions)
+        valueFormatter: (p: any) => getNameByNrp(p.value, operatorOptions)
       },
       {
         headerName: 'Action',
@@ -718,16 +715,14 @@ const ReconcileLotoImages: React.FC = () => {
              </div>
          </div>
          
-         <div className="ag-theme-alpine w-full flex-1">
-            <AgGridReact
+         <div className="w-full h-[400px]">
+            <ThemedGrid
               rowData={filteredSessions}
               columnDefs={columnDefs}
-              defaultColDef={{ resizable: true }}
               pagination={true}
               paginationPageSize={10}
               getRowStyle={getRowStyle}
               rowSelection="single"
-              enableCellTextSelection={true}
               onSelectionChanged={(e) => {
                 const selected = e.api.getSelectedRows()[0];
                 setSelectedSession(selected || null);
@@ -1431,7 +1426,12 @@ const VerificationCard = ({ row, onAssign, onClearImage, onZoom }: { row: any, o
              ? (isNew ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-800') 
              : 'bg-gray-100 text-gray-600'
        }`}>
+        <div className="flex items-center space-x-2">
           <span>{row.cn_unit}</span>
+          <span className={`text-[8px] uppercase px-1 rounded-sm font-bold ${row.is_included ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
+             {row.is_included ? 'Included' : 'Excluded'}
+          </span>
+        </div>
           {/* Optional: Add status icon? */}
        </div>
        

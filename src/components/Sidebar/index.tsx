@@ -255,6 +255,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/reporting/stocktaking" label="Stock Taking" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/reporting/ftbdrfu" label="FT Breakdown - RFU" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/reporting/gardaloto" label="Garda Loto" mini={sidebarConfig === 'mini'} />
+                <SidebarLink to="/reporting/fuelusage" label="Fuel Usage Report" mini={sidebarConfig === 'mini'} />
               </SidebarGroup>
 
 

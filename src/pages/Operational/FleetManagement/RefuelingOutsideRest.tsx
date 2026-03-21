@@ -401,7 +401,7 @@ const RefuelingOutsideRest = () => {
       bg: 'bg-amber-500/10', border: 'border-amber-500/25', glow: 'shadow-amber-500/20', activeBorder: 'border-amber-400',
     },
     {
-      key: 'outside_non_slippery', title: 'Outside & Non-Slippery', value: outsideRestNonSlipperyCount,
+      key: 'outside_non_slippery', title: 'Outs. & Non-Slipp.', value: outsideRestNonSlipperyCount,
       bg: 'bg-orange-500/10', border: 'border-orange-500/25', glow: 'shadow-orange-500/20', activeBorder: 'border-orange-400',
     },
     {

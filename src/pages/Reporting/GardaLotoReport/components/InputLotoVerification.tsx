@@ -1,11 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { AgGridReact } from 'ag-grid-react';
-import { ColDef } from 'ag-grid-community';
-
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
+import { Loader2, Radio, Zap } from 'lucide-react';
 import { supabase } from '../../../../db/SupabaseClient';
+import ThemedGrid from '../../../../common/ThemedComponents/ThemedGrid';
 
 /* =========================
    ALLOWED EGI (WHITELIST)
@@ -57,6 +54,7 @@ const ALLOWED_EGI = new Set([
    TYPES
 ========================= */
 interface LotoRow {
+  id: any;
   session_code: string;
   no_logsheet: string;
   issued_date: string;
@@ -68,6 +66,8 @@ interface LotoRow {
   hm: number;
   qty: number;
   refueling_start: string;
+  refueling_end: string;
+  is_included: boolean;
 }
 
 /* =========================
@@ -162,6 +162,8 @@ const InputLotoVerification: React.FC = () => {
   const [issuedDate, setIssuedDate] = useState<string>('');
   const [shift, setShift] = useState<number | ''>('');
   const [filtering, setFiltering] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'unique' | 'upsert'>('unique');
   const [lastVerification, setLastVerification] = useState<{
     session_code: string;
     issued_date: string;
@@ -191,8 +193,21 @@ const InputLotoVerification: React.FC = () => {
   /* =========================
      AG GRID COLUMNS
   ========================= */
-  const columnDefs = useMemo<ColDef[]>(
+  const columnDefs = useMemo<any[]>(
     () => [
+      { field: 'id', headerName: 'ND', width: 100 },
+      { 
+        field: 'is_included', 
+        headerName: 'Included', 
+        width: 100,
+        cellRenderer: (params: any) => (
+          params.value ? (
+            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">Yes</span>
+          ) : (
+            <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs font-bold">No</span>
+          )
+        )
+      },
       { field: 'session_code', headerName: 'Session Code' },
       { field: 'no_logsheet', headerName: 'No Logsheet' },
       { field: 'issued_date', headerName: 'Issued Date' },
@@ -204,6 +219,7 @@ const InputLotoVerification: React.FC = () => {
       { field: 'hm', headerName: 'HM' },
       { field: 'qty', headerName: 'Qty' },
       { field: 'refueling_start', headerName: 'Jam Start' },
+      { field: 'refueling_end', headerName: 'Jam End' },
     ],
     [],
   );
@@ -212,16 +228,18 @@ const InputLotoVerification: React.FC = () => {
      SUMMARY
   ========================= */
   const summaryByEquipClass = useMemo(() => {
+    const includedOnly = rowData.filter(r => r.is_included);
     const map = new Map<string, number>();
-    for (const row of rowData) {
+    for (const row of includedOnly) {
       map.set(row.equip_class, (map.get(row.equip_class) || 0) + 1);
     }
     return Array.from(map.entries());
   }, [rowData]);
 
   const summaryByWarehouse = useMemo(() => {
+    const includedOnly = rowData.filter(r => r.is_included);
     const map = new Map<string, Set<string>>();
-    for (const row of rowData) {
+    for (const row of includedOnly) {
       if (!map.has(row.warehouse_code)) {
         map.set(row.warehouse_code, new Set());
       }
@@ -251,8 +269,11 @@ const InputLotoVerification: React.FC = () => {
       const uniqueMap = new Map<string, LotoRow>();
 
       for (const row of json) {
+        const nd = row['ND'] || null;
+        if (!nd) continue; // ND is required as ID
+
         const egi = String(row['EGI']).trim();
-        if (!ALLOWED_EGI.has(egi)) continue;
+        const isIncluded = ALLOWED_EGI.has(egi);
 
         const issued = XLSX.SSF.format('yyyy-mm-dd', row['Issued Date']);
         const shiftVal = Number(row['Shift']);
@@ -269,12 +290,13 @@ const InputLotoVerification: React.FC = () => {
             warehouse,
           );
         
-        // Let's use a composite key to ensure full uniqueness
-        const uniqueKey = `${sessionCode}_${cnUnit}_${row['No Logsheet']}`;
+        // Let's use ND as the primary unique key if available, otherwise fallback
+        const uniqueKey = nd ? String(nd) : `${sessionCode}_${cnUnit}_${row['No Logsheet']}`;
 
         if (uniqueMap.has(uniqueKey)) continue;
 
         uniqueMap.set(uniqueKey, {
+          id: nd,
           session_code: sessionCode,
           no_logsheet: row['No Logsheet'],
           issued_date: issued,
@@ -284,8 +306,10 @@ const InputLotoVerification: React.FC = () => {
           EGI: egi,
           equip_class: row['Equip Class'],
           hm: Number(row['Hm']),
-          qty: Number(row['Qty']),
+          qty: Number(row['Qty'] || row['QTY'] || row['Qty ']),
           refueling_start: toTimestamptzGMT8(row['Jam Start']),
+          refueling_end: toTimestamptzGMT8(row['Jam End']),
+          is_included: isIncluded,
         });
       }
 
@@ -330,20 +354,35 @@ const InputLotoVerification: React.FC = () => {
     if (!rowData.length) return;
 
     const confirm = window.confirm(
-      `Submit ${rowData.length} data ke sistem?`,
+      `Submit ${rowData.length} data ke sistem (Mode: ${uploadMode.toUpperCase()})?`,
     );
     if (!confirm) return;
+    
+    setSubmitting(true);
+    try {
+      // Use RPC for data integrity and atomic transactions
+      console.log(`Submitting ${rowData.length} records via RPC...`);
+      
+      const { data, error } = await supabase.rpc('upsert_loto_verification_v2', {
+        p_records: rowData,
+        p_mode: uploadMode
+      });
 
-    const { error } = await supabase
-      .from('loto_verification')
-      .insert(rowData);
+      if (error) throw error;
 
-    if (error) {
-      alert(`Gagal submit: ${error.message}`);
-    } else {
-      alert('Data berhasil disubmit');
+      const result = data || {};
+      alert(`Success! 
+      - Inserted: ${result.inserted || 0}
+      - Skipped: ${result.skipped || 0}
+      - Relocated (Mode Upsert): ${result.relocated || 0}`);
+      
       setRowData([]);
       fetchLastVerification(); // Refresh info
+    } catch (e: any) {
+      console.error('Submit Error:', e);
+      alert(`Error saat submit: ${e.message}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -425,24 +464,20 @@ const InputLotoVerification: React.FC = () => {
 
       {filtering && (
         <div className="text-sm text-gray-500 animate-pulse">
-          Memfilter data EGI…
+          Memetakan data EGI…
         </div>
       )}
 
       <div
-        className={`ag-theme-alpine transition-opacity duration-200 ${
+        className={`transition-opacity duration-200 mt-4 h-[500px] w-full ${
           filtering ? 'opacity-50' : 'opacity-100'
         }`}
-        style={{ height: 400 }}
       >
-        <AgGridReact
+        <ThemedGrid
           rowData={rowData}
           columnDefs={columnDefs}
-          defaultColDef={{
-            sortable: true,
-            filter: true,
-            resizable: true,
-          }}
+          useGridFilter={true}
+          enableCellTextSelection={true}
         />
       </div>
 
@@ -463,9 +498,9 @@ const InputLotoVerification: React.FC = () => {
                   </tr>
                 ))}
                 <tr className="font-semibold bg-gray-50">
-                  <td className="border px-2 py-1">TOTAL</td>
+                  <td className="border px-2 py-1">TOTAL (INCLUDED)</td>
                   <td className="border px-2 py-1 text-right">
-                    {rowData.length}
+                    {rowData.filter(r => r.is_included).length}
                   </td>
                 </tr>
               </tbody>
@@ -490,10 +525,10 @@ const InputLotoVerification: React.FC = () => {
                 ))}
                 <tr className="font-semibold bg-gray-50">
                   <td className="border px-2 py-1">
-                    TOTAL RECORD
+                    TOTAL UNIT (INCLUDED)
                   </td>
                   <td className="border px-2 py-1 text-right">
-                    {rowData.length}
+                    {new Set(rowData.filter(r => r.is_included).map(r => r.cn_unit)).size}
                   </td>
                 </tr>
               </tbody>
@@ -502,11 +537,55 @@ const InputLotoVerification: React.FC = () => {
         </div>
       )}
 
+      {rowData.length > 0 && (
+        <div className="bg-white/50 backdrop-blur-sm border rounded-xl p-4 mb-4 flex items-center justify-between border-blue-200">
+          <div className="flex flex-col">
+            <span className="text-sm font-bold text-blue-900">Upload Mode</span>
+            <p className="text-[10px] text-blue-600 max-w-sm">
+              {uploadMode === 'unique' 
+                ? 'UNIQUE: Baris dengan ND duplikat akan dilewati (Data lama tetap).' 
+                : 'UPSERT: Baris duplikat akan "mengusir" data lama (Data lama di-rename otomatis).'}
+            </p>
+          </div>
+          <div className="flex bg-gray-100 p-1 rounded-lg border">
+            <button
+              onClick={() => setUploadMode('unique')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all text-xs font-bold ${
+                uploadMode === 'unique' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              <Radio className="w-4 h-4" />
+              <span>UNIQUE</span>
+            </button>
+            <button
+              onClick={() => setUploadMode('upsert')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all text-xs font-bold ${
+                uploadMode === 'upsert' 
+                  ? 'bg-orange-500 text-white shadow-sm' 
+                  : 'text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              <span>UPSERT</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={handleSubmit}
-        className="bg-green-600 text-white px-6 py-2 rounded"
+        disabled={submitting || !rowData.length}
+        style={{
+          backgroundColor: uploadMode === 'upsert' ? '#f59e0b' : '#16a34a'
+        }}
+        className={`text-white px-8 py-3 rounded-lg flex items-center justify-center space-x-3 transition-all duration-200 shadow-lg ${
+          submitting ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105 active:scale-95'
+        }`}
       >
-        Submit
+        {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+        <span className="font-bold text-lg">{submitting ? 'Submitting...' : `Submit (${uploadMode.toUpperCase()})`}</span>
       </button>
     </div>
   );

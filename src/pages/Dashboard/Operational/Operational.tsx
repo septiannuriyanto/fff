@@ -10,7 +10,7 @@ const Operational = () => {
   return (
     <ThemedPanelContainer title='Operational Dashboard'>
       <>
-        <RefuelingOutsideRest></RefuelingOutsideRest>
+        <RefuelingOutsideRest />
       </>
     </ThemedPanelContainer>
   );

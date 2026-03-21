@@ -1,5 +1,3 @@
-import React from 'react';
-import { DatePicker } from 'rsuite';
 import { formatNumberWithSeparator } from '../../../../../Utils/NumberUtility';
 
 interface RitationStatsProps {
@@ -11,7 +9,6 @@ interface RitationStatsProps {
   onShowPoDoc?: () => void;
   onShowBaRequest?: () => void;
   selectedMonth: Date;
-  onMonthChange: (date: Date | null) => void;
   isLoading?: boolean;
   titleLeft?: string;
   receiveProgress?: string;
@@ -26,7 +23,6 @@ const RitationStatsPanel: React.FC<RitationStatsProps> = ({
   onShowBaRequest,
   onShowPoDoc,
   selectedMonth,
-  onMonthChange,
   isLoading
 }) => {
   return (
@@ -45,32 +41,17 @@ const RitationStatsPanel: React.FC<RitationStatsProps> = ({
         </div>
       )}
 
-        <div className="relative z-10 flex flex-row flex-wrap xl:flex-nowrap items-stretch gap-3 xl:gap-4">
+      <div className="relative z-10 flex flex-row flex-wrap xl:flex-nowrap items-stretch gap-3 xl:gap-4">
         {/* Section 1: Compact Title & Period */}
         <div className="flex flex-col justify-between py-1 min-w-[180px]">
           <h1 className="font-black text-gray-800 dark:text-white text-[10px] tracking-widest uppercase opacity-80 mb-1">
             {panelTitle}
           </h1>
-          <div className="modern-month-picker bg-white/20 dark:bg-white/5 backdrop-blur-md rounded-lg border border-white/30 dark:border-white/10 transition-all hover:bg-white/30">
-            <DatePicker 
-              format="MMM yyyy"
-              value={selectedMonth}
-              onChange={onMonthChange}
-              shouldDisableDate={(date) => {
-                 const today = new Date();
-                 const currentYear = today.getFullYear();
-                 const minYear = currentYear - 3;
-                 const year = date.getFullYear();
-                 if (year < minYear || year > currentYear) return true;
-                 if (year === currentYear && date.getMonth() > today.getMonth()) return true;
-                 return false;
-              }}
-              cleanable={false}
-              className="!w-full !bg-transparent"
-              placeholder="Month"
-              appearance="subtle"
-              size="xs"
-            />
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 dark:bg-white/5 backdrop-blur-md rounded-xl border border-white/30 dark:border-white/10 shadow-sm">
+            <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+              {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(selectedMonth)}
+            </span>
           </div>
         </div>
 
@@ -97,10 +78,10 @@ const RitationStatsPanel: React.FC<RitationStatsProps> = ({
               <span className="text-[10px] font-black text-blue-600/60">%</span>
             </div>
           </div>
-          
+
           <div className="h-2 w-full bg-blue-500/10 dark:bg-black/20 rounded-full overflow-hidden border border-blue-500/20 p-[1px] relative">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-[1500ms] ease-out relative" 
+            <div
+              className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-[1500ms] ease-out relative"
               style={{ width: ritationProgress }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
@@ -111,24 +92,24 @@ const RitationStatsPanel: React.FC<RitationStatsProps> = ({
 
         {/* Section 4: Document Cards */}
         <div className="flex gap-2 align-center">
-           {[
-             { label: 'BA Plan Fuel', onClick: onShowBaRequest, sub: 'Monthly' },
-             { label: 'PO Fuel Doc', onClick: onShowPoDoc, sub: poDoc || 'Pending' }
-           ].map((doc, i) => (
-             <button 
-               key={i}
-               onClick={doc.onClick}
-               className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-gray-500/5 dark:bg-white/5 backdrop-blur-md border border-white/20 dark:border-white/5 hover:bg-gray-500/10 dark:hover:bg-white/10 transition-all text-left min-w-[130px] group/doc shadow-lg"
-             >
-                <div className="w-7 h-7 rounded-lg bg-gray-400/10 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover/doc:scale-110 transition-transform">
-                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                   <span className="text-[8px] font-black uppercase tracking-tighter text-gray-500 dark:text-gray-400 leading-none">{doc.label}</span>
-                   <span className="text-[7px] font-bold text-gray-400 uppercase truncate w-[80px]">{doc.sub}</span>
-                </div>
-             </button>
-           ))}
+          {[
+            { label: 'BA Plan Fuel', onClick: onShowBaRequest, sub: 'Monthly' },
+            { label: 'PO Fuel Doc', onClick: onShowPoDoc, sub: poDoc || 'Pending' }
+          ].map((doc, i) => (
+            <button
+              key={i}
+              onClick={doc.onClick}
+              className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-gray-500/5 dark:bg-white/5 backdrop-blur-md border border-white/20 dark:border-white/5 hover:bg-gray-500/10 dark:hover:bg-white/10 transition-all text-left min-w-[130px] group/doc shadow-lg"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gray-400/10 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover/doc:scale-110 transition-transform">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[8px] font-black uppercase tracking-tighter text-gray-500 dark:text-gray-400 leading-none">{doc.label}</span>
+                <span className="text-[7px] font-bold text-gray-400 uppercase truncate w-[80px]">{doc.sub}</span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

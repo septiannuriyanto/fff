@@ -3,6 +3,7 @@ import {
   convertDateToYYYYMM,
   formatDateForSupabase,
 } from '../../../../../Utils/DateUtility';
+import { startOfMonth } from 'date-fns';
 import { supabase } from '../../../../../db/SupabaseClient';
 import RitationAction from '../../components/RitationAction';
 import toast, { Toaster } from 'react-hot-toast';
@@ -32,11 +33,12 @@ import { useNavigate } from 'react-router-dom';
 import { ReconcileFuelData } from '../ReconcileFuelData';
 import RitationStatsPanel from '../components/RitationStatsPanel';
 import { ThemedMetricCard } from '../../../../../common/ThemedComponents/ThemedMetricCard';
+import ThemedMonthPicker from '../../../../../common/ThemedComponents/ThemedMonthPicker';
 
 
 
 const RitationDashboard = () => {
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<Date>(startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
   const [distributionViewMode, setDistributionViewMode] = useState<'day' | 'month'>('day');
   const [dataRitasi, setDataRitasi] = useState<RitasiFuelData[]>([]);
@@ -91,8 +93,8 @@ const RitationDashboard = () => {
 
   const fetchRitationReport = async (targetDate: Date) => {
     setIsDistLoading(true);
-    setDataRitasi([]); 
-    
+    setDataRitasi([]);
+
     const dateStr = formatDateForSupabase(targetDate);
 
     const { data: dataDaily, error: errorDaily } = await supabase
@@ -137,8 +139,8 @@ const RitationDashboard = () => {
     const periodPrefix = `G${(targetMonth.getFullYear() % 100).toString().padStart(2, '0')}${(targetMonth.getMonth() + 1).toString().padStart(2, '0')}%`;
 
     setIsDistLoading(true);
-    setDataRitasiMonthly([]); 
-    
+    setDataRitasiMonthly([]);
+
     const { data: dataMonthly, error: errorMonthly } = await supabase.rpc('rpc_get_fuel_trip_distribution_v2', {
       p_prefix: periodPrefix
     });
@@ -161,7 +163,7 @@ const RitationDashboard = () => {
 
   const processAnalyticalDailyData = (analytics: any, currentPlan: number) => {
     const { daily_actuals, daily_reconciles, last_ritation_date } = analytics;
-    
+
     const dInMonth = getDaysInMonth(selectedMonth);
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth();
@@ -175,7 +177,7 @@ const RitationDashboard = () => {
 
     const actualMap: Record<string, number> = {};
     const reconcileMap: Record<string, number> = {};
-    
+
     allDates.forEach(dStr => {
       actualMap[dStr] = 0;
       reconcileMap[dStr] = 0;
@@ -234,7 +236,7 @@ const RitationDashboard = () => {
     const periodStr = convertDateToYYYYMM(selectedMonth);
     const periodNum = parseInt(periodStr);
     const periodPrefix = `G${(selectedMonth.getFullYear() % 100).toString().padStart(2, '0')}${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}%`;
-    
+
     const { data, error } = await supabase.rpc('rpc_get_ritation_dashboard_analytics', {
       p_prefix: periodPrefix,
       p_period: periodNum
@@ -311,7 +313,7 @@ const RitationDashboard = () => {
         const deviationValues = Object.entries(devDaily)
           .filter(([dStr]) => lds && dStr <= lds)
           .map(([_, val]) => val);
-        
+
         const totalDevMtd = deviationValues.reduce((acc, v) => acc + v, 0);
 
         const daysInMonth = getDaysInMonth(selectedMonth);
@@ -357,9 +359,21 @@ const RitationDashboard = () => {
     }
   }, [selectedDay, distributionViewMode]);
 
-  const handleMonthChange = async (date: Date | null) => {
-    if (date) setSelectedMonth(date);
-  };
+  // Sync selectedDay when selectedMonth changes
+  useEffect(() => {
+    const now = new Date();
+    const isCurrentMonth =
+      selectedMonth.getMonth() === now.getMonth() &&
+      selectedMonth.getFullYear() === now.getFullYear();
+
+    if (isCurrentMonth) {
+      // For current month, default to today
+      setSelectedDay(now);
+    } else {
+      // For other months, default to the 1st day
+      setSelectedDay(startOfMonth(selectedMonth));
+    }
+  }, [selectedMonth]);
 
   const handleDayChange = async (date: Date | null) => {
     console.log('Day Changed:', date);
@@ -476,12 +490,14 @@ const RitationDashboard = () => {
     <div className="flex flex-col gap-4 transition-all duration-300">
       <div className="w-full">
         <div className="w-full">
-          <div className="header flex mb-4 items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2">
-            <h2 className="mb-0 font-bold text-black dark:text-white text-xl">
-              Ritation Dashboard
-            </h2>
-            <Toaster />
+          <div className="flex justify-end mb-4 px-2">
+            <ThemedMonthPicker
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              className="w-full md:w-64"
+            />
           </div>
+          <Toaster />
 
           <div className="ritation__table w-full space-y-4">
             <div className="grid grid-cols-1 gap-6">
@@ -489,7 +505,6 @@ const RitationDashboard = () => {
                 <RitationStatsPanel
                   panelTitle="Monthly Progress (Liter)"
                   selectedMonth={selectedMonth}
-                  onMonthChange={handleMonthChange}
                   isLoading={isLoading}
                   ritationProgress={
                     ((ritationQtyTotal / (ritationQtyPlan || 1)) * 100).toFixed(2) + '%'
@@ -518,7 +533,7 @@ const RitationDashboard = () => {
               </div>
 
               <div className="space-y-4">
-                <DeviationChart 
+                <DeviationChart
                   chartDataDaily={chartDataDeviationDaily}
                   chartDataCumulative={chartDataDeviationCumulative}
                 />
@@ -547,7 +562,7 @@ const RitationDashboard = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className={`transition-all duration-300 ${isDistLoading ? 'opacity-30 blur-[2px]' : ''}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
                     <div className="flex flex-col gap-1.5">
@@ -564,16 +579,16 @@ const RitationDashboard = () => {
                         ) : 'Full month performance overview'}
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex p-1.5 rounded-2xl bg-gray-100/30 dark:bg-white/5 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-inner">
-                        <button 
+                        <button
                           onClick={() => setDistributionViewMode('day')}
                           className={`relative px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${distributionViewMode === 'day' ? 'bg-white dark:bg-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] text-blue-600 scale-[1.05]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
                         >
                           Daily
                         </button>
-                        <button 
+                        <button
                           onClick={() => setDistributionViewMode('month')}
                           className={`relative px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${distributionViewMode === 'month' ? 'bg-white dark:bg-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] text-blue-600 scale-[1.05]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
                         >
@@ -597,15 +612,15 @@ const RitationDashboard = () => {
                               placement="bottomEnd"
                               container={document.body}
                               className="!w-full !bg-transparent custom-date-picker font-bold text-blue-600 cursor-pointer"
-                            
+
                             />
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  <RitationSubtotalByFTChart 
-                    data={distributionViewMode === 'day' ? dataRitasi : dataRitasiMonthly} 
+                  <RitationSubtotalByFTChart
+                    data={distributionViewMode === 'day' ? dataRitasi : dataRitasiMonthly}
                     viewMode={distributionViewMode}
                   />
                 </div>
@@ -643,7 +658,7 @@ const RitationDashboard = () => {
                             <td className="px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold text-right tabular-nums">{formatNumberWithSeparator(row.qty_sonding || 0)}</td>
                             <td className="px-3 py-1.5 text-xs">
                               <div className="flex items-center justify-center gap-1">
-                                <button 
+                                <button
                                   onClick={() => setExpandedRow(expandedRow === row.no_surat_jalan ? null : row.no_surat_jalan)}
                                   className={`w-6 h-6 flex items-center justify-center rounded-full transition-all ${expandedRow === row.no_surat_jalan ? 'bg-blue-500 text-white rotate-180' : 'hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500'}`}
                                 >
@@ -676,9 +691,9 @@ const RitationDashboard = () => {
                                         <div className="relative group overflow-hidden rounded-xl border border-white/20 dark:border-white/10 shadow-md aspect-[4/3] bg-gray-100 dark:bg-black/40">
                                           {row[urlType] ? (
                                             <>
-                                              <img 
-                                                src={`${baseStorageUrl}/ritation_upload/${row.no_surat_jalan.slice(1,5)}/${row.no_surat_jalan}/${row[urlType]}`} 
-                                                style={{ 
+                                              <img
+                                                src={`${baseStorageUrl}/ritation_upload/${row.no_surat_jalan.slice(1, 5)}/${row.no_surat_jalan}/${row[urlType]}`}
+                                                style={{
                                                   transform: `rotate(${rotationAngle[`${row.no_surat_jalan}-${urlType}`] || 0}deg)`,
                                                   transition: 'transform 0.5s ease-in-out'
                                                 }}
@@ -727,7 +742,7 @@ const RitationDashboard = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div ref={modalRef} className="bg-white dark:bg-boxdark w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl relative overflow-hidden">
-            <button 
+            <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-black/50 text-white rounded-full hover:bg-black/70 transition-all"
             >
