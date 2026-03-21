@@ -164,7 +164,7 @@ export default function CoordinatorReport() {
             // Fetch active warehouses to calculate missing submissions
             const { data: storageData, error: storageError } = await supabase
                 .from('storage')
-                .select('unit_id')
+                .select('unit_id, warehouse_id')
                 .neq('status', 'OUT');
 
             if (!storageError && storageData) {
@@ -183,9 +183,9 @@ export default function CoordinatorReport() {
                 }
 
                 const missing = storageData
-                    .map(s => s.unit_id)
-                    .filter(id => !submittedSondings.includes(id))
-                    .sort();
+                    .filter(s => !submittedSondings.includes(s.unit_id))
+                    .sort((a, b) => (a.warehouse_id || '').localeCompare(b.warehouse_id || '', undefined, { numeric: true, sensitivity: 'base' }))
+                    .map(s => s.unit_id);
 
                 setMissingWarehouses(missing);
             }
