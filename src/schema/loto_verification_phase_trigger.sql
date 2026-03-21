@@ -16,17 +16,24 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- Mengkonversi jam ke zona waktu target (Makassar/WITA, GMT+8) lalu cast ke format time murni
-    v_local_time := (p_refueling_start AT TIME ZONE 'Asia/Makassar')::time;
+    -- Data sudah dalam Asia/Makassar, langsung cast ke time
+    v_local_time := p_refueling_start::time;
 
-    -- Fase 2: antara 11:45 s/d 13:15
-    IF v_local_time >= '11:45:00'::time AND v_local_time <= '13:15:00'::time THEN
-        v_phase := 2;
-    -- Fase 1: sebelum 11:45
-    ELSIF v_local_time < '11:45:00'::time THEN
+    -- Shift 1
+    IF v_local_time >= '06:00:00'::time AND v_local_time <= '11:44:59'::time THEN
         v_phase := 1;
-    -- Fase 3: setelah 13:15
-    ELSE
+    ELSIF v_local_time >= '11:45:00'::time AND v_local_time <= '13:15:59'::time THEN
+        v_phase := 2;
+    ELSIF v_local_time >= '13:16:00'::time AND v_local_time <= '17:59:59'::time THEN
+        v_phase := 3;
+    
+    -- Shift 2
+    ELSIF v_local_time >= '18:00:00'::time AND v_local_time <= '23:34:59'::time THEN
+        v_phase := 1;
+    ELSIF (v_local_time >= '23:35:00'::time AND v_local_time <= '23:59:59'::time) OR 
+          (v_local_time >= '00:00:00'::time AND v_local_time <= '01:15:59'::time) THEN
+        v_phase := 2;
+    ELSIF v_local_time >= '01:16:00'::time AND v_local_time <= '05:59:59'::time THEN
         v_phase := 3;
     END IF;
 
