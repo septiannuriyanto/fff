@@ -1,17 +1,14 @@
 
-import RefuelingAnomaly from './RefuelingAnomaly';
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../../../db/SupabaseClient'
-import { Session } from '@supabase/supabase-js'; // Import Session type
-import Ritation from './Ritation/page/RitationDashboard';
 import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import RefuelingOutsideRest from '../../Operational/FleetManagement/RefuelingOutsideRest';
+import IssuingFuel from '../../Operational/IssuingFuel/IssuingFuel';
 const Operational = () => {
   return (
     <ThemedPanelContainer title='Operational Dashboard'>
-      <>
+      <div className='flex flex-col gap-2'>
         <RefuelingOutsideRest />
-      </>
+        <IssuingFuel />
+      </div>
     </ThemedPanelContainer>
   );
 };

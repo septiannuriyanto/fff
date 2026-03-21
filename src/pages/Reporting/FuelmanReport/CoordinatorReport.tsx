@@ -37,7 +37,7 @@ const LocalSection = ({ title, children }: { title: string; children: React.Reac
 };
 
 export default function CoordinatorReport() {
-    const DEV_MODE = false; // Toggle this to bypass complete report requirements
+    const DEV_MODE = true; // Toggle this to bypass complete report requirements
 
     const { activeTheme } = useTheme();
     const [reports, setReports] = useState<any[]>([]);
@@ -382,13 +382,19 @@ export default function CoordinatorReport() {
             }
 
             const lowStockNotes: string[] = [];
+            // p_next_shift: the shift that will CONSUME this stock.
+            // Shift 1 report → stock consumed by Shift 2 → p_next_shift = 2 (and vice versa)
+            const nextShift: number = targetShift === 1 ? 2 : 1;
             for (const s of (stock || [])) {
                 if (s.qty_akhir != null) {
-                    const { data: avgData, error } = await supabase.rpc('get_last_3_days_average_usage', { p_unit_id: s.unit_number });
+                    const { data: avgData, error } = await supabase.rpc('get_last_3_days_average_usage', {
+                        p_unit_id: s.unit_number,
+                        p_next_shift: nextShift,
+                    });
                     if (!error && avgData != null) {
                         const avgUsage = Number(avgData);
                         if (avgUsage > 0 && s.qty_akhir < avgUsage) {
-                            lowStockNotes.push(`- ⚠ ${s.unit_number} : Stock Akhir (${formatDots(Math.round(s.qty_akhir))} L) lebih rendah dari Usage Harian (${formatDots(Math.round(avgUsage))} L)`);
+                            lowStockNotes.push(`- ⚠ ${s.unit_number} : Stock Akhir (${formatDots(Math.round(s.qty_akhir))} L) lebih rendah dari Avg. Usage Phase 1 Shift ${nextShift} / 3 Hari (${formatDots(Math.round(avgUsage))} L)`);
                         }
                     }
                 }
