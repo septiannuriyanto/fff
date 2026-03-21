@@ -429,7 +429,7 @@ const InputLotoVerification: React.FC = () => {
                 Date: {lastVerification.issued_date}, Shift: {lastVerification.shift}
               </div>
               <div className="text-xs opacity-75">
-                Session Code: {lastVerification.session_code.slice(0, 11)} (Decoded)
+                Session Code: {lastVerification.session_code?.slice(0, 11) || 'N/A'} (Decoded)
               </div>
             </div>
             <div className="text-right">

@@ -161,7 +161,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_latest_loto_verification()
 RETURNS TABLE (
   issued_date date,
-  shift smallint
+  shift smallint,
+  session_code text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -170,7 +171,8 @@ BEGIN
   RETURN QUERY
   SELECT 
     lv.issued_date, 
-    lv.shift
+    lv.shift,
+    lv.session_code
   FROM public.loto_verification lv
   ORDER BY lv.issued_date DESC, lv.shift DESC
   LIMIT 1;

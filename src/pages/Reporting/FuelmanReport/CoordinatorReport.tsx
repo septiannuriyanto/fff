@@ -12,7 +12,7 @@ import toast, { Toaster } from "react-hot-toast";
 import ThemedGrid from "../../../common/ThemedComponents/ThemedGrid";
 import { shareMessageToWhatsapp } from "../../../functions/share_message";
 import { createPortal } from "react-dom";
-import { FaWhatsapp, FaTimes, FaCheckCircle } from "react-icons/fa";
+import { FaWhatsapp, FaTimes } from "react-icons/fa";
 import DatePickerOne from "../../../components/Forms/DatePicker/DatePickerOne";
 import ShiftDropdown from "../../../components/Forms/SelectGroup/ShiftDropdown";
 
@@ -37,6 +37,8 @@ const LocalSection = ({ title, children }: { title: string; children: React.Reac
 };
 
 export default function CoordinatorReport() {
+    const DEV_MODE = false; // Toggle this to bypass complete report requirements
+
     const { activeTheme } = useTheme();
     const [reports, setReports] = useState<any[]>([]);
     const [selectedReport, setSelectedReport] = useState<any | null>(null);
@@ -54,6 +56,8 @@ export default function CoordinatorReport() {
 
     const [filterDate, setFilterDate] = useState<Date>(getOperationalDate());
     const [filterShift, setFilterShift] = useState<boolean>(getOperationalShift() === 1);
+
+    const [missingWarehouses, setMissingWarehouses] = useState<string[]>([]);
 
     // Master report state
     const [masterReport, setMasterReport] = useState<any | null | 'not_found'>(null);
@@ -150,11 +154,41 @@ export default function CoordinatorReport() {
         `)
                 .eq('report_date', targetDate)
                 .eq('shift', targetShift)
-                .order('created_at', { ascending: false })
+                .order('ft_number', { ascending: true })
                 .limit(50);
 
             if (error) throw error;
-            setReports(data || []);
+            const fetchedReports = data || [];
+            setReports(fetchedReports);
+
+            // Fetch active warehouses to calculate missing submissions
+            const { data: storageData, error: storageError } = await supabase
+                .from('storage')
+                .select('unit_id')
+                .neq('status', 'OUT');
+
+            if (!storageError && storageData) {
+                let submittedSondings: string[] = [];
+
+                if (fetchedReports.length > 0) {
+                    const reportIds = fetchedReports.map(r => r.id);
+                    const { data: stockData } = await supabase
+                        .from('fuelman_report_stock')
+                        .select('unit_number')
+                        .in('report_id', reportIds);
+
+                    if (stockData) {
+                        submittedSondings = stockData.map(s => s.unit_number);
+                    }
+                }
+
+                const missing = storageData
+                    .map(s => s.unit_id)
+                    .filter(id => !submittedSondings.includes(id))
+                    .sort();
+
+                setMissingWarehouses(missing);
+            }
         } catch (err) {
             console.error("Failed to fetch reports:", err);
         }
@@ -214,21 +248,33 @@ export default function CoordinatorReport() {
 
             const reportIds = reportsData.map((r: any) => r.id);
 
-            const [ritasiRes, transfersRes, flowmeterRes, stockRes, issuingRes, tmrRes] = await Promise.all([
+            const [ritasiRes, transfersRes, flowmeterRes, stockRes, tmrRes, storageRes] = await Promise.all([
                 supabase.from('fuelman_report_ritasi').select('ft_number, value').in('report_id', reportIds),
                 supabase.from('fuelman_report_transfers').select('transfer_from, destination, transfer_out').in('report_id', reportIds),
                 supabase.from('fuelman_report_flowmeter').select('unit_number, fm_awal, fm_akhir, usage').in('report_id', reportIds),
-                supabase.from('fuelman_report_stock').select('unit_number, sonding_awal, sonding_akhir').in('report_id', reportIds),
-                supabase.from('fuelman_report_issuing').select('total_refueling, jumlah_unit_support, jumlah_unit_hd').in('report_id', reportIds),
-                supabase.from('fuelman_report_tmr').select('loader_id, time_refueling, area_id(major_area), location_detail').in('report_id', reportIds),
+                supabase.from('fuelman_report_stock').select('unit_number, sonding_awal, sonding_akhir, qty_awal, qty_akhir').in('report_id', reportIds),
+                supabase.from('fuelman_report_tmr').select('loader_id, time_refueling, area_id(major_area), location_detail, inside_rest_time, reason, is_slippery').in('report_id', reportIds),
+                supabase.from('storage').select('unit_id, warehouse_id')
             ]);
 
+            const storageMap: Record<string, string> = {};
+            (storageRes.data || []).forEach((s: any) => {
+                if (s.unit_id && s.warehouse_id) {
+                    storageMap[s.unit_id] = s.warehouse_id;
+                }
+            });
+
+            const getWhId = (unitId: string) => storageMap[unitId] || unitId;
+
             const ritasi = (ritasiRes as any).data || [];
-            const transfers = (transfersRes as any).data || [];
-            const flowmeter = (flowmeterRes as any).data || [];
-            const stock = (stockRes as any).data || [];
-            const issuing = (issuingRes as any).data || [];
-            const tmr = (tmrRes as any).data || [];
+            const transfers = ((transfersRes as any).data || []).sort((a: any, b: any) => getWhId(a.transfer_from || '').localeCompare(getWhId(b.transfer_from || '')));
+            const flowmeter = ((flowmeterRes as any).data || []).sort((a: any, b: any) => getWhId(a.unit_number || '').localeCompare(getWhId(b.unit_number || '')));
+            const stock = ((stockRes as any).data || []).sort((a: any, b: any) => getWhId(a.unit_number || '').localeCompare(getWhId(b.unit_number || '')));
+            const tmr = ((tmrRes as any).data || []).sort((a: any, b: any) => {
+                const areaA = (Array.isArray(a.area_id) ? a.area_id[0] : a.area_id)?.major_area || '';
+                const areaB = (Array.isArray(b.area_id) ? b.area_id[0] : b.area_id)?.major_area || '';
+                return areaA.localeCompare(areaB);
+            });
 
             toast.dismiss();
 
@@ -241,40 +287,48 @@ export default function CoordinatorReport() {
                 msg += `${f.unit_number} = ${formatDots(f.usage || 0)}\n`;
             });
             const totalOutValue = flowmeter?.reduce((acc: number, f: any) => acc + Number(f.usage || 0), 0) || 0;
-            msg += `*TOTAL FUEL OUT = ${formatDots(totalOutValue)} (LITER)*\n\n`;
-
-            if (issuing.length > 0) {
-                msg += `*DETAIL ISSUING*\n`;
-                const totalSupport = issuing.reduce((acc: number, i: any) => acc + Number(i.jumlah_unit_support || 0), 0);
-                const totalHD = issuing.reduce((acc: number, i: any) => acc + Number(i.jumlah_unit_hd || 0), 0);
-                const totalQty = issuing.reduce((acc: number, i: any) => acc + Number(i.total_refueling || 0), 0);
-                msg += `- Total Qty: ${formatDots(totalQty)} L\n`;
-                msg += `- Total Unit Support: ${totalSupport}\n`;
-                msg += `- Total Unit HD: ${totalHD}\n\n`;
-            }
+            msg += `\n`;
 
             msg += `*RITASI (LITER)*\n`;
-            const aggregatedRitasi = (ritasi || []).reduce((acc: Record<string, number>, curr: any) => {
+            const aggregatedRitasi = (ritasi || []).reduce((acc: Record<string, { value: number, count: number }>, curr: any) => {
                 const ft = curr.ft_number || 'UNKNOWN';
-                acc[ft] = (acc[ft] || 0) + Number(curr.value || 0);
+                if (!acc[ft]) acc[ft] = { value: 0, count: 0 };
+                acc[ft].value += Number(curr.value || 0);
+                acc[ft].count += 1;
                 return acc;
             }, {});
 
-            Object.entries(aggregatedRitasi).forEach(([ft, value]) => {
-                msg += `${ft} = ${formatDots(value as number)}\n`;
-            });
+            Object.entries(aggregatedRitasi)
+                .sort(([ftA], [ftB]) => getWhId(ftA).localeCompare(getWhId(ftB)))
+                .forEach(([ft, data]: [string, any]) => {
+                    msg += `${ft} = ${formatDots(data.value)} (${data.count}x)\n`;
+                });
 
-            const totalInValue = Object.values(aggregatedRitasi).reduce((acc: number, val: any) => acc + Number(val), 0) || 0;
-            msg += `*TOTAL FUEL IN = ${formatDots(totalInValue)} LITER*\n\n`;
+            const totalInValue = Object.values(aggregatedRitasi).reduce((acc: number, val: any) => acc + Number(val.value), 0) || 0;
+            msg += `\n`;
 
-            if (tmr.length > 0) {
-                msg += `*TMR / MAINTENANCE REPORTING*\n`;
-                tmr.forEach((item: any) => {
+            const tmrInside = tmr.filter((item: any) => item.inside_rest_time === true);
+            const tmrOutside = tmr.filter((item: any) => item.inside_rest_time !== true);
+
+            if (tmrInside.length > 0) {
+                msg += `*REFUELING LOADER (INSIDE REST)*\n`;
+                tmrInside.forEach((item: any) => {
                     const areaObj = Array.isArray(item.area_id) ? item.area_id[0] : item.area_id;
                     msg += `- ${item.loader_id} (${item.time_refueling}) @ ${areaObj?.major_area || ''} ${item.location_detail || ''}\n`;
                 });
                 msg += `\n`;
             }
+
+            if (tmrOutside.length > 0) {
+                msg += `*REFUELING LOADER (OUTSIDE REST)*\n`;
+                tmrOutside.forEach((item: any) => {
+                    const areaObj = Array.isArray(item.area_id) ? item.area_id[0] : item.area_id;
+                    msg += `- ${item.loader_id} (${item.time_refueling}) @ ${areaObj?.major_area || ''} ${item.location_detail || ''}\n`;
+                });
+                msg += `\n`;
+            }
+
+            const uniqueLoaders = new Set(tmr.map((t: any) => t.loader_id)).size;
 
             msg += `*WAREHOUSE TRANSFER*\n`;
             transfers?.forEach((t: any) => {
@@ -283,15 +337,23 @@ export default function CoordinatorReport() {
             msg += `\n`;
 
             msg += `*READINESS FT*\n`;
-            ftReadiness.forEach((ft: any) => {
-                msg += `${ft.unit_id} = ${ft.readiness} (${ft.location})\n`;
-            });
-            const rfuCount = ftReadiness.filter((ft: any) => ft.readiness === 'RFU').length;
-            msg += `*TOTAL FT RFU : ${rfuCount} UNIT*\n\n`;
+            [...ftReadiness]
+                .sort((a: any, b: any) => getWhId(a.unit_id || '').localeCompare(getWhId(b.unit_id || '')))
+                .forEach((ft: any) => {
+                    msg += `${ft.unit_id} = ${ft.readiness} (${ft.location})\n`;
+                });
+            const rfuCount = ftReadiness.filter((ft: any) => ft.readiness === 'RFU' && (ft.unit_id || '').toUpperCase().startsWith('FT')).length;
+            msg += `\n`;
 
-            msg += `*SONDING AWAL - AKHIR (CM)*\n`;
+            msg += `*SONDING / ACTUAL STOCK AWAL - AKHIR*\n`;
+            let totalStockAwal = 0;
+            let totalStockAkhir = 0;
             stock?.forEach((s: any) => {
-                msg += `${s.unit_number} = ${s.sonding_awal} - ${s.sonding_akhir}\n`;
+                const qAwal = s.qty_awal != null ? `${formatDots(Math.round(s.qty_awal))} L` : '? L';
+                const qAkhir = s.qty_akhir != null ? `${formatDots(Math.round(s.qty_akhir))} L` : '? L';
+                msg += `${s.unit_number} = ${s.sonding_awal}cm (${qAwal}) - ${s.sonding_akhir}cm (${qAkhir})\n`;
+                totalStockAwal += (s.qty_awal || 0);
+                totalStockAkhir += (s.qty_akhir || 0);
             });
             msg += `\n`;
 
@@ -300,17 +362,81 @@ export default function CoordinatorReport() {
                 msg += `${f.unit_number} = ${formatDots(f.fm_awal || 0)}-${formatDots(f.fm_akhir || 0)}\n`;
             });
             msg += `\n`;
-            msg += `*NOTE :*\n`;
 
-            const bdUnits = ftReadiness.filter(ft => ft.readiness === 'BD');
-            if (bdUnits.length > 0) {
-                bdUnits.forEach(ft => {
-                    msg += `- ${ft.unit_id} (${ft.location}) : ${ft.remark}\n`;
-                });
+            msg += `*SUMMARY*\n`;
+            msg += `- TOTAL STOCK AWAL SHIFT = ${formatDots(Math.round(totalStockAwal))} L\n`;
+            msg += `- TOTAL FUEL IN = ${formatDots(totalInValue)} L\n`;
+            msg += `- TOTAL FUEL OUT = ${formatDots(totalOutValue)} L\n`;
+            msg += `- TOTAL LOADER REFUELED = ${uniqueLoaders} UNIT\n`;
+            msg += `- TOTAL FT RFU = ${rfuCount} UNIT\n`;
+            msg += `- TOTAL STOCK AKHIR SHIFT = ${formatDots(Math.round(totalStockAkhir))} L\n`;
+            msg += `===============================\n`;
+
+            const deltaStock = totalStockAkhir - totalStockAwal;
+            if (deltaStock > 0) {
+                msg += `- STOCK : +${formatDots(Math.round(deltaStock))} L (Gained)\n`;
+            } else if (deltaStock < 0) {
+                msg += `- STOCK : -${formatDots(Math.round(Math.abs(deltaStock)))} L (Drained)\n`;
             } else {
-                msg += `-\n`;
+                msg += `- STOCK : +0 L\n`;
+            }
+
+            const lowStockNotes: string[] = [];
+            for (const s of (stock || [])) {
+                if (s.qty_akhir != null) {
+                    const { data: avgData, error } = await supabase.rpc('get_last_3_days_average_usage', { p_unit_id: s.unit_number });
+                    if (!error && avgData != null) {
+                        const avgUsage = Number(avgData);
+                        if (avgUsage > 0 && s.qty_akhir < avgUsage) {
+                            lowStockNotes.push(`- ⚠ ${s.unit_number} : Stock Akhir (${formatDots(Math.round(s.qty_akhir))} L) lebih rendah dari Usage Harian (${formatDots(Math.round(avgUsage))} L)`);
+                        }
+                    }
+                }
+            }
+
+            if (lowStockNotes.length > 0) {
+                msg += lowStockNotes.join('\n') + '\n';
+            }
+
+            const bdUnits = [...ftReadiness]
+                .filter((ft: any) => ft.readiness === 'BD')
+                .sort((a: any, b: any) => getWhId(a.unit_id || '').localeCompare(getWhId(b.unit_id || '')));
+
+            const tmrOutsideNotes = tmr
+                .filter((item: any) => item.inside_rest_time !== true)
+                .sort((a: any, b: any) => {
+                    const aSlip = a.is_slippery ? 1 : 0;
+                    const bSlip = b.is_slippery ? 1 : 0;
+                    return bSlip - aSlip;
+                });
+
+            if (bdUnits.length > 0 || tmrOutsideNotes.length > 0) {
+                if (bdUnits.length > 0) {
+                    bdUnits.forEach((ft: any) => {
+                        msg += `- BD : ${ft.unit_id} (${ft.location}) : ${ft.remark || '-'}\n`;
+                    });
+                }
+                if (tmrOutsideNotes.length > 0) {
+                    tmrOutsideNotes.forEach((item: any) => {
+                        let tmrReason = item.reason;
+                        if (item.is_slippery === true) {
+                            tmrReason = 'R21 (Rain & Slippery)';
+                        } else if (!tmrReason || tmrReason.trim() === '') {
+                            tmrReason = 'Non R21, No Reason Provided';
+                        }
+
+                        const areaObj = Array.isArray(item.area_id) ? item.area_id[0] : item.area_id;
+                        const loc = `${areaObj?.major_area || ''} ${item.location_detail || ''}`.trim();
+                        const locStr = loc ? ` (@ ${loc})` : '';
+
+                        msg += `- TMR : ${item.loader_id}${locStr} (OUTSIDE REST) : ${tmrReason}\n`;
+                    });
+                }
             }
             msg += `\n`;
+
+            msg += `*NOTE :*\n`;
+            msg += `-\n\n`;
 
             shareMessageToWhatsapp(msg);
         } catch (err: any) {
@@ -402,13 +528,36 @@ export default function CoordinatorReport() {
                     </div>
                 </LocalSection>
 
-                <div className="px-4 pb-12 overflow-y-auto">
+                <div className="px-4 pb-12 flex flex-col gap-3 overflow-y-auto">
+                    {missingWarehouses.length > 0 && (
+                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500">
+                            <div className="font-bold flex items-center gap-2 mb-2 text-sm">
+                                <span>⚠</span> Menunggu submitted (Sonding) :
+                            </div>
+                            <ul className="list-none space-y-1 font-mono text-xs pl-6">
+                                {missingWarehouses.filter(Boolean).map(ft => (
+                                    <li key={ft} className="relative before:content-['•'] before:absolute before:-left-4 before:text-red-500">
+                                        {ft}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <button
                         onClick={handleShareDailyReport}
-                        className="w-full py-4 flex items-center justify-center gap-2 bg-green-600/20 text-green-500 border border-green-500/20 rounded-2xl hover:bg-green-600 hover:text-white transition-all font-bold shadow-lg shadow-green-500/10"
+                        disabled={!DEV_MODE && missingWarehouses.length > 0}
+                        className={`w-full py-4 flex items-center justify-center gap-2 border rounded-2xl transition-all font-bold shadow-lg ${!DEV_MODE && missingWarehouses.length > 0
+                            ? "bg-gray-500/10 text-gray-500 border-gray-500/20 cursor-not-allowed opacity-70"
+                            : "bg-green-600/20 text-green-500 border-green-500/20 hover:bg-green-600 hover:text-white shadow-green-500/10"
+                            }`}
                     >
                         <FaWhatsapp size={24} />
-                        Share Aggregated Report to WhatsApp
+                        {!DEV_MODE && missingWarehouses.length > 0
+                            ? "Menunggu Semua Warehouse Submit..."
+                            : (DEV_MODE && missingWarehouses.length > 0
+                                ? "Share (DEV MODE Bypassed)"
+                                : "Share Aggregated Report to WhatsApp")
+                        }
                     </button>
                 </div>
 
@@ -479,6 +628,11 @@ export default function CoordinatorReport() {
                                                     <div className="text-xs opacity-70 mt-1">
                                                         Sonding: <span className="text-primary">{s.sonding_awal}</span> - <span className="text-primary">{s.sonding_akhir}</span> (CM)
                                                     </div>
+                                                    {(s.qty_awal != null || s.qty_akhir != null) && (
+                                                        <div className="text-xs mt-1">
+                                                            Actual Stock: <span className="text-green-500 font-bold">{formatDots(Math.round(s.qty_awal || 0))}</span> - <span className="text-green-500 font-bold">{formatDots(Math.round(s.qty_akhir || 0))}</span> (LITER)
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )} />
 
@@ -492,11 +646,20 @@ export default function CoordinatorReport() {
                                                     <div className="text-[10px] opacity-40">
                                                         {item.area?.major_area} • {item.location_detail}
                                                     </div>
-                                                    {item.reason && (
-                                                        <div className="text-[10px] mt-2 p-2 bg-white/5 rounded border border-white/5 italic">
-                                                            "{item.reason}"
-                                                        </div>
-                                                    )}
+                                                    {(() => {
+                                                        if (item.inside_rest_time) return null;
+                                                        let tmrReason = item.reason;
+                                                        if (item.is_slippery === true) {
+                                                            tmrReason = 'R21 (Rain & Slippery)';
+                                                        } else if (!tmrReason || tmrReason.trim() === '') {
+                                                            tmrReason = 'Non R21, No Reason Provided';
+                                                        }
+                                                        return (
+                                                            <div className="text-[10px] mt-2 p-2 bg-white/5 rounded border border-white/5 italic">
+                                                                * Reason: {tmrReason}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )} />
                                         </div>
