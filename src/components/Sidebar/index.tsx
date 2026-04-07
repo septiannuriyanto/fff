@@ -307,6 +307,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               >
                 <SidebarLink to="/oil/storagemgmt" label="Stor. Mgmt" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/dst" label="DST Oil" mini={sidebarConfig === 'mini'} />
+                <SidebarLink to="/oil/dst-user" label="DST Oil (User)" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/dstreport" label="DST Report" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/historical" label="Historical Report" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/grease" label="Grease" mini={sidebarConfig === 'mini'} />

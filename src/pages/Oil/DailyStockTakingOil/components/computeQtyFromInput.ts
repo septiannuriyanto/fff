@@ -26,7 +26,8 @@ export async function computeQtyFromInput(
   console.log(inputValue);
   console.log(warehouseId, materialCode, tankNumber, uoi);
 
-  const raw = parseFloat(inputValue);
+  const normalizedInput = inputValue.replace(',', '.');
+  const raw = parseFloat(normalizedInput);
   if (isNaN(raw)) return null;
 
   let setup = setupData;

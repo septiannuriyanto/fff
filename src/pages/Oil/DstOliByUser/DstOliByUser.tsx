@@ -1,12 +1,13 @@
 // /dst-oil/DailyStockTakingOil.tsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../db/SupabaseClient';
-import DraftsTable from './components/DraftsTable';
-import { computeQtyFromInput } from './components/computeQtyFromInput';
-import { LocalDraft } from './components/LocalDraft';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useParams } from 'react-router-dom';
-import VoiceInputHandler from './enhancement/VoiceInputHandler';
+import { computeQtyFromInput } from '../DailyStockTakingOil/components/computeQtyFromInput';
+import { LocalDraft } from '../DailyStockTakingOil/components/LocalDraft';
+import DraftsTable from '../DailyStockTakingOil/components/DraftsTable';
+import { getMakassarShiftlyDateObject, getShiftString } from '../../../Utils/TimeUtility';
+
 
 type StorageOilSetup = {
   id: number;
@@ -23,9 +24,17 @@ type Material = {
   item_description?: string;
 };
 
-const LS_PREFIX = 'dailyStock-';
+const LS_PREFIX = 'dailyStockByUser-';
+const FORM_LS_KEY = 'dstOliByUser-form-v1';
 
-const DailyStockTakingOil: React.FC = () => {
+const parseInputNumber = (value: string) => {
+  const normalized = value.replace(',', '.').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const DailyStockTakingOilByUser: React.FC = () => {
   const [storageSetups, setStorageSetups] = useState<StorageOilSetup[]>([]);
   const [storageOils, setStorageOils] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -37,6 +46,8 @@ const DailyStockTakingOil: React.FC = () => {
   const [tankNumber, setTankNumber] = useState<number | null>(null);
   const [selectedUOI, setSelectedUOI] = useState<string>('');
   const [inputValue, setInputValue] = useState<string>('');
+  const [inputDate, setInputDate] = useState<string>(() => format(getMakassarShiftlyDateObject(), 'yyyy-MM-dd'));
+  const [inputShift, setInputShift] = useState<'1' | '2'>(() => getShiftString());
   const [qty, setQty] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<LocalDraft[]>([]);
   
@@ -140,6 +151,36 @@ const DailyStockTakingOil: React.FC = () => {
       }
     })();
   }, [urlAlias]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FORM_LS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { inputDate?: string; inputShift?: '1' | '2' };
+      if (typeof parsed.inputDate === 'string') {
+        setInputDate(parsed.inputDate);
+      }
+      if (parsed.inputShift === '1' || parsed.inputShift === '2') {
+        setInputShift(parsed.inputShift);
+      }
+    } catch (err) {
+      console.error('Failed to restore DstOliByUser form state', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FORM_LS_KEY,
+        JSON.stringify({
+          inputDate,
+          inputShift,
+        }),
+      );
+    } catch (err) {
+      console.error('Failed to persist DstOliByUser form state', err);
+    }
+  }, [inputDate, inputShift]);
 
   // ambil material untuk warehouse yang dipilih
   useEffect(() => {
@@ -372,9 +413,10 @@ const DailyStockTakingOil: React.FC = () => {
         null,
       tank_number: tankNumber,
       uoi: selectedUOI,
-      input_value: inputValue ? Number(inputValue) : null,
+      input_value: parseInputNumber(inputValue),
       qty,
-      date_dst: new Date().toISOString().split('T')[0],
+      date_dst: inputDate,
+      shift: Number(inputShift),
     };
     const { error } = await supabase.from('dst_oli').insert([payload]);
     if (!error) {
@@ -394,18 +436,6 @@ const DailyStockTakingOil: React.FC = () => {
   const handleSubmitAll = async () => {
     if (!drafts.length) return;
 
-    // ambil tanggal sekarang
-    const now = new Date();
-    // definisikan timezone yang diinginkan
-    const timeZone = 'Asia/Makassar'; // GMT+8
-
-    // konversi UTC → zona yang dimaksud
-    const zonedDate = toZonedTime(now, timeZone);
-
-    // format YYYY-MM-DD sesuai zona
-    const date_dst = format(zonedDate, 'yyyy-MM-dd');
-    console.log('Formatted date_dst:', date_dst);
-
     const rows = drafts.map((d) => ({
       warehouse_id: d.warehouse_id,
       unit_id: d.unit_id,
@@ -414,9 +444,10 @@ const DailyStockTakingOil: React.FC = () => {
       item_description: d.item_description,
       tank_number: d.tank_number,
       uoi: d.uoi,
-      input_value: d.input_value ? Number(d.input_value) : null,
+      input_value: parseInputNumber(String(d.input_value ?? '')),
       qty: d.qty,
-      date_dst, // hasil format dengan timezone
+      date_dst: inputDate,
+      shift: Number(inputShift),
     }));
 
     const { error } = await supabase.from('dst_oli').insert(rows);
@@ -431,6 +462,8 @@ const DailyStockTakingOil: React.FC = () => {
     localStorage.removeItem(key);
     loadDrafts();
   };
+
+  const hasDrafts = drafts.length > 0;
 
   // Tampilkan error 403 jika alias tidak ditemukan
   if (error403) {
@@ -454,8 +487,37 @@ const DailyStockTakingOil: React.FC = () => {
   return (
     <div className="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark mb-6 p-4 sm:p-6">
       <h2 className="mb-4 font-bold text-black dark:text-white sm:text-title-sm">
-        Daily Stock Taking Oil
+        Daily Stock Taking Oil by User
       </h2>
+      <div className="mb-5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3 text-xs text-slate-600 dark:text-slate-300 leading-6">
+        <p>1. Pilih warehouse</p>
+        <p>2. Pilih material</p>
+        <p>3. Input hasil sondingan dalam cm, tunggu hasil tera liternya keluar (tersimpan otomatis di draft local browser)</p>
+        <p>4. Ulangi untuk material yang lain pada 1 lubcar/storage yang sama</p>
+        <p>5. Tekan submit all jika sudah selesai input</p>
+      </div>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+        <div className="flex-1">
+          <label className="block mb-1 font-medium">Date</label>
+          <input
+            type="date"
+            value={inputDate}
+            onChange={(e) => setInputDate(e.target.value)}
+            className="border p-2 w-full rounded"
+          />
+        </div>
+        <div className="min-w-[120px]">
+          <label className="block mb-1 font-medium">Shift</label>
+          <select
+            value={inputShift}
+            onChange={(e) => setInputShift(e.target.value as '1' | '2')}
+            className="border p-2 w-full rounded bg-white dark:bg-boxdark"
+          >
+            <option value="1">Shift 1</option>
+            <option value="2">Shift 2</option>
+          </select>
+        </div>
+      </div>
 
       {/* Warehouse */}
       <div className="mb-4">
@@ -508,7 +570,7 @@ const DailyStockTakingOil: React.FC = () => {
       </div>
 
       {/* Tank */}
-      <div className="mb-4">
+      <div className="mb-4 hidden">
         <label className="block mb-1 font-medium">Select Tank Number</label>
         <select
           className="border p-2 w-full rounded"
@@ -526,7 +588,7 @@ const DailyStockTakingOil: React.FC = () => {
       </div>
 
       {/* UOI */}
-      <div className="mb-4">
+      <div className="mb-4 hidden">
         <label className="block mb-1 font-medium">Select UOI</label>
         <select
           className="border p-2 w-full rounded"
@@ -548,9 +610,15 @@ const DailyStockTakingOil: React.FC = () => {
   <label className="block mb-1 font-medium">Input Value (cm)</label>
   <input
     value={inputValue}
-    onChange={(e) => setInputValue(e.target.value)}
+    onChange={(e) => {
+      const nextValue = e.target.value.replace(/[^\d.,]/g, '');
+      if (nextValue === '' || /^\d*(?:[.,]\d*)?$/.test(nextValue)) {
+        setInputValue(nextValue);
+      }
+    }}
     className="border p-2 w-full rounded"
     placeholder="Type measured value..."
+    inputMode="decimal"
   />
 
   {/* Tambahkan Voice Input */}
@@ -571,37 +639,31 @@ const DailyStockTakingOil: React.FC = () => {
 
       {/* Buttons */}
       <div className="flex justify-center gap-3 mb-4">
-        <button
+        {/* <button
           className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
           onClick={handleGetQty}
           disabled={!selectedWarehouse || !selectedMaterial || !tankNumber || !selectedUOI}
         >
           Get Qty
-        </button>
+        </button> */}
 
-        <button
+        {/* <button
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           onClick={handleSubmit}
           disabled={!selectedWarehouse || !selectedMaterial || !tankNumber || !selectedUOI || qty === null}
         >
           Submit
-        </button>
-
+        </button> */}
+{/* 
         <button
           className="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600"
           onClick={handleGetQtyAll}
           disabled={!drafts.length}
         >
           Get Qty All
-        </button>
+        </button> */}
 
-        <button
-          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-          onClick={handleSubmitAll}
-          disabled={!drafts.length}
-        >
-          Submit All
-        </button>
+       
       </div>
 
       {/* Drafts table */}
@@ -611,8 +673,15 @@ const DailyStockTakingOil: React.FC = () => {
         onSubmitAll={handleSubmitAll}
         handleDeleteDraft={handleDeleteDraft}
       />
+       <button
+          className="mt-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-purple-300 disabled:text-purple-100"
+          onClick={handleSubmitAll}
+          disabled={!hasDrafts}
+        >
+          Submit All
+        </button>
     </div>
   );
 };
 
-export default DailyStockTakingOil;
+export default DailyStockTakingOilByUser;

@@ -77,6 +77,7 @@ import InfrastructureInspection from './pages/Reporting/Infrastructure/Infrastru
 import OilHystoricalReport from './pages/Oil/HystoricalReport/OilHystoricalReport';
 import RefuelingOutsideRest from './pages/Operational/FleetManagement/RefuelingOutsideRest';
 import FuelUsageReport from './pages/Reporting/FuelUsage/FuelUsageReport';
+import DailyStockTakingOilByUser from './pages/Oil/DstOliByUser/DstOliByUser';
 
 export interface AppRoute {
   path: string;
@@ -460,6 +461,11 @@ const routes: AppRoute[] = [
     component: <DailyStockTakingOil />,
     title: 'FFF | Daily Stock Taking Oil',
     allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'dst', 'daily stock taking']
+  },
+    {
+    path: '/oil/dst-user',
+    component: <DailyStockTakingOilByUser />,
     keywords: ['oil', 'dst', 'daily stock taking']
   },
   {
