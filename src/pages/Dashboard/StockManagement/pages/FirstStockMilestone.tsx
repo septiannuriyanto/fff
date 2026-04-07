@@ -15,10 +15,14 @@ type DailyMovement = {
 type MovementRow = {
   date: string;
   qty: number;
+  warehouseId?: string;
+  unitId?: string;
 };
 
 type OpeningStockRow = {
   date?: string;
+  unit_number?: string;
+  warehouse_id?: string;
   qty_awal?: number;
   qty_akhir?: number;
 };
@@ -47,6 +51,7 @@ export default function FirstStockMilestone() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [openStock, setOpenStock] = useState<number>(0);
   const [openingStockByDate, setOpeningStockByDate] = useState<Record<string, number>>({});
+  const [stockRows, setStockRows] = useState<OpeningStockRow[]>([]);
   const [ritasiRows, setRitasiRows] = useState<MovementRow[]>([]);
   const [usageRows, setUsageRows] = useState<MovementRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -215,6 +220,171 @@ export default function FirstStockMilestone() {
     XLSX.writeFile(wb, `First Stock Report MTD ${exportTag}.xlsx`);
   };
 
+  const handleExportDetailedExcel = () => {
+    const exportDays = daysInMonth.filter(day => !lastCompleteDate || formatDateKey(day) <= lastCompleteDate);
+    const stockLookup = new Map<string, { qtyAwal: number; qtyAkhir: number; unitId: string }>();
+    const usageLookup = new Map<string, number>();
+    const ritasiLookup = new Map<string, number>();
+    const labelMap = new Map<string, string>();
+
+    stockRows.forEach(row => {
+      if (!row.date) return;
+      const warehouseId = row.warehouse_id || row.unit_number || '';
+      if (!warehouseId) return;
+      const unitId = row.unit_number || '';
+      const key = `${row.date}:${warehouseId}`;
+      const current = stockLookup.get(key) || { qtyAwal: 0, qtyAkhir: 0, unitId };
+      current.qtyAwal += Number(row.qty_awal ?? 0);
+      current.qtyAkhir += Number(row.qty_akhir ?? 0);
+      current.unitId = current.unitId || unitId;
+      stockLookup.set(key, current);
+      if (!labelMap.has(warehouseId) && unitId) {
+        labelMap.set(warehouseId, unitId);
+      }
+    });
+
+    usageRows.forEach(row => {
+      if (!row.date) return;
+      const warehouseId = row.warehouseId || '';
+      if (!warehouseId) return;
+      const key = `${row.date}:${warehouseId}`;
+      usageLookup.set(key, (usageLookup.get(key) || 0) + Number(row.qty || 0));
+    });
+
+    ritasiRows.forEach(row => {
+      if (!row.date) return;
+      const warehouseId = row.warehouseId || '';
+      if (!warehouseId) return;
+      const key = `${row.date}:${warehouseId}`;
+      ritasiLookup.set(key, (ritasiLookup.get(key) || 0) + Number(row.qty || 0));
+    });
+
+    const rows: Array<Record<string, string | number>> = [];
+    exportDays.forEach(day => {
+      const dateStr = formatDateKey(day);
+      const warehouseIds = new Set<string>();
+
+      stockRows.forEach(row => {
+        if (row.date === dateStr) {
+          const warehouseId = row.warehouse_id || row.unit_number || '';
+          if (warehouseId) warehouseIds.add(warehouseId);
+        }
+      });
+      usageRows.forEach(row => {
+        if (row.date === dateStr && row.warehouseId) warehouseIds.add(row.warehouseId);
+      });
+      ritasiRows.forEach(row => {
+        if (row.date === dateStr && row.warehouseId) warehouseIds.add(row.warehouseId);
+      });
+
+      Array.from(warehouseIds)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+        .forEach(warehouseId => {
+          const stockKey = `${dateStr}:${warehouseId}`;
+          const stockInfo = stockLookup.get(stockKey);
+          const ritasi = Number(ritasiLookup.get(stockKey) || 0);
+          const usage = Number(usageLookup.get(stockKey) || 0);
+          const opening = Number(stockInfo?.qtyAwal ?? 0);
+          const closing = Number(stockInfo?.qtyAkhir ?? (opening + ritasi - usage));
+          const unitId = stockInfo?.unitId || labelMap.get(warehouseId) || '';
+
+          rows.push({
+            Date: formatDisplayDate(dateStr),
+            Site: 'GMO',
+            kontraktor: 'Pama GMO',
+            'Fuel Truck': 'Skidtank GMO',
+            Warehouse: unitId ? `${warehouseId} (${unitId})` : warehouseId,
+            'Stock Awal (L)': opening,
+            'Pengambilan dari BC (L)': ritasi,
+            'Penggunaan Fuel (L)': usage,
+            'Stock Akhir (L)': closing,
+          });
+        });
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: [
+        'Date',
+        'Site',
+        'kontraktor',
+        'Fuel Truck',
+        'Warehouse',
+        'Stock Awal (L)',
+        'Pengambilan dari BC (L)',
+        'Penggunaan Fuel (L)',
+        'Stock Akhir (L)',
+      ],
+    });
+
+    const headerFill = { patternType: 'solid', fgColor: { rgb: 'C6E0B4' } };
+    const rowFill = { patternType: 'solid', fgColor: { rgb: 'FFF200' } };
+    const border = {
+      top: { style: 'thin', color: { rgb: '808080' } },
+      bottom: { style: 'thin', color: { rgb: '808080' } },
+      left: { style: 'thin', color: { rgb: '808080' } },
+      right: { style: 'thin', color: { rgb: '808080' } },
+    };
+
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:I1');
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+      const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c })];
+      if (headerCell) {
+        const existingStyle = headerCell.s || {};
+        headerCell.s = {
+          fill: headerFill,
+          font: {
+            ...(existingStyle as any).font,
+            bold: true,
+            color: { rgb: '000000' },
+          },
+          border,
+          alignment: { horizontal: 'center', vertical: 'center' },
+        };
+      }
+    }
+
+    for (let r = 1; r <= range.e.r; r += 1) {
+      for (let c = range.s.c; c <= range.e.c; c += 1) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        if (!cell) continue;
+        cell.s = {
+          fill: rowFill,
+          border,
+          alignment: {
+            horizontal: c >= 5 ? 'right' : 'center',
+            vertical: 'center',
+          },
+        };
+      }
+    }
+
+    ws['!cols'] = [
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 18 },
+    ];
+
+    for (let r = 1; r <= range.e.r; r += 1) {
+      for (let c = 5; c <= 8; c += 1) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        const cell = ws[cellRef];
+        if (!cell) continue;
+        cell.z = '#,##0.0';
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'First Stock Detail');
+    const exportTag = lastCompleteDate || `${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}-01`;
+    XLSX.writeFile(wb, `First Stock Report MTD Detail ${exportTag}.xlsx`);
+  };
+
   const fetchData = async () => {
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth();
@@ -235,6 +405,7 @@ export default function FirstStockMilestone() {
 
       const stockSource = (reportPack?.stock || []) as OpeningStockRow[];
       const openingMap: Record<string, number> = {};
+      setStockRows(stockSource);
       const day1Opening = stockSource
         .filter(row => row?.date === day1)
         .reduce((sum, row) => sum + Number(row.qty_awal ?? 0), 0);
@@ -248,8 +419,8 @@ export default function FirstStockMilestone() {
       setOpeningStockByDate(openingMap);
       setOpenStock(Number(openingMap[day1] ?? 0));
 
-      const ritasiSource = (reportPack?.ritasi || []) as Array<{ date?: string; value?: number }>;
-      const usageSource = (reportPack?.usage || []) as Array<{ date?: string; qty?: number }>;
+      const ritasiSource = (reportPack?.ritasi || []) as Array<{ date?: string; warehouse_id?: string; value?: number }>;
+      const usageSource = (reportPack?.usage || []) as Array<{ date?: string; warehouse_code?: string; qty?: number }>;
 
       setRitasiRows(
         ritasiSource
@@ -257,6 +428,7 @@ export default function FirstStockMilestone() {
           .map(row => ({
             date: row.date as string,
             qty: Number(row.value ?? 0),
+            warehouseId: row.warehouse_id || '',
           }))
       );
       setUsageRows(
@@ -265,12 +437,14 @@ export default function FirstStockMilestone() {
           .map(row => ({
             date: row.date as string,
             qty: Number(row.qty ?? 0),
+            warehouseId: row.warehouse_code || '',
           }))
       );
     } catch (error: any) {
       console.error('Failed to load first stock milestone data:', error);
       toast.error(error?.message || 'Failed to load milestone data');
       setOpenStock(0);
+      setStockRows([]);
       setRitasiRows([]);
       setUsageRows([]);
     } finally {
@@ -409,12 +583,20 @@ export default function FirstStockMilestone() {
         </div>
 
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2.5 bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40 hover:-translate-y-0.5 transition-all active:scale-95"
-          >
-            Export to Excel
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportDetailedExcel}
+              className="flex items-center gap-2.5 bg-slate-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-700/20 hover:shadow-slate-700/40 hover:-translate-y-0.5 transition-all active:scale-95"
+            >
+              Export Detailed Report
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-2.5 bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40 hover:-translate-y-0.5 transition-all active:scale-95"
+            >
+              Export to Excel
+            </button>
+          </div>
         </div>
       </div>
     </ThemedPanelContainer>
