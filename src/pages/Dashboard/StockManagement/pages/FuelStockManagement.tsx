@@ -4,18 +4,49 @@ import { supabase } from '../../../../db/SupabaseClient';
 import ThemedPanelContainer from '../../../../common/ThemedComponents/ThemedPanelContainer';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import ExclusiveWidget from '../../../../common/TrialWrapper/ExclusiveWidget';
-import StockReporting from '../../../Reporting/DailyReport/components/StockReporting';
-import { ADMIN } from '../../../../store/roles';
+
+interface DailyStockData {
+    date: string;
+    site_stock: number;
+    port_stock: number;
+    site_usage: number;
+    ritasi?: number;
+}
+
+interface DailyStockDetail {
+    date: string;
+    unit_number: string;
+    warehouse_id: string;
+    qty_awal: number;
+    qty_akhir: number;
+    usage: number;
+}
+
+interface DailyUsageDetail {
+    date: string;
+    warehouse_code: string;
+    qty: number;
+}
+
+interface DailyRitasiDetail {
+    date: string;
+    warehouse_id: string;
+    value: number;
+}
 
 export default function FuelStockManagement() {
     const [selectedMonth, setSelectedMonth] = useState(new Date());
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<DailyStockData[]>([]);
+    const [stockDetails, setStockDetails] = useState<DailyStockDetail[]>([]);
+    const [usageDetails, setUsageDetails] = useState<DailyUsageDetail[]>([]);
+    const [ritasiDetails, setRitasiDetails] = useState<DailyRitasiDetail[]>([]);
     const [lastInputDate, setLastInputDate] = useState<string | null>(null);
+    const [isNormalized, setIsNormalized] = useState(false);
     const [editingPortDay, setEditingPortDay] = useState<number | null>(null);
     const [editValue, setEditValue] = useState<string>('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isNormalized, setIsNormalized] = useState(false);
+    const [isSiteStockExpanded, setIsSiteStockExpanded] = useState(false);
+    const [isFuelUsageExpanded, setIsFuelUsageExpanded] = useState(false);
+    const [isRitasiExpanded, setIsRitasiExpanded] = useState(false);
 
     const chartScrollRef = useRef<HTMLDivElement>(null);
     const tableScrollRef = useRef<HTMLDivElement>(null);
@@ -37,23 +68,17 @@ export default function FuelStockManagement() {
     useEffect(() => {
         fetchData();    
         fetchLastInput();
-
-        const handleEsc = (event: KeyboardEvent) => {
-           if (event.key === 'Escape') setIsModalOpen(false);
-        };
-        window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
     }, [selectedMonth]);
 
     const fetchLastInput = async () => {
         const { data: lastData, error } = await supabase
             .from('stock_monitoring')
-            .select('date, created_at')
+            .select('created_at, date')
             .order('created_at', { ascending: false })
             .limit(1);
 
         if (!error && lastData && lastData.length > 0) {
-            setLastInputDate(lastData[0].date);
+            setLastInputDate(lastData[0].date || lastData[0].created_at);
         }
     };
 
@@ -64,42 +89,296 @@ export default function FuelStockManagement() {
         const lastDay = new Date(year, month + 1, 0).getDate();
         const endOfMonth = `${year}-${(month + 1).toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`;
 
-        const { data: result, error } = await supabase
-            .from('stock_monitoring')
-            .select('*')
-            .gte('date', startOfMonth)
-            .lte('date', endOfMonth)
-            .order('date', { ascending: true });
+        const [reportPackRes, portStockRes] = await Promise.all([
+            supabase.rpc('get_fuel_stock_management_monthly', {
+                p_start_date: startOfMonth,
+                p_end_date: endOfMonth,
+            }),
+            supabase
+                .from('stock_monitoring')
+                .select('date, port_stock')
+                .gte('date', startOfMonth)
+                .lte('date', endOfMonth)
+                .order('date', { ascending: true })
+        ]);
 
-        if (error) {
-            console.error('Error fetching stock data:', error);
-        } else {
-            setData(result || []);
+        const { data: reportPack, error: rpcError } = reportPackRes;
+        const { data: portStockRows, error: portStockError } = portStockRes;
+
+        if (rpcError) {
+            console.error('Error fetching dashboard stock data:', rpcError);
+            setData([]);
+            setStockDetails([]);
+            setUsageDetails([]);
+            setRitasiDetails([]);
+            return;
         }
+
+        if (portStockError) {
+            console.error('Error fetching stock monitoring data:', portStockError);
+            setData([]);
+            setStockDetails([]);
+            setUsageDetails([]);
+            setRitasiDetails([]);
+            return;
+        }
+
+        const stockRows = reportPack?.stock || [];
+        const usageRows = reportPack?.usage || [];
+        const ritasiRows = reportPack?.ritasi || [];
+        const portStockRowsMap = new Map<string, number>();
+        (portStockRows || []).forEach((row: any) => {
+            if (row?.date) {
+                portStockRowsMap.set(row.date, Number(row.port_stock ?? 0));
+            }
+        });
+
+        if ((stockRows.length === 0) && (usageRows.length === 0) && (ritasiRows.length === 0)) {
+            setData([]);
+            setStockDetails([]);
+            setUsageDetails([]);
+            setRitasiDetails([]);
+            return;
+        }
+
+        const aggregated = new Map<string, DailyStockData>();
+        const detailAggregated = new Map<string, DailyStockDetail>();
+        const ritasiAggregated = new Map<string, DailyRitasiDetail>();
+
+        (stockRows || []).forEach((row: any) => {
+            const reportDate = row?.date;
+            if (!reportDate) return;
+            const qtyAwal = Number(row.qty_awal ?? 0);
+            const qtyAkhir = Number(row.qty_akhir ?? 0);
+            const unitNumber = row.unit_number || '';
+            const warehouseId = row.warehouse_id || unitNumber;
+            const detailKey = `${reportDate}:${unitNumber}`;
+
+            const currentDetail = detailAggregated.get(detailKey) || {
+                date: reportDate,
+                unit_number: unitNumber,
+                warehouse_id: warehouseId,
+                qty_awal: 0,
+                qty_akhir: 0,
+                usage: 0,
+            };
+
+            currentDetail.qty_awal += qtyAwal;
+            currentDetail.qty_akhir += qtyAkhir;
+            detailAggregated.set(detailKey, currentDetail);
+
+            const current = aggregated.get(reportDate) || {
+                date: reportDate,
+                site_stock: 0,
+                port_stock: 0,
+                site_usage: 0,
+                ritasi: 0,
+            };
+
+            current.site_stock += qtyAwal;
+            aggregated.set(reportDate, current);
+        });
+
+        const usageAggregated = new Map<string, DailyUsageDetail>();
+        (usageRows || []).forEach((row: any) => {
+            const usageDate = row?.date;
+            if (!usageDate) return;
+
+            const qty = Number(row.qty ?? 0);
+            const warehouseCode = row.warehouse_code || '';
+            const usageKey = `${usageDate}:${warehouseCode}`;
+
+            const currentUsage = usageAggregated.get(usageKey) || {
+                date: usageDate,
+                warehouse_code: warehouseCode,
+                qty: 0,
+            };
+
+            currentUsage.qty += qty;
+            usageAggregated.set(usageKey, currentUsage);
+
+            const currentDay = aggregated.get(usageDate) || {
+                date: usageDate,
+                site_stock: 0,
+                port_stock: 0,
+                site_usage: 0,
+                ritasi: 0,
+            };
+            currentDay.site_usage += qty;
+            aggregated.set(usageDate, currentDay);
+        });
+
+        (ritasiRows || []).forEach((row: any) => {
+            const ritasiDate = row?.date;
+            if (!ritasiDate) return;
+
+            const value = Number(row.value ?? 0);
+            const warehouseId = row.warehouse_id || '';
+            const ritasiKey = `${ritasiDate}:${warehouseId}`;
+
+            const currentRitasi = ritasiAggregated.get(ritasiKey) || {
+                date: ritasiDate,
+                warehouse_id: warehouseId,
+                value: 0,
+            };
+
+            currentRitasi.value += value;
+            ritasiAggregated.set(ritasiKey, currentRitasi);
+
+            const currentDay = aggregated.get(ritasiDate) || {
+                date: ritasiDate,
+                site_stock: 0,
+                port_stock: 0,
+                site_usage: 0,
+                ritasi: 0,
+            };
+            currentDay.ritasi = (currentDay.ritasi || 0) + value;
+            aggregated.set(ritasiDate, currentDay);
+        });
+
+        (portStockRows || []).forEach((row: any) => {
+            const portDate = row?.date;
+            if (!portDate) return;
+
+            const currentDay = aggregated.get(portDate) || {
+                date: portDate,
+                site_stock: 0,
+                port_stock: 0,
+                site_usage: 0,
+                ritasi: 0,
+            };
+
+            currentDay.port_stock = Number(portStockRowsMap.get(portDate) ?? row.port_stock ?? 0);
+            aggregated.set(portDate, currentDay);
+        });
+
+        setData(Array.from(aggregated.values()).sort((a, b) => a.date.localeCompare(b.date)));
+        setStockDetails(Array.from(detailAggregated.values()).sort((a, b) => {
+            const dateCompare = a.date.localeCompare(b.date);
+            if (dateCompare !== 0) return dateCompare;
+            return (a.warehouse_id || a.unit_number).localeCompare(b.warehouse_id || b.unit_number, undefined, { numeric: true, sensitivity: 'base' });
+        }));
+        setUsageDetails(Array.from(usageAggregated.values()).sort((a, b) => {
+            const dateCompare = a.date.localeCompare(b.date);
+            if (dateCompare !== 0) return dateCompare;
+            return (a.warehouse_code || '').localeCompare(b.warehouse_code || '', undefined, { numeric: true, sensitivity: 'base' });
+        }));
+        setRitasiDetails(Array.from(ritasiAggregated.values()).sort((a, b) => {
+            const dateCompare = a.date.localeCompare(b.date);
+            if (dateCompare !== 0) return dateCompare;
+            return (a.warehouse_id || '').localeCompare(b.warehouse_id || '', undefined, { numeric: true, sensitivity: 'base' });
+        }));
     };
 
-    // Prepare data for mapping (Day -> Value) - stock_monitoring already has aggregated data
+    // Prepare data for mapping (Day -> Value) - aggregated from fuelman_report_stock
     const dataMap = useMemo(() => {
-        const map = new Map();
+        const map = new Map<number, DailyStockData>();
         data.forEach(item => {
             const day = new Date(item.date).getDate();
             map.set(day, {
+                date: item.date,
                 site_stock: item.site_stock || 0,
                 port_stock: item.port_stock || 0,
-                site_usage: item.site_usage || 0
+                site_usage: item.site_usage || 0,
+                ritasi: item.ritasi || 0,
             });
         });
         return map;
     }, [data]);
 
-    // Find last date with data - Rule: (Site OR Port Stock) AND Usage must be present
+    const siteStockDetailsByDay = useMemo(() => {
+        const map = new Map<number, DailyStockDetail[]>();
+        stockDetails.forEach(detail => {
+            const day = new Date(detail.date).getDate();
+            const list = map.get(day) || [];
+            list.push(detail);
+            map.set(day, list);
+        });
+
+        map.forEach((list, day) => {
+            list.sort((a, b) => (a.warehouse_id || a.unit_number).localeCompare(b.warehouse_id || b.unit_number, undefined, { numeric: true, sensitivity: 'base' }));
+            map.set(day, list);
+        });
+
+        return map;
+    }, [stockDetails]);
+
+    const siteStockUnitLabels = useMemo(() => {
+        return Array.from(
+            new Set(stockDetails.map(detail => detail.warehouse_id || detail.unit_number).filter(Boolean))
+        ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [stockDetails]);
+
+    const warehouseUnitMap = useMemo(() => {
+        const map = new Map<string, string>();
+        stockDetails.forEach(detail => {
+            const warehouseId = detail.warehouse_id || '';
+            const unitId = detail.unit_number || '';
+            if (warehouseId && unitId && !map.has(warehouseId)) {
+                map.set(warehouseId, unitId);
+            }
+        });
+        return map;
+    }, [stockDetails]);
+
+    const getLabelWithUnit = (warehouseId: string) => {
+        const unitId = warehouseUnitMap.get(warehouseId);
+        return unitId ? `${warehouseId} (${unitId})` : warehouseId;
+    };
+
+    const fuelUsageDetailsByDay = useMemo(() => {
+        const map = new Map<number, DailyUsageDetail[]>();
+        usageDetails.forEach(detail => {
+            const day = new Date(detail.date).getDate();
+            const list = map.get(day) || [];
+            list.push(detail);
+            map.set(day, list);
+        });
+
+        map.forEach((list, day) => {
+            list.sort((a, b) => (a.warehouse_code || '').localeCompare(b.warehouse_code || '', undefined, { numeric: true, sensitivity: 'base' }));
+            map.set(day, list);
+        });
+
+        return map;
+    }, [usageDetails]);
+
+    const fuelUsageWarehouseLabels = useMemo(() => {
+        return Array.from(
+            new Set(usageDetails.map(detail => detail.warehouse_code).filter(Boolean))
+        ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [usageDetails]);
+
+    const ritasiDetailsByDay = useMemo(() => {
+        const map = new Map<number, DailyRitasiDetail[]>();
+        ritasiDetails.forEach(detail => {
+            const day = new Date(detail.date).getDate();
+            const list = map.get(day) || [];
+            list.push(detail);
+            map.set(day, list);
+        });
+
+        map.forEach((list, day) => {
+            list.sort((a, b) => (a.warehouse_id || '').localeCompare(b.warehouse_id || '', undefined, { numeric: true, sensitivity: 'base' }));
+            map.set(day, list);
+        });
+
+        return map;
+    }, [ritasiDetails]);
+
+    const ritasiUnitLabels = useMemo(() => {
+        return Array.from(
+            new Set(ritasiDetails.map(detail => detail.warehouse_id).filter(Boolean))
+        ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [ritasiDetails]);
+
+    // Find last date with data - based on stock rows that have actual values
     const lastDataDay = useMemo(() => {
         let lastDay = 0;
         for (let i = daysInMonth.length - 1; i >= 0; i--) {
             const day = daysInMonth[i].getDate();
             const item = dataMap.get(day);
-            // Must have (site stock OR port stock) AND usage to be considered complete
-            if (item && (item.site_stock > 0 || item.port_stock > 0) && item.site_usage > 0) {
+            if (item && (item.site_stock > 0 || item.port_stock > 0)) {
                 lastDay = day;
                 break;
             }
@@ -143,6 +422,72 @@ export default function FuelStockManagement() {
 
     const getAchievement = (ito: number) => {
         return ito > 3 ? 100 : 0;
+    };
+
+    const formatValue = (value: number) =>
+        Number(value || 0).toLocaleString('id-ID', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+        });
+
+    const handleStartEditPortStock = (day: number) => {
+        setEditingPortDay(day);
+        setEditValue('');
+    };
+
+    const handleUpdatePortStock = async (day: number) => {
+        if (editingPortDay === null) return;
+
+        const cleanValue = editValue.replace(/\./g, '').replace(/,/g, '').trim();
+        const targetTotal = Number(cleanValue);
+        if (Number.isNaN(targetTotal)) {
+            setEditingPortDay(null);
+            return;
+        }
+
+        const dayDate = daysInMonth.find(d => d.getDate() === day);
+        if (!dayDate) return;
+
+        const dateStr = `${dayDate.getFullYear()}-${(dayDate.getMonth() + 1).toString().padStart(2, '0')}-${dayDate.getDate().toString().padStart(2, '0')}`;
+        const currentTotal = Number(dataMap.get(day)?.port_stock || 0);
+
+        if (Math.abs(targetTotal - currentTotal) < 0.0001) {
+            setEditingPortDay(null);
+            return;
+        }
+
+        const loadingToast = toast.loading('Updating Port Stock...');
+        setEditingPortDay(null);
+
+        try {
+            const { data: existing, error: existingError } = await supabase
+                .from('stock_monitoring')
+                .select('site_stock, site_usage')
+                .eq('date', dateStr)
+                .maybeSingle();
+
+            if (existingError) throw existingError;
+
+            const { error: updateError } = await supabase
+                .from('stock_monitoring')
+                .upsert(
+                    {
+                        date: dateStr,
+                        port_stock: targetTotal,
+                        site_stock: existing?.site_stock ?? dataMap.get(day)?.site_stock ?? 0,
+                        site_usage: existing?.site_usage ?? dataMap.get(day)?.site_usage ?? 0,
+                    },
+                    { onConflict: 'date' }
+                );
+
+            if (updateError) throw updateError;
+
+            toast.success(`Port Stock for ${day} updated!`, { id: loadingToast });
+            fetchData();
+        } catch (err: any) {
+            toast.error(`Failed to update: ${err.message || 'Unknown error'}`, { id: loadingToast });
+            fetchData();
+        }
     };
 
     // Calculate MTD Achievement Average
@@ -275,7 +620,7 @@ export default function FuelStockManagement() {
                 title: { text: 'Volume (L)', style: { color: '#3C50E0', fontWeight: 600 } },
                 max: isNormalized ? undefined : 2000000,
                 labels: {
-                    formatter: (val: number) => val ? Math.round(val).toLocaleString('id-ID') : 0
+                    formatter: (val: number) => formatValue(val || 0)
                 },
                 show: !isNormalized // Hide Port Stock in normalized view to magnify other metrics
             },
@@ -333,65 +678,18 @@ export default function FuelStockManagement() {
             yaxis: { lines: { show: true } }
         },
         dataLabels: { enabled: false },
-        tooltip: { 
-            shared: true,
-            intersect: false,
-            y: { 
-                formatter: (val: number, { seriesIndex }: any) => {
-                    if (val === null || val === undefined) return '';
-                    if (seriesIndex >= 3) return val.toFixed(1) + ' Days';
-                    return Math.round(val).toLocaleString('id-ID') + ' L';
-                }
-            } 
-        }
+            tooltip: { 
+                shared: true,
+                intersect: false,
+                y: { 
+                    formatter: (val: number, { seriesIndex }: any) => {
+                        if (val === null || val === undefined) return '';
+                        if (seriesIndex >= 3) return val.toFixed(1) + ' Days';
+                        return formatValue(val) + ' L';
+                    }
+                } 
+            }
     }), [isNormalized, daysInMonth]);
-
-    const handleStartEdit = (day: number) => {
-        setEditingPortDay(day);
-        setEditValue(''); // Start blank as requested
-    };
-
-    const handleUpdatePortStock = async (day: number) => {
-        if (editingPortDay === null) return;
-        
-        // Remove thousand separators before parsing
-        const cleanValue = editValue.replace(/\./g, '').replace(/,/g, '');
-        const newVal = parseFloat(cleanValue) || 0;
-        
-        const dayDate = daysInMonth.find(d => d.getDate() === day);
-        if (!dayDate) return;
-        
-        const dateStr = `${dayDate.getFullYear()}-${(dayDate.getMonth() + 1).toString().padStart(2, '0')}-${dayDate.getDate().toString().padStart(2, '0')}`;
-        
-        // Find existing record to see if current stock is different
-        const existing = dataMap.get(day);
-        if (existing && existing.port_stock === newVal) {
-            setEditingPortDay(null);
-            return;
-        }
-
-        const loadingToast = toast.loading('Updating Port Stock...');
-        setEditingPortDay(null); // Close input immediately for responsiveness
-
-        try {
-            const { error } = await supabase
-                .from('stock_monitoring')
-                .upsert({ 
-                    date: dateStr, 
-                    port_stock: newVal,
-                    site_stock: existing?.site_stock || 0,
-                    site_usage: existing?.site_usage || 0
-                }, { onConflict: 'date' });
-
-            if (error) throw error;
-            
-            toast.success(`Port Stock for ${day} updated!`, { id: loadingToast });
-            fetchData(); // Refresh data
-        } catch (err: any) {
-            toast.error('Failed to update: ' + err.message, { id: loadingToast });
-            fetchData(); // Reset to current state on error
-        }
-    };
 
     const handleExport = () => {
         // Create horizontal table structure like the display
@@ -400,18 +698,52 @@ export default function FuelStockManagement() {
         // Header row with dates
         const headerRow = ['Metric / Date', ...daysInMonth.map(d => d.getDate())];
         ws_data.push(headerRow);
-        
-        // Site Stock row
-        const siteStockRow = ['Site Stock (L)', ...daysInMonth.map(d => dataMap.get(d.getDate())?.site_stock || 0)];
-        ws_data.push(siteStockRow);
-        
+
         // Port Stock row
         const portStockRow = ['Port Stock (L)', ...daysInMonth.map(d => dataMap.get(d.getDate())?.port_stock || 0)];
         ws_data.push(portStockRow);
-        
+
+        // Site Stock row
+        const siteStockRow = ['Site Stock (L)', ...daysInMonth.map(d => dataMap.get(d.getDate())?.site_stock || 0)];
+        ws_data.push(siteStockRow);
+
+        if (isSiteStockExpanded) {
+            siteStockUnitLabels.forEach(label => {
+                const breakdownRow = [getLabelWithUnit(label), ...daysInMonth.map(d => {
+                    const detail = siteStockDetailsByDay.get(d.getDate())?.find(item => (item.warehouse_id || item.unit_number) === label);
+                    return detail ? detail.qty_awal : '-';
+                })];
+                ws_data.push(breakdownRow);
+            });
+        }
+
         // Fuel Usage row
         const usageRow = ['Fuel Usage (L)', ...daysInMonth.map(d => dataMap.get(d.getDate())?.site_usage || 0)];
         ws_data.push(usageRow);
+
+        if (isFuelUsageExpanded) {
+            fuelUsageWarehouseLabels.forEach(label => {
+                const breakdownRow = [getLabelWithUnit(label), ...daysInMonth.map(d => {
+                    const detail = fuelUsageDetailsByDay.get(d.getDate())?.find(item => item.warehouse_code === label);
+                    return detail ? detail.qty : '-';
+                })];
+                ws_data.push(breakdownRow);
+            });
+        }
+
+        // Ritasi row
+        const ritasiRow = ['Ritasi (L)', ...daysInMonth.map(d => dataMap.get(d.getDate())?.ritasi || 0)];
+        ws_data.push(ritasiRow);
+
+        if (isRitasiExpanded) {
+            ritasiUnitLabels.forEach(label => {
+                const breakdownRow = [getLabelWithUnit(label), ...daysInMonth.map(d => {
+                    const detail = ritasiDetailsByDay.get(d.getDate())?.find(item => item.warehouse_id === label);
+                    return detail ? detail.value : '-';
+                })];
+                ws_data.push(breakdownRow);
+            });
+        }
         
         // ITO row
         const itoRow = ['ITO (Days)', ...daysInMonth.map(d => {
@@ -435,11 +767,11 @@ export default function FuelStockManagement() {
         
         // Create workbook
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Stock Monitoring');
+        XLSX.utils.book_append_sheet(wb, ws, 'Fuelman Stock');
         
         // Export
         const monthStr = `${selectedMonth.getFullYear()}-${(selectedMonth.getMonth() + 1).toString().padStart(2, '0')}`;
-        XLSX.writeFile(wb, `stock_monitoring_${monthStr}.xlsx`);
+        XLSX.writeFile(wb, `fuelman_report_stock_${monthStr}.xlsx`);
     };
 
 
@@ -566,28 +898,19 @@ export default function FuelStockManagement() {
                         </tr>
                     </thead>
                     <tbody>
-                        {/* Site Stock Row */}
+                        {/* Port Stock Row */}
                         <tr>
-                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Site Stock (L)</td>
-                            {daysInMonth.map(d => (
-                                <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
-                                    {(dataMap.get(d.getDate())?.site_stock || 0).toLocaleString('id-ID')}
-                                </td>
-                            ))}
-                        </tr>
-                         {/* Port Stock Row */}
-                         <tr>
                             <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Port Stock (L)</td>
                             {daysInMonth.map(d => {
                                 const day = d.getDate();
                                 const currentStock = dataMap.get(day)?.port_stock || 0;
                                 const isEditing = editingPortDay === day;
-                                
+
                                 return (
-                                    <td 
-                                        key={day} 
+                                    <td
+                                        key={day}
                                         className={`border border-stroke dark:border-strokedark p-2 text-right cursor-pointer hover:bg-slate-50 dark:hover:bg-meta-4/20 transition-colors ${isEditing ? '!p-0' : ''}`}
-                                        onClick={() => !isEditing && handleStartEdit(day)}
+                                        onClick={() => !isEditing && handleStartEditPortStock(day)}
                                     >
                                         {isEditing ? (
                                             <input
@@ -595,17 +918,10 @@ export default function FuelStockManagement() {
                                                 type="text"
                                                 className="w-full h-full p-2 text-right outline-none bg-blue-50 dark:bg-blue-900/20 border-2 border-primary font-bold"
                                                 value={editValue}
-                                                placeholder={currentStock.toLocaleString('id-ID')}
+                                                placeholder={formatValue(currentStock)}
                                                 onChange={(e) => {
-                                                    // Only allow numbers
-                                                    const val = e.target.value.replace(/[^0-9]/g, '');
-                                                    if (val === '') {
-                                                        setEditValue('');
-                                                    } else {
-                                                        // Format with dots as thousand separator
-                                                        const formatted = parseInt(val).toLocaleString('id-ID');
-                                                        setEditValue(formatted);
-                                                    }
+                                                    const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                                    setEditValue(val);
                                                 }}
                                                 onBlur={() => handleUpdatePortStock(day)}
                                                 onKeyDown={(e) => {
@@ -614,21 +930,117 @@ export default function FuelStockManagement() {
                                                 }}
                                             />
                                         ) : (
-                                            currentStock.toLocaleString('id-ID')
+                                            formatValue(currentStock)
                                         )}
                                     </td>
                                 );
                             })}
                         </tr>
-                        {/* Fuel Usage Row */}
-                         <tr>
-                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Fuel Usage (L)</td>
+                        {/* Site Stock Row */}
+                        <tr>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSiteStockExpanded(prev => !prev)}
+                                    className="flex w-full items-center gap-2 text-left font-semibold hover:text-primary transition-colors"
+                                >
+                                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px] transition-transform ${isSiteStockExpanded ? 'rotate-90' : ''}`}>
+                                        {isSiteStockExpanded ? '▾' : '▸'}
+                                    </span>
+                                    <span>Site Stock (L)</span>
+                                </button>
+                            </td>
                             {daysInMonth.map(d => (
                                 <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
-                                    {(dataMap.get(d.getDate())?.site_usage || 0).toLocaleString('id-ID')}
+                                    {formatValue(dataMap.get(d.getDate())?.site_stock || 0)}
                                 </td>
                             ))}
                         </tr>
+                        {isSiteStockExpanded && siteStockUnitLabels.map(label => (
+                            <tr key={label} className="bg-slate-50/80 dark:bg-white/5">
+                                <td className="border border-stroke dark:border-strokedark border-r-2 p-2 pr-4 text-right text-xs font-medium text-slate-500 bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                    {getLabelWithUnit(label)}
+                                </td>
+                                {daysInMonth.map(d => {
+                                    const detail = siteStockDetailsByDay.get(d.getDate())?.find(item => (item.warehouse_id || item.unit_number) === label);
+                                    return (
+                                        <td key={`${label}-${d.getDate()}`} className="border border-stroke dark:border-strokedark p-2 text-right text-xs text-slate-600 dark:text-slate-300">
+                                            {detail ? formatValue(detail.qty_awal) : '-'}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                        {/* Fuel Usage Row */}
+                         <tr>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFuelUsageExpanded(prev => !prev)}
+                                    className="flex w-full items-center gap-2 text-left font-semibold hover:text-primary transition-colors"
+                                >
+                                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px] transition-transform ${isFuelUsageExpanded ? 'rotate-90' : ''}`}>
+                                        {isFuelUsageExpanded ? '▾' : '▸'}
+                                    </span>
+                                    <span>Fuel Usage (L)</span>
+                                </button>
+                            </td>
+                            {daysInMonth.map(d => (
+                                <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
+                                    {formatValue(dataMap.get(d.getDate())?.site_usage || 0)}
+                                </td>
+                            ))}
+                        </tr>
+                        {isFuelUsageExpanded && fuelUsageWarehouseLabels.map(label => (
+                            <tr key={label} className="bg-slate-50/80 dark:bg-white/5">
+                                <td className="border border-stroke dark:border-strokedark border-r-2 p-2 pr-4 text-right text-xs font-medium text-slate-500 bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                    {getLabelWithUnit(label)}
+                                </td>
+                                {daysInMonth.map(d => {
+                                    const detail = fuelUsageDetailsByDay.get(d.getDate())?.find(item => item.warehouse_code === label);
+                                    return (
+                                        <td key={`${label}-${d.getDate()}`} className="border border-stroke dark:border-strokedark p-2 text-right text-xs text-slate-600 dark:text-slate-300">
+                                            {detail ? formatValue(detail.qty) : '-'}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                        {/* Ritasi Row */}
+                        <tr>
+                            <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-medium bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRitasiExpanded(prev => !prev)}
+                                    className="flex w-full items-center gap-2 text-left font-semibold hover:text-primary transition-colors"
+                                >
+                                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px] transition-transform ${isRitasiExpanded ? 'rotate-90' : ''}`}>
+                                        {isRitasiExpanded ? '▾' : '▸'}
+                                    </span>
+                                    <span>Ritasi (L)</span>
+                                </button>
+                            </td>
+                            {daysInMonth.map(d => (
+                                <td key={d.getDate()} className="border border-stroke dark:border-strokedark p-2 text-right">
+                                    {formatValue(dataMap.get(d.getDate())?.ritasi || 0)}
+                                </td>
+                            ))}
+                        </tr>
+                        {isRitasiExpanded && ritasiUnitLabels.map(label => (
+                            <tr key={label} className="bg-slate-50/80 dark:bg-white/5">
+                                <td className="border border-stroke dark:border-strokedark border-r-2 p-2 pr-4 text-right text-xs font-medium text-slate-500 bg-white dark:bg-boxdark sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                    {getLabelWithUnit(label)}
+                                </td>
+                                {daysInMonth.map(d => {
+                                    const detail = ritasiDetailsByDay.get(d.getDate())?.find(item => item.warehouse_id === label);
+                                    return (
+                                        <td key={`${label}-${d.getDate()}`} className="border border-stroke dark:border-strokedark p-2 text-right text-xs text-slate-600 dark:text-slate-300">
+                                            {detail ? formatValue(detail.value) : '-'}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
                         {/* ITO Row */}
                         <tr className="bg-blue-50 dark:bg-blue-900/10">
                             <td className="border border-stroke dark:border-strokedark border-r-2 p-2 font-bold text-blue-700 bg-[#EEF2FF] dark:bg-[#1E293B] sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">ITO (Days)</td>
@@ -663,21 +1075,25 @@ export default function FuelStockManagement() {
             <div className="mt-6 flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-t border-stroke dark:border-white/10 pt-6">
                 <div className="text-xs text-slate-500 italic leading-relaxed">
                     <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * ITO Formula: (Site Stock + Port Stock) / Fuel Usage</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * Fuel Usage is aggregated from `loto_verification.qty` by `issued_date` and `warehouse_code`</p>
+                    <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * Ritasi is aggregated from `ritasi_fuel.qty_sj` by `ritation_date` and `warehouse_id`</p>
                     <p className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-400"></span> * Achievement: 100% if ITO &gt; 3 Days</p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <ExclusiveWidget allowedRoles={ ADMIN}>
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2.5 bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                            </svg>
-                            Update Site Data
-                        </button>
-                    </ExclusiveWidget>
+                    <button 
+                        onClick={() => {
+                            fetchData();
+                            fetchLastInput();
+                            toast.success('Dashboard refreshed');
+                        }}
+                        className="flex items-center gap-2.5 bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Refresh Data
+                    </button>
                     <button 
                         onClick={handleExport}
                         className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:shadow-emerald-600/40 hover:-translate-y-1 transition-all active:scale-95 active:translate-y-0"
@@ -689,43 +1105,6 @@ export default function FuelStockManagement() {
                     </button>
                 </div>
             </div>
-
-            {/* Modal Overlay */}
-            {isModalOpen && (
-                <div 
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setIsModalOpen(false);
-                    }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in cursor-pointer"
-                >
-                    <div className="relative w-full max-w-7xl max-h-[92vh] overflow-hidden bg-white dark:bg-boxdark rounded-[2.5rem] shadow-2xl flex flex-col border border-white/20 cursor-default">
-                        {/* Close Button UI */}
-                        <div className="flex justify-between items-center p-6 border-b border-stroke dark:border-white/10">
-                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Update Site Inventory Data</h3>
-                            <button 
-                                onClick={() => setIsModalOpen(false)}
-                                className="group p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8 text-slate-400 group-hover:text-red-500 transition-colors">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-                            <StockReporting 
-                                onSuccess={() => {
-                                    setIsModalOpen(false);
-                                    fetchData();
-                                    fetchLastInput();
-                                    toast.success("Dashboard Refreshed!");
-                                }} 
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     </ThemedPanelContainer>
   )
