@@ -23,8 +23,27 @@ type OpeningStockRow = {
   date?: string;
   unit_number?: string;
   warehouse_id?: string;
+  shift?: number;
   qty_awal?: number;
   qty_akhir?: number;
+};
+
+type RawMilestoneRow = {
+  date?: string;
+  shift?: number;
+  warehouse_id?: string;
+  unit_id?: string;
+  unit_number?: string;
+  no_surat_jalan?: string;
+  qty_awal?: number;
+  qty_akhir?: number;
+  qty?: number;
+  value?: number;
+};
+
+type FormState = {
+  inputDate?: string;
+  inputShift?: '1' | '2';
 };
 
 const formatValue = (value: number) =>
@@ -54,7 +73,36 @@ export default function FirstStockMilestone() {
   const [stockRows, setStockRows] = useState<OpeningStockRow[]>([]);
   const [ritasiRows, setRitasiRows] = useState<MovementRow[]>([]);
   const [usageRows, setUsageRows] = useState<MovementRow[]>([]);
+  const [inputDate, setInputDate] = useState<string>(() => formatDateKey(new Date()));
+  const [inputShift, setInputShift] = useState<'1' | '2'>('1');
   const [isLoading, setIsLoading] = useState(false);
+  const FORM_LS_KEY = 'firstStockMilestone-form-v1';
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FORM_LS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as FormState;
+      if (typeof parsed.inputDate === 'string') setInputDate(parsed.inputDate);
+      if (parsed.inputShift === '1' || parsed.inputShift === '2') setInputShift(parsed.inputShift);
+    } catch (error) {
+      console.error('Failed to restore FirstStockMilestone form state:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FORM_LS_KEY,
+        JSON.stringify({
+          inputDate,
+          inputShift,
+        } as FormState),
+      );
+    } catch (error) {
+      console.error('Failed to persist FirstStockMilestone form state:', error);
+    }
+  }, [FORM_LS_KEY, inputDate, inputShift]);
 
   const daysInMonth = useMemo(() => {
     const year = selectedMonth.getFullYear();
@@ -220,19 +268,42 @@ export default function FirstStockMilestone() {
     XLSX.writeFile(wb, `First Stock Report MTD ${exportTag}.xlsx`);
   };
 
-  const handleExportDetailedExcel = () => {
+  const handleExportDetailedExcel = async () => {
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const startOfMonth = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endOfMonth = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     const exportDays = daysInMonth.filter(day => !lastCompleteDate || formatDateKey(day) <= lastCompleteDate);
+
+    const { data: rawPack, error: rawError } = await supabase.rpc('get_first_stock_milestone_raw_monthly', {
+      p_start_date: startOfMonth,
+      p_end_date: endOfMonth,
+    });
+
+    if (rawError) {
+      toast.error(rawError.message || 'Failed to fetch detailed raw data');
+      return;
+    }
+
+    const rawStockRows = (rawPack?.stock || []) as RawMilestoneRow[];
+    const rawUsageRows = (rawPack?.usage || []) as RawMilestoneRow[];
+    const rawRitasiRows = (rawPack?.ritasi || []) as RawMilestoneRow[];
+
     const stockLookup = new Map<string, { qtyAwal: number; qtyAkhir: number; unitId: string }>();
     const usageLookup = new Map<string, number>();
     const ritasiLookup = new Map<string, number>();
+    const ritasiSjLookup = new Map<string, string[]>();
     const labelMap = new Map<string, string>();
 
-    stockRows.forEach(row => {
-      if (!row.date) return;
+    const stockKey = (date: string, shift: number, warehouseId: string) => `${date}:${shift}:${warehouseId}`;
+
+    rawStockRows.forEach(row => {
+      if (!row.date || row.shift == null) return;
       const warehouseId = row.warehouse_id || row.unit_number || '';
       if (!warehouseId) return;
-      const unitId = row.unit_number || '';
-      const key = `${row.date}:${warehouseId}`;
+      const unitId = row.unit_id || row.unit_number || '';
+      const key = stockKey(row.date, Number(row.shift), warehouseId);
       const current = stockLookup.get(key) || { qtyAwal: 0, qtyAkhir: 0, unitId };
       current.qtyAwal += Number(row.qty_awal ?? 0);
       current.qtyAkhir += Number(row.qty_akhir ?? 0);
@@ -243,68 +314,116 @@ export default function FirstStockMilestone() {
       }
     });
 
-    usageRows.forEach(row => {
-      if (!row.date) return;
-      const warehouseId = row.warehouseId || '';
+    rawUsageRows.forEach(row => {
+      if (!row.date || row.shift == null) return;
+      const warehouseId = row.warehouse_id || '';
       if (!warehouseId) return;
-      const key = `${row.date}:${warehouseId}`;
-      usageLookup.set(key, (usageLookup.get(key) || 0) + Number(row.qty || 0));
+      const key = stockKey(row.date, Number(row.shift), warehouseId);
+      usageLookup.set(key, (usageLookup.get(key) || 0) + Number(row.qty ?? 0));
+      if (row.unit_id && !labelMap.has(warehouseId)) {
+        labelMap.set(warehouseId, row.unit_id);
+      }
     });
 
-    ritasiRows.forEach(row => {
-      if (!row.date) return;
-      const warehouseId = row.warehouseId || '';
+    rawRitasiRows.forEach(row => {
+      if (!row.date || row.shift == null) return;
+      const warehouseId = row.warehouse_id || '';
       if (!warehouseId) return;
-      const key = `${row.date}:${warehouseId}`;
-      ritasiLookup.set(key, (ritasiLookup.get(key) || 0) + Number(row.qty || 0));
+      const key = stockKey(row.date, Number(row.shift), warehouseId);
+      ritasiLookup.set(key, (ritasiLookup.get(key) || 0) + Number(row.value ?? 0));
+      if (row.no_surat_jalan) {
+        const current = ritasiSjLookup.get(key) || [];
+        current.push(row.no_surat_jalan);
+        ritasiSjLookup.set(key, current);
+      }
+      if (row.unit_id && !labelMap.has(warehouseId)) {
+        labelMap.set(warehouseId, row.unit_id);
+      }
     });
 
     const rows: Array<Record<string, string | number>> = [];
     exportDays.forEach(day => {
       const dateStr = formatDateKey(day);
-      const warehouseIds = new Set<string>();
+      const shifts = new Set<number>();
 
-      stockRows.forEach(row => {
-        if (row.date === dateStr) {
-          const warehouseId = row.warehouse_id || row.unit_number || '';
-          if (warehouseId) warehouseIds.add(warehouseId);
-        }
+      rawStockRows.forEach(row => {
+        if (row.date === dateStr && row.shift != null) shifts.add(Number(row.shift));
       });
-      usageRows.forEach(row => {
-        if (row.date === dateStr && row.warehouseId) warehouseIds.add(row.warehouseId);
+      rawUsageRows.forEach(row => {
+        if (row.date === dateStr && row.shift != null) shifts.add(Number(row.shift));
       });
-      ritasiRows.forEach(row => {
-        if (row.date === dateStr && row.warehouseId) warehouseIds.add(row.warehouseId);
+      rawRitasiRows.forEach(row => {
+        if (row.date === dateStr && row.shift != null) shifts.add(Number(row.shift));
       });
 
-      Array.from(warehouseIds)
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
-        .forEach(warehouseId => {
-          const stockKey = `${dateStr}:${warehouseId}`;
-          const stockInfo = stockLookup.get(stockKey);
-          const ritasi = Number(ritasiLookup.get(stockKey) || 0);
-          const usage = Number(usageLookup.get(stockKey) || 0);
-          const opening = Number(stockInfo?.qtyAwal ?? 0);
-          const closing = Number(stockInfo?.qtyAkhir ?? (opening + ritasi - usage));
-          const unitId = stockInfo?.unitId || labelMap.get(warehouseId) || '';
+      Array.from(shifts)
+        .sort((a, b) => a - b)
+        .forEach(shift => {
+          const warehouseIds = new Set<string>();
 
-          rows.push({
-            Date: formatDisplayDate(dateStr),
-            Site: 'GMO',
-            kontraktor: 'Pama GMO',
-            'Fuel Truck': 'Skidtank GMO',
-            Warehouse: unitId ? `${warehouseId} (${unitId})` : warehouseId,
-            'Stock Awal (L)': opening,
-            'Pengambilan dari BC (L)': ritasi,
-            'Penggunaan Fuel (L)': usage,
-            'Stock Akhir (L)': closing,
+          rawStockRows.forEach(row => {
+            if (row.date === dateStr && Number(row.shift) === shift) {
+              const warehouseId = row.warehouse_id || row.unit_number || '';
+              if (warehouseId) warehouseIds.add(warehouseId);
+            }
           });
+          rawUsageRows.forEach(row => {
+            if (row.date === dateStr && Number(row.shift) === shift && row.warehouse_id) {
+              warehouseIds.add(row.warehouse_id);
+            }
+          });
+          rawRitasiRows.forEach(row => {
+            if (row.date === dateStr && Number(row.shift) === shift && row.warehouse_id) {
+              warehouseIds.add(row.warehouse_id);
+            }
+          });
+
+          Array.from(warehouseIds)
+            .sort((a, b) => {
+              const sjA = Array.from(new Set(ritasiSjLookup.get(stockKey(dateStr, shift, a)) || []))
+                .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
+                .join(' | ');
+              const sjB = Array.from(new Set(ritasiSjLookup.get(stockKey(dateStr, shift, b)) || []))
+                .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
+                .join(' | ');
+              return (
+                sjA.localeCompare(sjB, undefined, { numeric: true, sensitivity: 'base' }) ||
+                a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+              );
+            })
+            .forEach(warehouseId => {
+              const key = stockKey(dateStr, shift, warehouseId);
+              const stockInfo = stockLookup.get(key);
+              const ritasi = Number(ritasiLookup.get(key) || 0);
+              const usage = Number(usageLookup.get(key) || 0);
+              const opening = Number(stockInfo?.qtyAwal ?? 0);
+              const closing = Number(stockInfo?.qtyAkhir ?? (opening + ritasi - usage));
+              const unitId = stockInfo?.unitId || labelMap.get(warehouseId) || '';
+              const noSuratJalan = Array.from(new Set(ritasiSjLookup.get(key) || []))
+                .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
+                .join(', ');
+
+              rows.push({
+                Date: formatDisplayDate(dateStr),
+                Shift: `Shift ${shift}`,
+                Site: 'GMO',
+                kontraktor: 'Pama GMO',
+                'Fuel Truck': 'Skidtank GMO',
+                Warehouse: unitId ? `${warehouseId} (${unitId})` : warehouseId,
+                'Stock Awal (L)': opening,
+                'Pengambilan dari BC (L)': ritasi,
+                'Penggunaan Fuel (L)': usage,
+                'Stock Akhir (L)': closing,
+                'No Surat Jalan': noSuratJalan || '-',
+              });
+            });
         });
     });
 
     const ws = XLSX.utils.json_to_sheet(rows, {
       header: [
         'Date',
+        'Shift',
         'Site',
         'kontraktor',
         'Fuel Truck',
@@ -313,6 +432,7 @@ export default function FirstStockMilestone() {
         'Pengambilan dari BC (L)',
         'Penggunaan Fuel (L)',
         'Stock Akhir (L)',
+        'No Surat Jalan',
       ],
     });
 
@@ -325,7 +445,7 @@ export default function FirstStockMilestone() {
       right: { style: 'thin', color: { rgb: '808080' } },
     };
 
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:I1');
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:K1');
     for (let c = range.s.c; c <= range.e.c; c += 1) {
       const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c })];
       if (headerCell) {
@@ -351,7 +471,7 @@ export default function FirstStockMilestone() {
           fill: rowFill,
           border,
           alignment: {
-            horizontal: c >= 5 ? 'right' : 'center',
+            horizontal: c >= 6 && c <= 9 ? 'right' : c === 10 ? 'left' : 'center',
             vertical: 'center',
           },
         };
@@ -360,6 +480,7 @@ export default function FirstStockMilestone() {
 
     ws['!cols'] = [
       { wch: 16 },
+      { wch: 10 },
       { wch: 12 },
       { wch: 16 },
       { wch: 18 },
@@ -368,10 +489,11 @@ export default function FirstStockMilestone() {
       { wch: 22 },
       { wch: 20 },
       { wch: 18 },
+      { wch: 24 },
     ];
 
     for (let r = 1; r <= range.e.r; r += 1) {
-      for (let c = 5; c <= 8; c += 1) {
+      for (let c = 6; c <= 9; c += 1) {
         const cellRef = XLSX.utils.encode_cell({ r, c });
         const cell = ws[cellRef];
         if (!cell) continue;
