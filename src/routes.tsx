@@ -79,6 +79,7 @@ import RefuelingOutsideRest from './pages/Operational/FleetManagement/RefuelingO
 import FuelUsageReport from './pages/Reporting/FuelUsage/FuelUsageReport';
 import DailyStockTakingOilByUser from './pages/Oil/DstOliByUser/DstOliByUser';
 import FirstStockMilestone from './pages/Dashboard/StockManagement/pages/FirstStockMilestone';
+import FuelStockManagement from './pages/Dashboard/StockManagement/pages/FuelStockManagement';
 
 export interface AppRoute {
   path: string;
@@ -156,6 +157,13 @@ const routes: AppRoute[] = [
     component: <StockManagement />,
     title: 'FFF | Stock Management',
     allowedRoles: ADMIN,
+    keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
+  },
+
+    {
+    path: '/stock/fuel',
+    component: <FuelStockManagement />,
+    allowedRoles: ALL_ROLES,
     keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
   },
    {

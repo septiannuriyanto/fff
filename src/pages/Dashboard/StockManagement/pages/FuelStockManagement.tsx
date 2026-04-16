@@ -4,6 +4,7 @@ import { supabase } from '../../../../db/SupabaseClient';
 import ThemedPanelContainer from '../../../../common/ThemedComponents/ThemedPanelContainer';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../Authentication/AuthContext';
 
 interface DailyStockData {
     date: string;
@@ -35,6 +36,7 @@ interface DailyRitasiDetail {
 }
 
 export default function FuelStockManagement() {
+    const { currentUser } = useAuth();
     const [selectedMonth, setSelectedMonth] = useState(new Date());
     const [data, setData] = useState<DailyStockData[]>([]);
     const [stockDetails, setStockDetails] = useState<DailyStockDetail[]>([]);
@@ -50,6 +52,7 @@ export default function FuelStockManagement() {
 
     const chartScrollRef = useRef<HTMLDivElement>(null);
     const tableScrollRef = useRef<HTMLDivElement>(null);
+    const canInlineEditPortStock = Boolean(currentUser?.role);
 
 
     // Generate date range for selected month
@@ -431,12 +434,13 @@ export default function FuelStockManagement() {
         });
 
     const handleStartEditPortStock = (day: number) => {
+        if (!canInlineEditPortStock) return;
         setEditingPortDay(day);
         setEditValue('');
     };
 
     const handleUpdatePortStock = async (day: number) => {
-        if (editingPortDay === null) return;
+        if (!canInlineEditPortStock || editingPortDay === null) return;
 
         const cleanValue = editValue.replace(/\./g, '').replace(/,/g, '').trim();
         const targetTotal = Number(cleanValue);
@@ -909,8 +913,8 @@ export default function FuelStockManagement() {
                                 return (
                                     <td
                                         key={day}
-                                        className={`border border-stroke dark:border-strokedark p-2 text-right cursor-pointer hover:bg-slate-50 dark:hover:bg-meta-4/20 transition-colors ${isEditing ? '!p-0' : ''}`}
-                                        onClick={() => !isEditing && handleStartEditPortStock(day)}
+                                        className={`border border-stroke dark:border-strokedark p-2 text-right transition-colors ${canInlineEditPortStock ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-meta-4/20' : 'cursor-default'} ${isEditing ? '!p-0' : ''}`}
+                                        onClick={() => canInlineEditPortStock && !isEditing && handleStartEditPortStock(day)}
                                     >
                                         {isEditing ? (
                                             <input
