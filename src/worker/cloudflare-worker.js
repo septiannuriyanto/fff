@@ -3,7 +3,7 @@ export default {
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id, X-Backlog-Id'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id, X-Backlog-Id, X-Report-Date, X-Bass-Reference, X-Line-No'
     }
 
     if (req.method === 'OPTIONS') {
@@ -93,6 +93,23 @@ export default {
             const headers = new Headers(cors)
             object.writeHttpMetadata(headers)
             headers.set('etag', object.httpEtag)
+            return new Response(object.body, { headers })
+        } catch(e) {
+            return res(500, e.message, cors)
+        }
+    }
+
+    if (req.method === 'GET' && url.pathname.startsWith('/documents/battery-documentation/')) {
+        const key = url.pathname.replace('/documents/battery-documentation/', '')
+
+        try {
+            const object = await env.R2_BATTERY_DOCUMENTATION.get(key)
+            if (!object) return res(404, 'Document not found', cors)
+
+            const headers = new Headers(cors)
+            object.writeHttpMetadata(headers)
+            headers.set('etag', object.httpEtag)
+
             return new Response(object.body, { headers })
         } catch(e) {
             return res(500, e.message, cors)
@@ -307,6 +324,73 @@ export default {
 
         try {
           await env.R2_INFRA_INSPECTION.delete(key)
+          return Response.json({ status: 'ok', msg: 'Deleted' }, { headers: cors })
+        } catch (e) {
+          return res(500, `Delete failed: ${e.message}`, cors)
+        }
+    }
+
+    // ===============================
+    // BATTERY DOCUMENTATION PHOTO UPLOAD (R2)
+    // ===============================
+    if (req.method === 'PUT' && url.pathname === '/upload/battery-documentation') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const reportDate = req.headers.get('X-Report-Date')
+        const bassReference = req.headers.get('X-Bass-Reference')
+        const lineNo = req.headers.get('X-Line-No') || '0'
+        const originalFileName = req.headers.get('X-File-Name') || `battery-${Date.now()}.jpg`
+
+        if (!reportDate || !bassReference) {
+          return res(400, 'Missing X-Report-Date or X-Bass-Reference header', cors)
+        }
+
+        const safeDate = reportDate.replace(/[^0-9-]/g, '')
+        const safeBass = bassReference.replace(/[^a-zA-Z0-9_-]/g, '_')
+        const safeFileName = originalFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+        const timestamp = Date.now()
+        const key = `${safeDate}/${safeBass}/${lineNo}-${timestamp}-${safeFileName}`
+
+        try {
+          await env.R2_BATTERY_DOCUMENTATION.put(key, req.body, {
+            httpMetadata: { contentType: req.headers.get('Content-Type') || 'image/jpeg' }
+          })
+
+          const publicUrl = env.PUBLIC_R2_DOMAIN_BATTERY_DOCUMENTATION
+             ? `${env.PUBLIC_R2_DOMAIN_BATTERY_DOCUMENTATION.replace(/\/$/, '')}/${key}`
+             : `${url.origin}/documents/battery-documentation/${key}`
+
+          return Response.json({ status: 'ok', key, url: publicUrl }, { headers: cors })
+        } catch (e) {
+          return res(500, `Upload failed: ${e.message}`, cors)
+        }
+    }
+
+    // ===============================
+    // DELETE BATTERY DOCUMENTATION PHOTO
+    // ===============================
+    if (req.method === 'DELETE' && url.pathname === '/upload/battery-documentation') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const key = url.searchParams.get('key')
+        if (!key) return res(400, 'Missing key parameter', cors)
+
+        try {
+          await env.R2_BATTERY_DOCUMENTATION.delete(key)
           return Response.json({ status: 'ok', msg: 'Deleted' }, { headers: cors })
         } catch (e) {
           return res(500, `Delete failed: ${e.message}`, cors)

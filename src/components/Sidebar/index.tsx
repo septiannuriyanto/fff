@@ -16,13 +16,14 @@ import {
   TbGasStation,
   TbSettings,
   TbDroplet,
-  TbTools
+  TbTools,
+  TbSkull
 } from 'react-icons/tb';
 import { FaRegHandshake } from 'react-icons/fa';
 import SidebarGroup from './SidebarGroup';
 import SidebarLink from './SidebarLink';
 import SidebarButton from './SidebarButton';
-import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from '../../store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR, WASTE_MANAGEMENT } from '../../store/roles';
 import ExclusiveWidget from '../../common/TrialWrapper/ExclusiveWidget';
 import { useTheme, hexToRgba } from '../../contexts/ThemeContext';
 
@@ -259,7 +260,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
               </SidebarGroup>
 
 
-              {/* <!-- Menu Item Oil Reporting Pages --> */}
+              {/* <!-- Menu Item Operational Reporting Pages --> */}
               <SidebarGroup
                 currentRole={role!}
                 roles={SUPERVISOR}
@@ -313,8 +314,21 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/oil/grease" label="Grease" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/housekeeping" label="Housekeeping" mini={sidebarConfig === 'mini'} />
               </SidebarGroup>
+              
+               {/* <!-- Menu Item Waste Reporting Pages --> */}
+              <SidebarGroup
+                currentRole={role!}
+                roles={WASTE_MANAGEMENT}
+                title="Waste Reporting"
+                icon={<TbSkull />}
+                pathname={pathname}
+                basePath="/waste"
+                mini={sidebarConfig === 'mini'}
+              >
+                <SidebarLink to="/waste/battery-documentation" label="Battery Documentation" mini={sidebarConfig === 'mini'} />
+              </SidebarGroup>
 
-              {/* <!-- Menu Item Oil Reporting Pages --> */}
+              {/* <!-- Menu Item Plant Reporting Pages --> */}
               <SidebarGroup
                 currentRole={role!}
                 roles={PLANT}

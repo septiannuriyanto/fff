@@ -36,7 +36,7 @@ import BaReconcile from './pages/Export/BaReconcile/BaReconcile';
 import MasterManpower from './pages/MasterData/MasterManpower/MasterManpower';
 import RegistrationList from './pages/Authentication/RegistrationList';
 import ForgotPassword from './pages/Authentication/ForgotPassword';
-import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR } from './store/roles';
+import { ADMIN, ALL_ROLES, FUEL_PARTNER, FUEL_ROLES, OIL_ROLES, PLANT, SUPERVISOR, WASTE_MANAGEMENT } from './store/roles';
 import FuelTruckBacklogRequest from './pages/Dashboard/Operational/components/FueltruckBacklogRequest';
 import ResetPassword from './pages/Authentication/ResetPassword';
 import PressurelessSummary from './pages/Dashboard/Infrastructure/PressurelessSummary';
@@ -80,6 +80,10 @@ import FuelUsageReport from './pages/Reporting/FuelUsage/FuelUsageReport';
 import DailyStockTakingOilByUser from './pages/Oil/DstOliByUser/DstOliByUser';
 import FirstStockMilestone from './pages/Dashboard/StockManagement/pages/FirstStockMilestone';
 import FuelStockManagement from './pages/Dashboard/StockManagement/pages/FuelStockManagement';
+import BatteryDocumentation from './pages/Waste/BatteryDocumentation';
+import BatteryDocumentationAdd from './pages/Waste/components/BatteryDocumentationAdd';
+import BatteryDocumentationEdit from './pages/Waste/components/BatteryDocumentationEdit';
+import BatteryDocumentationPrint from './pages/Waste/components/BatteryDocumentationPrint';
 
 export interface AppRoute {
   path: string;
@@ -515,6 +519,34 @@ const routes: AppRoute[] = [
     title: 'FFF | Oil Historical Stock Deviation',
     allowedRoles: OIL_ROLES,
     keywords: ['oil', 'historical', 'deviation', 'report']
+  },
+  {
+    path: '/waste/battery-documentation',
+    component: <BatteryDocumentation />,
+    title: 'FFF | Battery Documentation',
+    allowedRoles: WASTE_MANAGEMENT,
+    keywords: ['waste', 'battery', 'documentation']
+  },
+  {
+    path: '/waste/battery-documentation/add',
+    component: <BatteryDocumentationAdd />,
+    title: 'FFF | Add Battery Documentation',
+    allowedRoles: OIL_ROLES,
+    keywords: ['waste', 'battery', 'documentation', 'add', 'entry']
+  },
+  {
+    path: '/waste/battery-documentation/edit/:id',
+    component: <BatteryDocumentationEdit />,
+    title: 'FFF | Edit Battery Documentation',
+    allowedRoles: OIL_ROLES,
+    keywords: ['waste', 'battery', 'documentation', 'edit', 'entry', 'update']
+  },
+  {
+    path: '/waste/battery-documentation/print/:id',
+    component: <BatteryDocumentationPrint />,
+    title: 'FFF | Print Battery Documentation',
+    allowedRoles: WASTE_MANAGEMENT,
+    keywords: ['waste', 'battery', 'documentation', 'print', 'report']
   },
   // Plant Reporting Routes
   {
