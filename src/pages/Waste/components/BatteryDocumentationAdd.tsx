@@ -18,6 +18,8 @@ import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelCo
 import { hexToRgba, useTheme } from '../../../contexts/ThemeContext';
 import { supabase } from '../../../db/SupabaseClient';
 import { useAuth } from '../../Authentication/AuthContext';
+import { sendTelegramMessageViaEdgeFunction } from '../../../services/TelegramSender';
+import TelegramTestButton from '../../../common/TelegramTestButton';
 
 interface BatteryRecordDraft {
   bassReferenceNumber: string;
@@ -360,7 +362,23 @@ const BatteryDocumentationAdd: React.FC = () => {
 
       if (error) throw error;
 
-      toast.success(`Report ${data?.[0]?.doc_no || ''} berhasil dibuat.`);
+      const docNo = data?.[0]?.doc_no || '';
+
+      // Send Telegram Notification (Edge)
+      try {
+        const message = `🔋 *NEW BATTERY DOCUMENTATION*\n\n` +
+          `*Doc No:* ${docNo}\n` +
+          `*Qty:* ${uploadedItems.length} Items / ${grandTotalAmpere} Amp\n` +
+          `*Plan Loading:* ${planLoadingDate || '-'}\n` +
+          `*Created By:* ${creatorName || currentUser?.nrp}\n\n` +
+          `_Please check for approval._`;
+        
+        await sendTelegramMessageViaEdgeFunction('60', message);
+      } catch (err) {
+        console.error('Failed to send submit notification:', err);
+      }
+
+      toast.success(`Report ${docNo} berhasil dibuat.`);
       navigate('/waste/battery-documentation', {
         replace: true,
         state: { shouldRefresh: true },
@@ -879,6 +897,10 @@ const BatteryDocumentationAdd: React.FC = () => {
                   {records.length} record teridentifikasi
                 </p>
               </div>
+            </div>
+
+            <div className="mb-4">
+               <TelegramTestButton contextName="Battery Documentation Add" />
             </div>
 
             <button

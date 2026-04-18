@@ -8,6 +8,7 @@ import { hexToRgba, useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../db/SupabaseClient';
 import { useAuth } from '../Authentication/AuthContext';
 import { OIL_ROLES } from '../../store/roles';
+import { sendTelegramMessageViaEdgeFunction } from '../../services/TelegramSender';
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'resubmitted';
 
@@ -360,6 +361,22 @@ const BatteryDocumentation: React.FC = () => {
       });
 
       if (error) throw error;
+
+      // Send Telegram Notification (Edge)
+      try {
+        const targetRow = rows.find(r => r.id === id);
+        const emoji = status === 'approved' ? '✅' : '❌';
+        const message = `${emoji} *BATTERY DOCUMENTATION ${status.toUpperCase()}*\n\n` +
+          `*Doc No:* ${targetRow?.docNo || '-'}\n` +
+          `*Status:* ${status}\n` +
+          `*Processed By:* ${(currentUser as any)?.nama || currentUser?.nrp}\n` +
+          `*Remark:* ${finalRemarks || '-'}\n\n` +
+          `_Please check system for details._`;
+        
+        await sendTelegramMessageViaEdgeFunction('60', message);
+      } catch (err) {
+        console.error('Failed to send approval notification:', err);
+      }
 
       toast.success(`Report ${status} successfully`);
       fetchReports();

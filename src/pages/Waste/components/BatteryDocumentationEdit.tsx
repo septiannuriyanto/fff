@@ -15,6 +15,8 @@ import {
 import ThemedPanelContainer from '../../../common/ThemedComponents/ThemedPanelContainer';
 import { hexToRgba, useTheme } from '../../../contexts/ThemeContext';
 import { supabase } from '../../../db/SupabaseClient';
+import { useAuth } from '../../Authentication/AuthContext';
+import { sendTelegramMessageViaEdgeFunction } from '../../../services/TelegramSender';
 
 interface BatteryRecordDraft {
   bassReferenceNumber: string;
@@ -59,6 +61,7 @@ const formatDisplayDate = (date: Date) =>
 const BatteryDocumentationEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { activeTheme } = useTheme();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -403,6 +406,19 @@ const BatteryDocumentationEdit: React.FC = () => {
       });
 
       if (error) throw error;
+
+      // Send Telegram Notification (Edge)
+      try {
+        const message = `🔄 *BATTERY DOCUMENTATION RESUBMITTED*\n\n` +
+          `*Doc No:* ${docNo}\n` +
+          `*Qty:* ${records.length} Items / ${grandTotalAmpere} Amp\n` +
+          `*Resubmitted By:* ${(currentUser as any)?.nama || currentUser?.nrp}\n\n` +
+          `_Please re-check for approval._`;
+        
+        await sendTelegramMessageViaEdgeFunction('60', message);
+      } catch (err) {
+        console.error('Failed to send resubmit notification:', err);
+      }
 
       toast.success(`Report ${docNo} updated and resubmitted.`);
       navigate('/waste/battery-documentation', {

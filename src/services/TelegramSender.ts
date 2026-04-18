@@ -1,4 +1,6 @@
 
+import { supabase } from '../db/SupabaseClient';
+
 const botToken = import.meta.env.VITE_TELEGRAM_BOT_API;
 const superGroupId = import.meta.env.VITE_TELE_FFF_GROUP_ID; // Or use the chat ID if it's private
 const chatId = import.meta.env.VITE_TELEGRAM_CHANNEL_ID; // Or use the chat ID if it's private
@@ -40,6 +42,7 @@ const sendTelegramNotification = async (message:string) => {
     const params = {
       chat_id: chatId,
       text: message,
+      parse_mode: 'Markdown',
     };
   
     try {
@@ -71,6 +74,7 @@ const sendTelegramNotification = async (message:string) => {
       chat_id: chatId,
       message_thread_id: threadId,
       text: message,
+      parse_mode: 'Markdown',
     };
   
     try {
@@ -91,6 +95,26 @@ const sendTelegramNotification = async (message:string) => {
       console.log('Message sent successfully');
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  const sendTelegramMessageViaEdgeFunction = async (chatId: string, message: string, threadId?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('telegram-notification', {
+        body: {
+          chat_id: chatId,
+          message_thread_id: threadId,
+          text: message,
+          parse_mode: 'Markdown'
+        }
+      });
+  
+      if (error) throw error;
+      console.log('Message sent successfully via Edge Function', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error sending message via Edge Function:', error);
+      return { success: false, error };
     }
   };
 
@@ -168,5 +192,5 @@ const sendTelegramNotification = async (message:string) => {
   
   
 
-  export { sendTelegramNotification, sendMessageToChannel, sendMessageToTopic , sendImageToTopic, sendImageToTopicWithFormData, botToken, chatId, superGroupId}
+  export { sendTelegramNotification, sendMessageToChannel, sendMessageToTopic , sendImageToTopic, sendImageToTopicWithFormData, sendTelegramMessageViaEdgeFunction, botToken, chatId, superGroupId}
   
