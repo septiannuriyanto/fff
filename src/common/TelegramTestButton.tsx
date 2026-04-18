@@ -15,7 +15,16 @@ const TelegramTestButton: React.FC<TelegramTestButtonProps> = ({ contextName = '
   const secondaryButtonTheme = activeTheme.button.secondary;
   const tertiaryButtonTheme = activeTheme.button.tertiary;
 
-  const getParams = () => {
+  const getThreadIdParam = () => {
+    const threadListMsg = threadIds
+      .filter(t => t.name)
+      .map(t => `${t.id}: ${t.name}`)
+      .join('\n');
+
+    return prompt(`PILIH TOPIK (Masukkan Angka ID):\n\n${threadListMsg}\n\nBiarkan kosong untuk General/ID 1:`, '1') || '1';
+  };
+
+  const handleTestDirect = async () => {
     let activeBotToken = botToken;
     let targetChatId = superGroupId;
 
@@ -27,19 +36,8 @@ const TelegramTestButton: React.FC<TelegramTestButtonProps> = ({ contextName = '
       targetChatId = prompt('VITE_TELE_FFF_GROUP_ID tidak ditemukan. Masukkan Chat ID / Group ID (e.g. -100xxx):') || '';
     }
 
-    const threadListMsg = threadIds
-      .filter(t => t.name)
-      .map(t => `${t.id}: ${t.name}`)
-      .join('\n');
-
-    const threadId = prompt(`PILIH TOPIK (Masukkan Angka ID):\n\n${threadListMsg}\n\nBiarkan kosong untuk General/ID 1:`, '1') || '1';
-
-    return { activeBotToken, targetChatId, threadId };
-  };
-
-  const handleTestDirect = async () => {
-    const { activeBotToken, targetChatId, threadId } = getParams();
     if (!activeBotToken || !targetChatId) return;
+    const threadId = getThreadIdParam();
 
     try {
       toast.loading('Testing Direct FE...', { id: 'tele-test' });
@@ -56,7 +54,7 @@ const TelegramTestButton: React.FC<TelegramTestButtonProps> = ({ contextName = '
   };
 
   const handleTestEdge = async () => {
-    const { threadId } = getParams(); // Only need threadId for Edge (chatId is in server secret)
+    const threadId = getThreadIdParam();
     if (!threadId) return;
 
     try {
@@ -74,7 +72,6 @@ const TelegramTestButton: React.FC<TelegramTestButtonProps> = ({ contextName = '
       toast.error(`Edge Failed: ${(error as Error).message}`, { id: 'tele-test' });
     }
   };
-
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
       <button
