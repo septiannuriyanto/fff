@@ -98,23 +98,33 @@ const sendTelegramNotification = async (message:string) => {
     }
   };
 
-  const sendTelegramMessageViaEdgeFunction = async (chatId: string, message: string, threadId?: string) => {
+  const sendTelegramMessageViaEdgeFunction = async (message: string, threadId?: string, chatId?: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('telegram-notification', {
         body: {
-          chat_id: chatId,
+          chat_id: chatId, 
           message_thread_id: threadId,
           text: message,
           parse_mode: 'Markdown'
         }
       });
   
-      if (error) throw error;
+      if (error) {
+        // Try to get more info from the error object
+        console.error('Edge Function Error Details:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (data?.error) {
+        console.error('Telegram API Error via Edge:', data.error);
+        return { success: false, error: data.error };
+      }
+
       console.log('Message sent successfully via Edge Function', data);
       return { success: true, data };
     } catch (error) {
-      console.error('Error sending message via Edge Function:', error);
-      return { success: false, error };
+      console.error('Unexpected Error:', error);
+      return { success: false, error: (error as Error).message };
     }
   };
 

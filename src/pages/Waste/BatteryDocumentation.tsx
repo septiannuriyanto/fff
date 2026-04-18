@@ -373,7 +373,7 @@ const BatteryDocumentation: React.FC = () => {
           `*Remark:* ${finalRemarks || '-'}\n\n` +
           `_Please check system for details._`;
         
-        await sendTelegramMessageViaEdgeFunction('60', message);
+        await sendTelegramMessageViaEdgeFunction(message, '60');
       } catch (err) {
         console.error('Failed to send approval notification:', err);
       }

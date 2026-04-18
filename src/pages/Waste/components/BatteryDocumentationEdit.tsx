@@ -415,7 +415,7 @@ const BatteryDocumentationEdit: React.FC = () => {
           `*Resubmitted By:* ${(currentUser as any)?.nama || currentUser?.nrp}\n\n` +
           `_Please re-check for approval._`;
         
-        await sendTelegramMessageViaEdgeFunction('60', message);
+        await sendTelegramMessageViaEdgeFunction(message, '60');
       } catch (err) {
         console.error('Failed to send resubmit notification:', err);
       }

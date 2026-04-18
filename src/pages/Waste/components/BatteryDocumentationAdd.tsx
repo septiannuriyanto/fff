@@ -373,7 +373,7 @@ const BatteryDocumentationAdd: React.FC = () => {
           `*Created By:* ${creatorName || currentUser?.nrp}\n\n` +
           `_Please check for approval._`;
         
-        await sendTelegramMessageViaEdgeFunction('60', message);
+        await sendTelegramMessageViaEdgeFunction(message, '60');
       } catch (err) {
         console.error('Failed to send submit notification:', err);
       }

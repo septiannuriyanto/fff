@@ -56,13 +56,12 @@ const TelegramTestButton: React.FC<TelegramTestButtonProps> = ({ contextName = '
   };
 
   const handleTestEdge = async () => {
-    const { targetChatId, threadId } = getParams();
-    if (!targetChatId) return;
+    const { threadId } = getParams(); // Only need threadId for Edge (chatId is in server secret)
+    if (!threadId) return;
 
     try {
       toast.loading('Testing Via Edge...', { id: 'tele-test' });
       const result = await sendTelegramMessageViaEdgeFunction(
-        targetChatId,
         `🚀 *TEST VIA EDGE*\nContext: ${contextName}\nTime: ${new Date().toLocaleString()}`,
         threadId
       );
