@@ -178,9 +178,9 @@ const BatteryDocumentationAdd: React.FC = () => {
         'photoFile' | 'photoPreview' | 'classificationN' | 'customClassificationN'
       >,
     ) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setDraft((prev) => ({ ...prev, [field]: event.target.value }));
-    };
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setDraft((prev) => ({ ...prev, [field]: event.target.value }));
+      };
 
   const handleClassificationSelect = (value: (typeof classificationOptions)[number]) => {
     setDraft((prev) => ({
@@ -372,7 +372,7 @@ const BatteryDocumentationAdd: React.FC = () => {
           `*Plan Loading:* ${planLoadingDate || '-'}\n` +
           `*Created By:* ${creatorName || currentUser?.nrp}\n\n` +
           `_Please check for approval._`;
-        
+
         await sendTelegramMessageViaEdgeFunction(message, '60');
       } catch (err) {
         console.error('Failed to send submit notification:', err);
@@ -648,7 +648,7 @@ const BatteryDocumentationAdd: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
 
               <div>
                 <label className="mb-2 block text-sm font-medium" style={{ color: textColor }}>
@@ -813,23 +813,23 @@ const BatteryDocumentationAdd: React.FC = () => {
 
                     <div className="relative flex min-h-[220px] flex-col justify-end p-4 text-center">
                       <div className="rounded-2xl border px-4 py-4 backdrop-blur-[2px]" style={{ borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(15,23,42,0.18)' }}>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
-                        N{record.classificationN}
-                      </p>
-                      <p className="mt-2 text-4xl font-black tracking-tight text-white">
-                        {record.ampere}
-                      </p>
-                      <p className="text-lg font-bold text-white">
-                        Amp
-                      </p>
-                      <p className="mt-4 line-clamp-2 text-sm font-semibold text-white">
-                        {record.bassReferenceNumber}
-                      </p>
-                      {record.notes && (
-                        <p className="mt-2 line-clamp-2 text-xs text-white/80">
-                          {record.notes}
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+                          N{record.classificationN}
                         </p>
-                      )}
+                        <p className="mt-2 text-4xl font-black tracking-tight text-white">
+                          {record.ampere}
+                        </p>
+                        <p className="text-lg font-bold text-white">
+                          Amp
+                        </p>
+                        <p className="mt-4 line-clamp-2 text-sm font-semibold text-white">
+                          {record.bassReferenceNumber}
+                        </p>
+                        {record.notes && (
+                          <p className="mt-2 line-clamp-2 text-xs text-white/80">
+                            {record.notes}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -899,9 +899,9 @@ const BatteryDocumentationAdd: React.FC = () => {
               </div>
             </div>
 
-            <div className="mb-4">
+            {/* <div className="mb-4">
                <TelegramTestButton contextName="Battery Documentation Add" />
-            </div>
+            </div> */}
 
             <button
               type="button"
