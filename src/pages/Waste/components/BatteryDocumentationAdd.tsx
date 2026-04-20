@@ -66,6 +66,8 @@ const formatInputDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizeBassReferenceNumber = (value: string) => value.trim().toUpperCase();
+
 const BatteryDocumentationAdd: React.FC = () => {
   const { activeTheme } = useTheme();
   const { currentUser } = useAuth();
@@ -227,12 +229,14 @@ const BatteryDocumentationAdd: React.FC = () => {
   };
 
   const validateDraft = () => {
+    const normalizedBassReferenceNumber = normalizeBassReferenceNumber(draft.bassReferenceNumber);
+
     if (!draft.photoFile) {
       toast.error('Foto baterai wajib diambil sebelum record ditambahkan.');
       return false;
     }
 
-    if (!draft.bassReferenceNumber.trim()) {
+    if (!normalizedBassReferenceNumber || normalizedBassReferenceNumber === '-') {
       toast.error('BASS Reference Number wajib diisi.');
       return false;
     }
@@ -258,9 +262,11 @@ const BatteryDocumentationAdd: React.FC = () => {
   const handleAddRecord = () => {
     if (!validateDraft() || !draft.photoFile) return;
 
+    const normalizedBassReferenceNumber = normalizeBassReferenceNumber(draft.bassReferenceNumber);
+
     const nextRecord: BatteryRecordItem = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      bassReferenceNumber: draft.bassReferenceNumber.trim().toUpperCase(),
+      bassReferenceNumber: normalizedBassReferenceNumber,
       classificationN: resolvedClassificationValue.trim().toUpperCase().replace(/^N/i, ''),
       ampere: resolvedAmpere,
       notes: draft.notes.trim(),
@@ -290,6 +296,18 @@ const BatteryDocumentationAdd: React.FC = () => {
   const handleSubmit = async () => {
     if (records.length === 0) {
       toast.error('Minimal harus ada 1 record sebelum submit.');
+      return;
+    }
+
+    const normalizedBassReferenceNumbers = records.map((record) =>
+      normalizeBassReferenceNumber(record.bassReferenceNumber),
+    );
+    const hasInvalidBassReferenceNumber = normalizedBassReferenceNumbers.some(
+      (bassReferenceNumber) => !bassReferenceNumber || bassReferenceNumber === '-',
+    );
+
+    if (hasInvalidBassReferenceNumber) {
+      toast.error('Semua BASS Reference Number harus valid sebelum submit.');
       return;
     }
 

@@ -1,0 +1,2 @@
+alter table public.battery_documentation_items
+  drop constraint if exists battery_documentation_items_report_id_bass_reference_number_key;

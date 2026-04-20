@@ -58,6 +58,8 @@ const formatDisplayDate = (date: Date) =>
     year: 'numeric',
   }).format(date);
 
+const normalizeBassReferenceNumber = (value: string) => value.trim().toUpperCase();
+
 const BatteryDocumentationEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { activeTheme } = useTheme();
@@ -254,12 +256,14 @@ const BatteryDocumentationEdit: React.FC = () => {
   };
 
   const validateDraft = () => {
+    const normalizedBassReferenceNumber = normalizeBassReferenceNumber(draft.bassReferenceNumber);
+
     if (!draft.photoPreview) {
       toast.error('Foto baterai wajib ada.');
       return false;
     }
 
-    if (!draft.bassReferenceNumber.trim()) {
+    if (!normalizedBassReferenceNumber || normalizedBassReferenceNumber === '-') {
       toast.error('BASS Reference Number wajib diisi.');
       return false;
     }
@@ -285,13 +289,15 @@ const BatteryDocumentationEdit: React.FC = () => {
   const handleAddRecord = () => {
     if (!validateDraft()) return;
 
+    const normalizedBassReferenceNumber = normalizeBassReferenceNumber(draft.bassReferenceNumber);
+
     if (editingRecordId) {
       setRecords((prev) =>
         prev.map((r) =>
           r.id === editingRecordId
             ? {
                 ...r,
-                bassReferenceNumber: draft.bassReferenceNumber.trim().toUpperCase(),
+                bassReferenceNumber: normalizedBassReferenceNumber,
                 classificationN: resolvedClassificationValue.trim().toUpperCase().replace(/^N/i, ''),
                 ampere: resolvedAmpere,
                 notes: draft.notes.trim(),
@@ -306,7 +312,7 @@ const BatteryDocumentationEdit: React.FC = () => {
     } else {
       const nextRecord: BatteryRecordItem = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        bassReferenceNumber: draft.bassReferenceNumber.trim().toUpperCase(),
+        bassReferenceNumber: normalizedBassReferenceNumber,
         classificationN: resolvedClassificationValue.trim().toUpperCase().replace(/^N/i, ''),
         ampere: resolvedAmpere,
         notes: draft.notes.trim(),
@@ -335,6 +341,18 @@ const BatteryDocumentationEdit: React.FC = () => {
   const handleSubmit = async () => {
     if (records.length === 0) {
       toast.error('Minimal harus ada 1 record sebelum submit.');
+      return;
+    }
+
+    const normalizedBassReferenceNumbers = records.map((record) =>
+      normalizeBassReferenceNumber(record.bassReferenceNumber),
+    );
+    const hasInvalidBassReferenceNumber = normalizedBassReferenceNumbers.some(
+      (bassReferenceNumber) => !bassReferenceNumber || bassReferenceNumber === '-',
+    );
+
+    if (hasInvalidBassReferenceNumber) {
+      toast.error('Semua BASS Reference Number harus valid sebelum submit.');
       return;
     }
 

@@ -10,7 +10,7 @@ import { useAuth } from '../Authentication/AuthContext';
 import { OIL_ROLES } from '../../store/roles';
 import { sendTelegramMessageViaEdgeFunction } from '../../services/TelegramSender';
 
-type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'resubmitted';
+type ApprovalStatus = 'pending' | 'submitted' | 'approved' | 'rejected' | 'resubmitted';
 
 interface BatteryDocumentationRow {
   id: string;
@@ -36,6 +36,10 @@ interface BatteryDocumentationItemRow {
   ampere: number;
   photoUrl: string;
   notes: string | null;
+}
+
+interface BatteryDocumentationRpcItem {
+  ampere?: number | string | null;
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -110,7 +114,7 @@ const BatteryDocumentation: React.FC = () => {
     async (options?: { background?: boolean; search?: string }) => {
       const isBackground = Boolean(options?.background) && rows.length > 0;
       const searchToUse = options?.search ?? appliedSearch;
-      const statusFilter = filterType === 'pending' ? ['pending', 'resubmitted'] : null;
+      const statusFilter = filterType === 'pending' ? ['pending', 'submitted', 'resubmitted'] : null;
 
       try {
         if (isBackground) {
@@ -128,13 +132,18 @@ const BatteryDocumentation: React.FC = () => {
 
         if (error) throw error;
 
-        const mappedRows: BatteryDocumentationRow[] = (data || []).map((item: any) => ({
+        const mappedRows: BatteryDocumentationRow[] = (data || []).map((item: any) => {
+          const rpcItems = Array.isArray(item.items) ? (item.items as BatteryDocumentationRpcItem[]) : [];
+          const derivedQtyEa = rpcItems.length;
+          const derivedQtyAmp = rpcItems.reduce((total, rpcItem) => total + Number(rpcItem?.ampere || 0), 0);
+
+          return {
           id: item.id,
           docNo: item.doc_no,
           createDate: item.create_date,
           createdBy: item.created_by_name || item.created_by_nrp,
-          qtyEa: Number(item.qty_ea || 0),
-          qtyAmp: Number(item.qty_amp || 0),
+          qtyEa: Number(item.qty_ea ?? derivedQtyEa ?? 0),
+          qtyAmp: Number(item.qty_amp ?? derivedQtyAmp ?? 0),
           planLoadingDate: item.plan_loading_date,
           bassNumber: item.bass_numbers,
           approvalStatus: item.approval_status,
@@ -142,7 +151,8 @@ const BatteryDocumentation: React.FC = () => {
           rejectedByName: item.rejected_by_name,
           processedAt: item.processed_at,
           remarks: item.remarks,
-        }));
+          };
+        });
 
         setRows(mappedRows);
         setTotalCount(Number(data?.[0]?.total_count || 0));
@@ -465,7 +475,7 @@ const BatteryDocumentation: React.FC = () => {
             Resubmitted
           </span>
         );
-      default:
+      case 'submitted':
         return (
           <span
             className="inline-flex min-w-[90px] items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
@@ -476,6 +486,19 @@ const BatteryDocumentation: React.FC = () => {
             }}
           >
             Submitted
+          </span>
+        );
+      default:
+        return (
+          <span
+            className="inline-flex min-w-[90px] items-center justify-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
+            style={{
+              backgroundColor: 'rgba(234, 179, 8, 0.12)',
+              color: '#ca8a04',
+              border: '1px solid rgba(234, 179, 8, 0.24)',
+            }}
+          >
+            Pending
           </span>
         );
     }
