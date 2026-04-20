@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../db/SupabaseClient';
 import { TbLoader, TbDownload, TbPrinter } from 'react-icons/tb';
 import toast from 'react-hot-toast';
-import { usePDF } from 'react-to-pdf';
+import { Resolution, usePDF } from 'react-to-pdf';
 
 interface ReportHeader {
   id: string;
@@ -23,8 +23,11 @@ interface ReportItem {
   classification_n: number;
   ampere: number;
   photo_url: string;
+  pdf_photo_url?: string;
   notes: string | null;
 }
+
+const ITEMS_PER_PRINT_PAGE = 6;
 
 const FooterContent: React.FC<{ docNo: string; printedAt: string }> = ({ docNo, printedAt }) => (
   <table
@@ -58,6 +61,56 @@ const FooterContent: React.FC<{ docNo: string; printedAt: string }> = ({ docNo, 
   </table>
 );
 
+const compressImageForPdf = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+
+    const shouldRotate = bitmap.height > bitmap.width;
+    const sourceWidth = shouldRotate ? bitmap.height : bitmap.width;
+    const sourceHeight = shouldRotate ? bitmap.width : bitmap.height;
+    const maxWidth = 1100;
+    const maxHeight = 825;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      bitmap.close();
+      return url;
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, width, height);
+
+    if (shouldRotate) {
+      context.translate(width / 2, height / 2);
+      context.rotate(Math.PI / 2);
+      context.drawImage(bitmap, -height / 2, -width / 2, height, width);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+    } else {
+      context.drawImage(bitmap, 0, 0, width, height);
+    }
+
+    bitmap.close();
+
+    return canvas.toDataURL('image/jpeg', 0.62);
+  } catch (error) {
+    console.warn('Failed to compress image for PDF, using original:', error);
+    return url;
+  }
+};
+
 const BatteryDocumentationPrint: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -67,7 +120,21 @@ const BatteryDocumentationPrint: React.FC = () => {
 
   const { toPDF, targetRef } = usePDF({
     filename: report ? `Berita_Acara_${report.doc_no}.pdf` : 'Berita_Acara.pdf',
+    resolution: 2,
     page: { margin: 15 },
+    canvas: {
+      mimeType: 'image/jpeg',
+      qualityRatio: 0.72,
+    },
+    overrides: {
+      pdf: {
+        compress: true,
+      },
+      canvas: {
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      },
+    },
   });
 
   useEffect(() => {
@@ -111,8 +178,15 @@ const BatteryDocumentationPrint: React.FC = () => {
 
         if (itemError) throw itemError;
 
+        const compressedItems: ReportItem[] = await Promise.all(
+          (itemData || []).map(async (item: ReportItem) => ({
+            ...item,
+            pdf_photo_url: await compressImageForPdf(item.photo_url),
+          })),
+        );
+
         setReport(mappedHeader);
-        setItems(itemData);
+        setItems(compressedItems);
       } catch (error: any) {
         console.error('Print error:', error);
         toast.error('Gagal memuat data cetak');
@@ -140,6 +214,16 @@ const BatteryDocumentationPrint: React.FC = () => {
   const totalPcs = items.length;
   const totalAmpere = items.reduce((sum, item) => sum + (item.ampere || 0), 0);
   const printedAt = new Date().toLocaleString('id-ID');
+  const itemPages: ReportItem[][] = [];
+  for (let index = 0; index < items.length; index += ITEMS_PER_PRINT_PAGE) {
+    itemPages.push(items.slice(index, index + ITEMS_PER_PRINT_PAGE));
+  }
+  if (itemPages.length === 0) {
+    itemPages.push([]);
+  }
+  const lastItemPageCount = itemPages[itemPages.length - 1]?.length ?? 0;
+  const shouldUseDedicatedSummaryPage = lastItemPageCount > 5;
+  const totalRenderedPages = itemPages.length + (shouldUseDedicatedSummaryPage ? 1 : 0);
 
   return (
     <>
@@ -165,189 +249,327 @@ const BatteryDocumentationPrint: React.FC = () => {
       <div
         ref={targetRef}
         style={{
-          minHeight: '297mm',
-          display: 'flex',
-          flexDirection: 'column',
           backgroundColor: 'white',
-          padding: '10mm',
           boxSizing: 'border-box',
         }}
         className="mx-auto max-w-[210mm] text-black font-sans bg-white"
       >
-        <div style={{ flex: 1 }}>
-          {/* Print Header */}
-          <div className="mb-8 border-b-2 border-black pb-4 text-center">
-            <h1 className="text-2xl font-bold uppercase">Berita Acara Pengambilan Baterai Bekas</h1>
-            <p className="text-sm">Dokumentasi Lampiran Pendukung</p>
-          </div>
+        {itemPages.map((pageItems, pageIndex) => {
+          const isLastItemPage = pageIndex === itemPages.length - 1;
+          const isLastRenderedPage = !shouldUseDedicatedSummaryPage && isLastItemPage;
 
-          {/* Meta Information */}
-          <div className="report-meta">
-            <div className="meta-row">
-              <div className="meta-item">
-                <span className="label">Nomor Dokumen</span>
-                <span>: {report.doc_no}</span>
-              </div>
-              <div className="meta-item">
-                <span className="label">Status</span>
-                <span className="status-approved">: {report.approval_status}</span>
+          return (
+            <div key={`page-${pageIndex}`} className={`print-page ${isLastRenderedPage ? 'last-page' : ''}`}>
+              <div className="page-inner">
+                <div className="mb-8 border-b-2 border-black pb-4 text-center">
+                  <h1 className="text-2xl font-bold uppercase">Berita Acara Pengambilan Baterai Bekas</h1>
+                  <p className="text-sm">
+                    Dokumentasi Lampiran Pendukung{totalRenderedPages > 1 ? ` - Halaman ${pageIndex + 1}/${totalRenderedPages}` : ''}
+                  </p>
+                </div>
+
+                <div className="report-meta">
+                  <div className="meta-row">
+                    <div className="meta-item">
+                      <span className="label">Nomor Dokumen</span>
+                      <span>: {report.doc_no}</span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="label">Status</span>
+                      <span className="status-approved">: {report.approval_status}</span>
+                    </div>
+                  </div>
+                  <div className="meta-row">
+                    <div className="meta-item">
+                      <span className="label">Tanggal Rencana</span>
+                      <span>
+                        :{' '}
+                        {new Date(report.plan_loading_date).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="label">Dicetak Pada</span>
+                      <span>: {printedAt}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <table className="items-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>No</th>
+                      <th style={{ width: '120px' }}>BASS Ref #</th>
+                      <th style={{ width: '80px' }}>Klasifikasi</th>
+                      <th style={{ width: '80px' }}>Ampere</th>
+                      <th>Foto Dokumentasi</th>
+                      <th style={{ width: '150px' }}>Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageItems.map((item, idx) => (
+                      <tr key={`row-${pageIndex}-${idx}`} className="item-row">
+                        <td className="text-center">{item.line_no}</td>
+                        <td className="font-bold">{item.bass_reference_number}</td>
+                        <td className="text-center">{`N${item.classification_n}`}</td>
+                        <td className="text-center font-bold">{`${item.ampere} AH`}</td>
+                        <td className="text-center photo-cell">
+                          <img
+                            src={item.pdf_photo_url || item.photo_url}
+                            alt="Documentation"
+                            className="doc-photo"
+                            crossOrigin="anonymous"
+                          />
+                        </td>
+                        <td className="italic notes-cell">{item.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {!shouldUseDedicatedSummaryPage && isLastItemPage && (
+                  <>
+                    <div className="mt-8 mb-8 break-inside-avoid">
+                      <table
+                        style={{
+                          width: 'auto',
+                          minWidth: '300px',
+                          border: '2px solid black',
+                          borderCollapse: 'collapse',
+                          backgroundColor: '#f3f4f6',
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            <th
+                              colSpan={2}
+                              style={{
+                                padding: '8px',
+                                borderBottom: '2px solid black',
+                                textAlign: 'left',
+                                fontSize: '11px',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              Ringkasan Dokumentasi
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '8px', fontSize: '12px' }}>Total Baterai</td>
+                            <td style={{ padding: '8px', fontSize: '12px', fontWeight: 'bold', textAlign: 'right' }}>
+                              {totalPcs} Unit
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '8px', fontSize: '12px', borderTop: '1px solid black' }}>
+                              Total Kapasitas
+                            </td>
+                            <td
+                              style={{
+                                padding: '8px',
+                                fontSize: '15px',
+                                fontWeight: 'bold',
+                                textAlign: 'right',
+                                borderTop: '1px solid black',
+                              }}
+                            >
+                              {totalAmpere} AH
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-8 grid grid-cols-2 gap-8">
+                      <div className="rounded border border-black p-4 bg-gray-50">
+                        <p className="text-xs font-bold uppercase mb-2">Riwayat Persetujuan:</p>
+                        <div className="text-xs">
+                          <div className="mb-1">
+                            <span className="font-bold">Dibuat Oleh:</span> {report.created_by_name}
+                          </div>
+                          <div className="mb-1">
+                            <span className="font-bold">Disetujui Oleh:</span> {report.approved_by_name}
+                          </div>
+                          <div className="mb-1">
+                            <span className="font-bold">Waktu Approval:</span>{' '}
+                            {report.approved_at ? new Date(report.approved_at).toLocaleString('id-ID') : '-'}
+                          </div>
+                          <hr className="mt-4 mb-2 border-black/10" />
+                          <div className="italic text-[10px]" style={{ color: '#4b5563' }}>
+                            {report.remarks}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col justify-between text-center pt-8">
+                        <div>
+                          <p className="text-sm font-bold">Authorized Signature</p>
+                          <div className="mt-12 text-[10px] italic text-gray-400 font-mono">[ SIGNED ]</div>
+                          <div className="mt-2 border-b border-black w-48 mx-auto"></div>
+                          <p className="text-[10px] mt-1">(Verified by System Approval)</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        paddingTop: '8px',
+                        borderTop: '1px solid rgba(100, 98, 90, 0.18)',
+                      }}
+                      className="pdf-footer-inline"
+                    >
+                      <FooterContent docNo={report.doc_no} printedAt={printedAt} />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-            <div className="meta-row">
-              <div className="meta-item">
-                <span className="label">Tanggal Rencana</span>
-                <span>
-                  :{' '}
-                  {new Date(report.plan_loading_date).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </span>
+          );
+        })}
+
+        {shouldUseDedicatedSummaryPage && (
+          <div className="print-page last-page">
+            <div className="page-inner">
+              <div className="mb-8 border-b-2 border-black pb-4 text-center">
+                <h1 className="text-2xl font-bold uppercase">Berita Acara Pengambilan Baterai Bekas</h1>
+                <p className="text-sm">
+                  Dokumentasi Lampiran Pendukung{totalRenderedPages > 1 ? ` - Halaman ${totalRenderedPages}/${totalRenderedPages}` : ''}
+                </p>
               </div>
-              <div className="meta-item">
-                <span className="label">Dicetak Pada</span>
-                <span>: {printedAt}</span>
+
+              <div className="report-meta">
+                <div className="meta-row">
+                  <div className="meta-item">
+                    <span className="label">Nomor Dokumen</span>
+                    <span>: {report.doc_no}</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="label">Status</span>
+                    <span className="status-approved">: {report.approval_status}</span>
+                  </div>
+                </div>
+                <div className="meta-row">
+                  <div className="meta-item">
+                    <span className="label">Tanggal Rencana</span>
+                    <span>
+                      :{' '}
+                      {new Date(report.plan_loading_date).toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="label">Dicetak Pada</span>
+                    <span>: {printedAt}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 mb-8 break-inside-avoid">
+                <table
+                  style={{
+                    width: 'auto',
+                    minWidth: '300px',
+                    border: '2px solid black',
+                    borderCollapse: 'collapse',
+                    backgroundColor: '#f3f4f6',
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th
+                        colSpan={2}
+                        style={{
+                          padding: '8px',
+                          borderBottom: '2px solid black',
+                          textAlign: 'left',
+                          fontSize: '11px',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Ringkasan Dokumentasi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '8px', fontSize: '12px' }}>Total Baterai</td>
+                      <td style={{ padding: '8px', fontSize: '12px', fontWeight: 'bold', textAlign: 'right' }}>
+                        {totalPcs} Unit
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '8px', fontSize: '12px', borderTop: '1px solid black' }}>
+                        Total Kapasitas
+                      </td>
+                      <td
+                        style={{
+                          padding: '8px',
+                          fontSize: '15px',
+                          fontWeight: 'bold',
+                          textAlign: 'right',
+                          borderTop: '1px solid black',
+                        }}
+                      >
+                        {totalAmpere} AH
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-8 grid grid-cols-2 gap-8">
+                <div className="rounded border border-black p-4 bg-gray-50">
+                  <p className="text-xs font-bold uppercase mb-2">Riwayat Persetujuan:</p>
+                  <div className="text-xs">
+                    <div className="mb-1">
+                      <span className="font-bold">Dibuat Oleh:</span> {report.created_by_name}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-bold">Disetujui Oleh:</span> {report.approved_by_name}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-bold">Waktu Approval:</span>{' '}
+                      {report.approved_at ? new Date(report.approved_at).toLocaleString('id-ID') : '-'}
+                    </div>
+                    <hr className="mt-4 mb-2 border-black/10" />
+                    <div className="italic text-[10px]" style={{ color: '#4b5563' }}>
+                      {report.remarks}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-between text-center pt-8">
+                  <div>
+                    <p className="text-sm font-bold">Authorized Signature</p>
+                    <div className="mt-12 text-[10px] italic text-gray-400 font-mono">[ SIGNED ]</div>
+                    <div className="mt-2 border-b border-black w-48 mx-auto"></div>
+                    <p className="text-[10px] mt-1">(Verified by System Approval)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '12px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid rgba(100, 98, 90, 0.18)',
+                }}
+                className="pdf-footer-inline"
+              >
+                <FooterContent docNo={report.doc_no} printedAt={printedAt} />
               </div>
             </div>
           </div>
-
-          {/* Items Table */}
-          <table className="items-table">
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}>No</th>
-                <th style={{ width: '120px' }}>BASS Ref #</th>
-                <th style={{ width: '80px' }}>Klasifikasi</th>
-                <th style={{ width: '80px' }}>Ampere</th>
-                <th>Foto Dokumentasi</th>
-                <th style={{ width: '150px' }}>Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="text-center">{item.line_no}</td>
-                  <td className="font-bold">{item.bass_reference_number}</td>
-                  <td className="text-center">N{item.classification_n}</td>
-                  <td className="text-center font-bold">{item.ampere} AH</td>
-                  <td className="text-center">
-                    <img
-                      src={item.photo_url}
-                      alt="Documentation"
-                      className="doc-photo"
-                      crossOrigin="anonymous"
-                    />
-                  </td>
-                  <td className="italic">{item.notes || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Summary */}
-          <div className="mt-8 mb-8 break-inside-avoid">
-            <table
-              style={{
-                width: 'auto',
-                minWidth: '300px',
-                border: '2px solid black',
-                borderCollapse: 'collapse',
-                backgroundColor: '#f3f4f6',
-              }}
-            >
-              <thead>
-                <tr>
-                  <th
-                    colSpan={2}
-                    style={{
-                      padding: '8px',
-                      borderBottom: '2px solid black',
-                      textAlign: 'left',
-                      fontSize: '11px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Ringkasan Dokumentasi
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>Total Baterai</td>
-                  <td style={{ padding: '8px', fontSize: '12px', fontWeight: 'bold', textAlign: 'right' }}>
-                    {totalPcs} Unit
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', fontSize: '12px', borderTop: '1px solid black' }}>
-                    Total Kapasitas
-                  </td>
-                  <td
-                    style={{
-                      padding: '8px',
-                      fontSize: '15px',
-                      fontWeight: 'bold',
-                      textAlign: 'right',
-                      borderTop: '1px solid black',
-                    }}
-                  >
-                    {totalAmpere} AH
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Approval Details */}
-          <div className="mt-8 grid grid-cols-2 gap-8">
-            <div className="rounded border border-black p-4 bg-gray-50">
-              <p className="text-xs font-bold uppercase mb-2">Riwayat Persetujuan:</p>
-              <div className="text-xs">
-                <div className="mb-1">
-                  <span className="font-bold">Dibuat Oleh:</span> {report.created_by_name}
-                </div>
-                <div className="mb-1">
-                  <span className="font-bold">Disetujui Oleh:</span> {report.approved_by_name}
-                </div>
-                <div className="mb-1">
-                  <span className="font-bold">Waktu Approval:</span>{' '}
-                  {report.approved_at ? new Date(report.approved_at).toLocaleString('id-ID') : '-'}
-                </div>
-                <hr className="mt-4 mb-2 border-black/10" />
-                <div className="italic text-[10px]" style={{ color: '#4b5563' }}>
-                  {report.remarks}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-between text-center pt-8">
-              <div>
-                <p className="text-sm font-bold">Authorized Signature</p>
-                <div className="mt-12 text-[10px] italic text-gray-400 font-mono">[ SIGNED ]</div>
-                <div className="mt-2 border-b border-black w-48 mx-auto"></div>
-                <p className="text-[10px] mt-1">(Verified by System Approval)</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── FOOTER INLINE — untuk react-to-pdf (PDF download) ── */}
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: '8px',
-            borderTop: '1px solid rgba(100, 98, 90, 0.18)',
-          }}
-          className="pdf-footer-inline"
-        >
-          <FooterContent docNo={report.doc_no} printedAt={printedAt} />
-        </div>
-      </div>
-
-      {/* ── FOOTER FIXED — untuk window.print() (muncul di setiap halaman) ── */}
-      <div className="print-footer-fixed">
-        <FooterContent docNo={report.doc_no} printedAt={printedAt} />
+        )}
       </div>
 
       <style>{`
@@ -356,32 +578,24 @@ const BatteryDocumentationPrint: React.FC = () => {
           margin: 10mm;
         }
 
-        /* Sembunyikan footer fixed di layar */
-        .print-footer-fixed { display: none; }
-
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-
-          /* Footer inline (untuk PDF) disembunyikan saat print — pakai yang fixed */
-          .pdf-footer-inline { display: none !important; }
-
-          /* Footer fixed muncul di tiap halaman saat window.print() */
-          .print-footer-fixed {
-            display: block;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 5px 10mm 4px;
-            border-top: 1px solid rgba(100, 98, 90, 0.18);
-            background: white;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          .print-page {
+            page-break-after: always;
+          }
+          .print-page.last-page {
+            page-break-after: auto;
           }
         }
 
         /* ── Layout helpers ── */
+        .print-page {
+          min-height: 277mm;
+          padding: 10mm;
+          box-sizing: border-box;
+          background: white;
+        }
         .report-meta { display: table; width: 100%; margin-bottom: 20px; }
         .meta-row { display: table-row; }
         .meta-item { display: table-cell; padding: 4px 0; }
@@ -393,13 +607,42 @@ const BatteryDocumentationPrint: React.FC = () => {
 
         .status-approved { color: #15803d !important; font-weight: bold; text-transform: uppercase; }
 
-        .items-table { width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10px; }
-        .items-table th, .items-table td { border: 1px solid black; padding: 8px; text-align: left; vertical-align: middle; }
-        .items-table th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
-
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          border: 1px solid black;
+          font-size: 10px;
+          table-layout: fixed;
+        }
+        .items-table th,
+        .items-table td {
+          border: 1px solid black;
+          padding: 8px;
+          text-align: left;
+          vertical-align: middle;
+          word-break: break-word;
+        }
+        .items-table th {
+          background-color: #f1f5f9 !important;
+          -webkit-print-color-adjust: exact;
+        }
+        .item-row {
+          height: 148px;
+        }
+        .photo-cell,
+        .notes-cell {
+          height: 148px;
+        }
         .text-center { text-align: center !important; }
 
-        .doc-photo { max-height: 180px; max-width: 100%; display: block; margin: 0 auto; }
+        .doc-photo {
+          max-height: 120px;
+          max-width: 100%;
+          width: auto;
+          object-fit: contain;
+          display: block;
+          margin: 0 auto;
+        }
 
         .break-inside-avoid { page-break-inside: avoid; }
       `}</style>
