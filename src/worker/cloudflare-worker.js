@@ -3,7 +3,7 @@ export default {
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id, X-Backlog-Id, X-Report-Date, X-Bass-Reference, X-Line-No'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Unit-Id, X-Request-Id, X-Year, X-Month, X-Roster-Type, X-Competency-Id, X-Nrp, X-File-Name, X-Inspection-Id, X-Item-Id, X-Backlog-Id, X-Report-Date, X-Bass-Reference, X-Line-No, X-Flowmeter-Mapping-Id, X-Photo-Type'
     }
 
     if (req.method === 'OPTIONS') {
@@ -109,6 +109,24 @@ export default {
             const headers = new Headers(cors)
             object.writeHttpMetadata(headers)
             headers.set('etag', object.httpEtag)
+
+            return new Response(object.body, { headers })
+        } catch(e) {
+            return res(500, e.message, cors)
+        }
+    }
+
+    if (req.method === 'GET' && url.pathname.startsWith('/images/flowmeter-mapping/')) {
+        const key = url.pathname.replace('/images/flowmeter-mapping/', '')
+
+        try {
+            const object = await env.R2_FLOWMETER_MAPPING.get(key)
+            if (!object) return res(404, 'Image not found', cors)
+
+            const headers = new Headers(cors)
+            object.writeHttpMetadata(headers)
+            headers.set('etag', object.httpEtag)
+            headers.set('Cache-Control', 'public, max-age=31536000, immutable')
 
             return new Response(object.body, { headers })
         } catch(e) {
@@ -397,6 +415,72 @@ export default {
         }
     }
 
+    // ===============================
+    // FLOWMETER MAPPING PHOTO UPLOAD (R2)
+    // ===============================
+    if (req.method === 'PUT' && url.pathname === '/upload/flowmeter-mapping') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const mappingId = req.headers.get('X-Flowmeter-Mapping-Id')
+        const photoType = req.headers.get('X-Photo-Type') || 'photo'
+        const originalFileName = req.headers.get('X-File-Name') || `${photoType}.jpg`
+
+        if (!mappingId) {
+          return res(400, 'Missing X-Flowmeter-Mapping-Id header', cors)
+        }
+
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const safeMappingId = sanitizePathPart(mappingId)
+        const safePhotoType = sanitizePathPart(photoType)
+        const safeFileName = originalFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+        const key = `${year}/${month}/${safeMappingId}/${safePhotoType}-${Date.now()}-${safeFileName}`
+
+        try {
+          await env.R2_FLOWMETER_MAPPING.put(key, req.body, {
+            httpMetadata: { contentType: req.headers.get('Content-Type') || 'image/jpeg' }
+          })
+
+          const publicUrl = flowmeterMappingPublicUrl(url, env, key)
+
+          return Response.json({ status: 'ok', key, url: publicUrl }, { headers: cors })
+        } catch (e) {
+          return res(500, `Upload failed: ${e.message}`, cors)
+        }
+    }
+
+    // ===============================
+    // DELETE FLOWMETER MAPPING PHOTO
+    // ===============================
+    if (req.method === 'DELETE' && url.pathname === '/upload/flowmeter-mapping') {
+        const token = req.headers.get('Authorization')?.split(' ')[1]
+        if (!token) return res(401, 'Unauthorized', cors)
+
+        try {
+          await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+        } catch {
+          return res(401, 'Unauthorized', cors)
+        }
+
+        const key = url.searchParams.get('key') || keyFromFlowmeterMappingUrl(url.searchParams.get('url'), env)
+        if (!key) return res(400, 'Missing key or url parameter', cors)
+
+        try {
+          await env.R2_FLOWMETER_MAPPING.delete(key)
+          return Response.json({ status: 'ok', key, msg: 'Deleted' }, { headers: cors })
+        } catch (e) {
+          return res(500, `Delete failed: ${e.message}`, cors)
+        }
+    }
+
 
     // ===============================
     // BATCH INSERT ENDPOINT (Original)
@@ -504,6 +588,53 @@ export default {
 // ===============================
 function res(status, msg, headers) {
   return new Response(msg, { status, headers })
+}
+
+function sanitizePathPart(value) {
+  return String(value || 'unknown')
+    .trim()
+    .replace(/[^a-zA-Z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 90) || 'unknown'
+}
+
+function flowmeterMappingPublicUrl(url, env, key) {
+  const base = env.PUBLIC_R2_DOMAIN_FLOWMETER_MAPPING
+    ? env.PUBLIC_R2_DOMAIN_FLOWMETER_MAPPING.replace(/\/$/, '')
+    : `${url.origin}/images/flowmeter-mapping`
+
+  return `${base}/${key}`
+}
+
+function keyFromFlowmeterMappingUrl(fileUrl, env) {
+  if (!fileUrl) return null
+
+  try {
+    const parsed = new URL(fileUrl)
+    const marker = '/images/flowmeter-mapping/'
+    const markerIndex = parsed.pathname.indexOf(marker)
+
+    if (markerIndex >= 0) {
+      return decodeURIComponent(parsed.pathname.slice(markerIndex + marker.length))
+    }
+
+    if (env.PUBLIC_R2_DOMAIN_FLOWMETER_MAPPING) {
+      const publicBase = new URL(env.PUBLIC_R2_DOMAIN_FLOWMETER_MAPPING)
+
+      if (parsed.origin === publicBase.origin) {
+        const basePath = publicBase.pathname.replace(/\/$/, '')
+        const path = parsed.pathname.startsWith(basePath)
+          ? parsed.pathname.slice(basePath.length)
+          : parsed.pathname
+
+        return decodeURIComponent(path.replace(/^\//, ''))
+      }
+    }
+
+    return decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+  } catch {
+    return fileUrl
+  }
 }
 
 // Minimal HS256 JWT verify

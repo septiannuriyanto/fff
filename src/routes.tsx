@@ -84,6 +84,7 @@ import BatteryDocumentation from './pages/Waste/BatteryDocumentation';
 import BatteryDocumentationAdd from './pages/Waste/components/BatteryDocumentationAdd';
 import BatteryDocumentationEdit from './pages/Waste/components/BatteryDocumentationEdit';
 import BatteryDocumentationPrint from './pages/Waste/components/BatteryDocumentationPrint';
+import OilFlowmeterMapping from './pages/Oil/FlowmeterMapping/OilFlowmeterMapping';
 
 export interface AppRoute {
   path: string;
@@ -164,13 +165,13 @@ const routes: AppRoute[] = [
     keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
   },
 
-    {
+  {
     path: '/stock/fuel',
     component: <FuelStockManagement />,
     allowedRoles: ALL_ROLES,
     keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
   },
-   {
+  {
     path: '/stock/first-stock',
     component: <FirstStockMilestone />,
     keywords: ['stock', 'inventory', 'fuel', 'management', 'dashboard']
@@ -481,7 +482,7 @@ const routes: AppRoute[] = [
     allowedRoles: OIL_ROLES,
     keywords: ['oil', 'dst', 'daily stock taking']
   },
-    {
+  {
     path: '/oil/dst-user',
     component: <DailyStockTakingOilByUser />,
     keywords: ['oil', 'dst', 'daily stock taking']
@@ -512,6 +513,13 @@ const routes: AppRoute[] = [
     title: 'FFF | Housekeeping Oil',
     allowedRoles: OIL_ROLES,
     keywords: ['oil', 'housekeeping', 'cleanliness']
+  },
+  {
+    path: '/oil/flowmeter-mapping',
+    component: <OilFlowmeterMapping />,
+    title: 'FFF | Oil Flowmeter Mapping',
+    allowedRoles: OIL_ROLES,
+    keywords: ['oil', 'flowmeter', 'mapping']
   },
   {
     path: '/oil/historical',

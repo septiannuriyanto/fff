@@ -311,11 +311,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, role }: SidebarProps) => {
                 <SidebarLink to="/oil/dst-user" label="DST Oil (User)" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/dstreport" label="DST Report" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/historical" label="Historical Report" mini={sidebarConfig === 'mini'} />
+                <SidebarLink to="/oil/flowmeter-mapping" label="Oil FM Mapping" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/grease" label="Grease" mini={sidebarConfig === 'mini'} />
                 <SidebarLink to="/oil/housekeeping" label="Housekeeping" mini={sidebarConfig === 'mini'} />
               </SidebarGroup>
-              
-               {/* <!-- Menu Item Waste Reporting Pages --> */}
+
+              {/* <!-- Menu Item Waste Reporting Pages --> */}
               <SidebarGroup
                 currentRole={role!}
                 roles={WASTE_MANAGEMENT}
