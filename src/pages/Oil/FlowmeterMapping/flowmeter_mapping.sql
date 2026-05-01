@@ -9,6 +9,7 @@ create table if not exists public.flowmeter_mapping (
   front_photo_url text null,
   recorded_at timestamp with time zone not null default now(),
   sn_photo_url text null,
+  installation_position text null,
   constraint flowmeter_mapping_pkey primary key (id)
 ) TABLESPACE pg_default;
 
@@ -21,7 +22,8 @@ alter table public.flowmeter_mapping
   add column if not exists function text null,
   add column if not exists front_photo_url text null,
   add column if not exists recorded_at timestamp with time zone not null default now(),
-  add column if not exists sn_photo_url text null;
+  add column if not exists sn_photo_url text null,
+  add column if not exists installation_position text null;
 
 do $$
 begin

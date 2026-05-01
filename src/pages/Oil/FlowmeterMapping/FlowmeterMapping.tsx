@@ -52,6 +52,7 @@ type FlowmeterMappingRecord = {
   function: string | null;
   front_photo_url: string | null;
   sn_photo_url: string | null;
+  installation_position: string | null;
   recorded_at: string;
 };
 
@@ -62,6 +63,7 @@ type FlowmeterForm = {
   serial_number: string;
   type: string;
   function: string;
+  installation_position: string;
   recorded_at: string;
 };
 
@@ -95,6 +97,7 @@ const initialForm = (): FlowmeterForm => ({
   serial_number: '',
   type: '',
   function: '',
+  installation_position: '',
   recorded_at: toLocalDateTimeInput(),
 });
 
@@ -657,6 +660,7 @@ const OilFlowmeterMapping = () => {
       serial_number: record.serial_number || '',
       type: record.type || '',
       function: record.function || '',
+      installation_position: record.installation_position || '',
       recorded_at: record.recorded_at ? toLocalDateTimeInput(new Date(record.recorded_at)) : toLocalDateTimeInput(),
     });
     setFrontPhotoFile(null);
@@ -707,6 +711,7 @@ const OilFlowmeterMapping = () => {
         serial_number: data.serial_number.trim(),
         type: data.material_type === 'FUEL' ? 'DIESEL FUEL' : (data.type.trim() || null),
         function: data.function.trim() || null,
+        installation_position: data.installation_position.trim() || null,
         front_photo_url: frontPhotoUrl,
         sn_photo_url: snPhotoUrl,
         recorded_at: data.recorded_at ? new Date(data.recorded_at).toISOString() : new Date().toISOString(),
@@ -1120,7 +1125,7 @@ const OilFlowmeterMapping = () => {
                             <th className="px-4 py-4">Photos</th>
                             <th className="px-4 py-4">Serial Number</th>
                             <th className="px-4 py-4">Material / Type</th>
-                            <th className="px-4 py-4">Function</th>
+                            <th className="px-4 py-4">Function / Position</th>
                             <th className="px-4 py-4">Location</th>
                             <th className="px-4 py-4">Recorded At</th>
                             <th className="px-4 py-4 text-right">Actions</th>
@@ -1167,9 +1172,14 @@ const OilFlowmeterMapping = () => {
                                 <p className="text-[10px] uppercase opacity-50">{record.material_type}</p>
                               </td>
                               <td className="px-4 py-4">
-                                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                                  {record.function}
-                                </span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary w-fit">
+                                    {record.function}
+                                  </span>
+                                  {record.installation_position && (
+                                    <span className="text-[10px] opacity-60 italic">Pos: {record.installation_position}</span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-4">
                                 <div className="flex items-center gap-1.5 text-sm opacity-70">
@@ -1336,16 +1346,30 @@ const OilFlowmeterMapping = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <FieldLabel label="Recorded Date" color={inputTheme.textColor} />
-                      <input
-                        type="datetime-local"
-                        value={form.recorded_at}
-                        onChange={(e) => setForm({ ...form, recorded_at: e.target.value })}
-                        className="w-full rounded-xl px-4 py-3.5 outline-none transition focus:ring-2 focus:ring-primary/20 border"
-                        style={inputStyle}
-                        disabled={saving}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <FieldLabel label="Installation Position" color={inputTheme.textColor} />
+                        <input
+                          type="text"
+                          value={form.installation_position}
+                          onChange={(e) => setForm({ ...form, installation_position: e.target.value })}
+                          placeholder="e.g. Tank left side"
+                          className="w-full rounded-xl px-4 py-3.5 text-sm outline-none transition focus:ring-2 focus:ring-primary/20 border"
+                          style={inputStyle}
+                          disabled={saving}
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel label="Recorded Date" color={inputTheme.textColor} />
+                        <input
+                          type="datetime-local"
+                          value={form.recorded_at}
+                          onChange={(e) => setForm({ ...form, recorded_at: e.target.value })}
+                          className="w-full rounded-xl px-4 py-3.5 text-sm outline-none transition focus:ring-2 focus:ring-primary/20 border"
+                          style={inputStyle}
+                          disabled={saving}
+                        />
+                      </div>
                     </div>
                   </div>
 
