@@ -11,7 +11,7 @@ const App = () => {
       <Toaster 
         position="top-center" 
         reverseOrder={false} 
-        containerStyle={{ zIndex: 9999999 }}
+        containerStyle={{ zIndex: 999999999 }}
       />
       <Routes>
         {routes.map(({ path, component, title, allowedRoles, isPublic }: any) => {

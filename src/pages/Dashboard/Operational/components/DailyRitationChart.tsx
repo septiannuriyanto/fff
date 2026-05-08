@@ -22,7 +22,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
 
   const [cumulativeRitation, setCumulativeRitation] = useState<(number | null)[]>([]); // New state for cumulative daily ritation
   const [poBalance, setPoBalance] = useState<(number | null)[]>([]); // New state for PO balance qty
-  
+
   useEffect(() => {
     // const daysInMonth = new Date(
     //   new Date().getFullYear(),
@@ -57,7 +57,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
     // for (let index = 0; index < daysInMonth; index++) {
     //   dailyTotal += dailyTarget;
     //   cumulativePlanData.push(dailyTotal); // Add to cumulative plan
-      
+
     //   // Calculate cumulative ritation
     //   if (index < qtys.length) {
     //     cumulativeRitationData.push(
@@ -76,7 +76,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
   }, [chartDataInput, chartDataReconcile, chartDataCumulative, chartDataPoBalance]);
 
   const [normalize, setNormalize] = useState(false);
-  
+
   // Create an array for the daily target line
   const chartData = useMemo(() => ({
     series: [
@@ -112,7 +112,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         },
       },
       // High Contrast Palette: Amber/Primary Blue for daily bars, ChartOne Sky Blue/Emerald for area progress
-      colors: ['#fbbf24', '#3c50e0', '#80caee', '#10b981'], 
+      colors: ['#fbbf24', '#3c50e0', '#80caee', '#10b981'],
       stroke: {
         width: [0, 0, 2, 2], // Outlines only for the areas
         curve: 'smooth' as 'smooth',
@@ -130,7 +130,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         }
       },
       markers: {
-        size: [0, 0, 4, 4], 
+        size: [0, 0, 4, 4],
         colors: '#fff',
         strokeColors: ['#fbbf24', '#3c50e0', '#80caee', '#10b981'],
         strokeWidth: 2,
@@ -158,22 +158,22 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
           show: false,
         },
       },
-      yaxis: normalize 
+      yaxis: normalize
         ? [
-            {
-              title: { text: 'Daily Volume', style: { color: '#fbbf24', fontWeight: 600 } },
-              labels: { formatter: (val: number) => val?.toLocaleString('id-ID') },
-            },
-            {
-              opposite: true,
-              title: { text: 'Cumulative Volume', style: { color: '#80caee', fontWeight: 600 } },
-              labels: { formatter: (val: number) => val?.toLocaleString('id-ID') },
-            }
-          ]
+          {
+            title: { text: 'Daily Volume', style: { color: '#fbbf24', fontWeight: 600 } },
+            labels: { formatter: (val: number) => val?.toLocaleString('id-ID') },
+          },
+          {
+            opposite: true,
+            title: { text: 'Cumulative Volume', style: { color: '#80caee', fontWeight: 600 } },
+            labels: { formatter: (val: number) => val?.toLocaleString('id-ID') },
+          }
+        ]
         : {
-            title: { style: { fontSize: '0px' } },
-            labels: { formatter: (value: number) => value.toLocaleString('id-ID') },
-          } as any,
+          title: { style: { fontSize: '0px' } },
+          labels: { formatter: (value: number) => value.toLocaleString('id-ID') },
+        } as any,
       legend: {
         show: false,
       },
@@ -205,9 +205,9 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
       },
     },
   }), [qty, reconcileQty, cumulativeRitation, poBalance, date, normalize]);
-  
-  
-  
+
+
+
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -226,7 +226,7 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
         const totalWidth = scrollRef.current.scrollWidth;
         const clientWidth = scrollRef.current.clientWidth;
         const itemWidth = totalWidth / qty.length;
-        
+
         // Calculate position so the last active point + 2 spaces is at the right edge
         // lastActiveIndex + 1 (to get count) + 2 (requested margin)
         const targetScroll = (lastActiveIndex + 1 + 2) * itemWidth - clientWidth;
@@ -239,20 +239,20 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
 
   const { appliedTheme, trialTheme } = useTheme();
   const activeTheme = trialTheme || appliedTheme;
-  const containerColor = activeTheme.container.color === 'initial' 
+  const containerColor = activeTheme.container.color === 'initial'
     ? (activeTheme.baseTheme === 'dark' ? '#000000' : '#ffffff')
     : activeTheme.container.color;
 
   return (
-    <div 
+    <div
       className="w-full rounded-2xl border p-5 shadow-sm transition-all duration-700 relative overflow-hidden backdrop-blur-md mb-6 border-white/10 shadow-lg"
     >
       {/* Background Layer */}
-      <div 
+      <div
         className="absolute inset-0 z-0 transition-all duration-700"
-        style={{ 
-          backgroundColor: containerColor, 
-          opacity: activeTheme.card.opacity 
+        style={{
+          backgroundColor: containerColor,
+          opacity: activeTheme.card.opacity
         }}
       />
 
@@ -261,23 +261,21 @@ const DailyRitationChart: React.FC<DailyRitationChartProps> = ({
           <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Monthly Fuel Trips by Date</h4>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Normalize View</span>
-            <button 
+            <button
               onClick={() => setNormalize(!normalize)}
-              className={`w-9 h-5 rounded-full transition-all relative border-2 ${
-                normalize 
-                  ? 'bg-emerald-500 border-emerald-500 shadow-inner' 
+              className={`w-9 h-5 rounded-full transition-all relative border-2 ${normalize
+                  ? 'bg-emerald-500 border-emerald-500 shadow-inner'
                   : 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm'
-              }`}
+                }`}
             >
-              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${
-                normalize 
-                  ? 'left-[20px]' 
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${normalize
+                  ? 'left-[20px]'
                   : 'left-0.5 border-[1.5px] border-black'
-              }`} />
+                }`} />
             </button>
           </div>
         </div>
-        <div 
+        <div
           ref={scrollRef}
           className="w-full overflow-x-auto no-scrollbar scroll-smooth pb-2"
         >

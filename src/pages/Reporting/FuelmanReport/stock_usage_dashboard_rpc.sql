@@ -40,7 +40,6 @@ begin
       sum(coalesce(lv.qty, 0)) as qty
     from public.loto_verification lv
     where lv.issued_date between p_start_date and p_end_date
-      and lv.shift = 2
       and coalesce(lv.is_included, true) = true
     group by lv.issued_date, lv.warehouse_code
     order by lv.issued_date, lv.warehouse_code

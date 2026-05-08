@@ -113,6 +113,17 @@ const getOperationalDate = (date: Date = new Date()) => {
   return operationalDate;
 };
 
+const formatDateToIndonesianShortByDate = (date: Date) => {
+  // Format the date using Indonesian locale with short month name
+  const formattedDate = date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short', // Short month name (e.g., Mei, Jan, Feb)
+    year: 'numeric',
+  });
+
+  return formattedDate;
+};
+
 const getOperationalShift = (date: Date = new Date()) => {
   const timeZone = 'Asia/Makassar';
   const zonedDate = toZonedTime(date, timeZone);
@@ -131,6 +142,7 @@ export {
   formatDateForSupabase,
   formatDateToIndonesian,
   formatDateToIndonesianByDate,
+  formatDateToIndonesianShortByDate,
   formatDateToISO,
   formatDateToString,
   formatDateToDdMmyy,
