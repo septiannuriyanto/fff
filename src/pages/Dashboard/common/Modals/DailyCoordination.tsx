@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FaUsers, FaPlus, FaSave, FaHistory, FaCheckCircle, FaTrash, FaSync, FaGripVertical, FaExpand, FaCompress, FaTimes, FaListUl, FaChevronDown, FaRegCommentDots, FaTasks, FaRegPlusSquare, FaEdit, FaLink, FaPlay } from 'react-icons/fa';
+import { FaPlus, FaHistory, FaCheckCircle, FaTrash, FaSync, FaGripVertical, FaExpand, FaTimes, FaListUl, FaChevronDown, FaRegPlusSquare, FaEdit, FaLink, FaPlay } from 'react-icons/fa';
 import { supabase } from '../../../../db/SupabaseClient';
 import toast, { Toaster } from 'react-hot-toast';
 import { Reorder, useDragControls, AnimatePresence, motion } from 'framer-motion';
@@ -26,20 +26,43 @@ const formatNumericString = (val: any) => {
 
     // If it's a number (from RPC), format it immediately
     if (typeof val === 'number') {
-        return new Intl.NumberFormat('id-ID').format(val);
+        return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(val);
     }
 
-    // If it's a string, check if it's a raw numeric string
-    const str = String(val).replace(/\./g, '').replace(',', '.');
+    let str = String(val);
+
+    // Heuristic: If it has a dot but NO comma, and it looks like a DB number (e.g. 123.45)
+    // we treat the dot as a decimal point.
+    // If it has both, or just a comma, or multiple dots, it's localized.
+    const hasComma = str.includes(',');
+    const dotCount = (str.match(/\./g) || []).length;
+
+    if (dotCount === 1 && !hasComma) {
+        // Treat as DB decimal (123.45)
+    } else {
+        // Treat as Localized (123.456,78)
+        str = str.replace(/\./g, '').replace(',', '.');
+    }
+
     const num = parseFloat(str);
+    if (isNaN(num)) return val;
 
-    if (!isNaN(num) && /^-?\d*(\.\d*)?$/.test(str)) {
-        return new Intl.NumberFormat('id-ID').format(num);
-    }
-
-    return val;
+    return new Intl.NumberFormat('id-ID', {
+        maximumFractionDigits: 2
+    }).format(num);
 };
 
+
+const getStatusColor = (status: string) => {
+    const s = String(status || '').toUpperCase();
+    if (s === 'OPEN' || s.includes('BREAKDOWN') || s.includes('REPAIR') || s.includes('FAILED') || s.includes('OFF'))
+        return 'bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-900/20 dark:border-rose-800/30';
+    if (s === 'PROGRESS' || s.includes('WAITING') || s.includes('STANDBY') || s.includes('MONITOR'))
+        return 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800/30';
+    if (s === 'CLOSE' || s === 'READY' || s === 'RFU' || s === 'OK')
+        return 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/30';
+    return 'bg-slate-50 border-slate-100 text-slate-600 dark:bg-white/5 dark:border-white/10';
+};
 
 const DailyCoordination = () => {
     const [loading, setLoading] = useState(true);
@@ -92,12 +115,45 @@ const DailyCoordination = () => {
     const handleRunFunction = async (path: string[], binding: string) => {
         const toastId = toast.loading(`Running ${binding}...`);
         try {
-            const { data: result, error } = await supabase.rpc(binding);
+            const { data: result, error } = await supabase.rpc(binding, { p_date: todayStr });
             if (error) throw error;
 
-            const updated = updateParameter(path, result);
-            saveChanges(updated);
-            toast.success(`Fetched: ${result}`, { id: toastId });
+            if (Array.isArray(result)) {
+                // Smart Merge: Preserve existing items (with their steps/remarks) if keys match
+                let existingItems: any[] = [];
+                try {
+                    let current: any = parameters;
+                    for (const segment of path) {
+                        if (Array.isArray(current)) {
+                            current = current.find(item => item.key === segment)?.value;
+                        } else if (current && typeof current === 'object') {
+                            current = current[segment];
+                        }
+                    }
+                    existingItems = Array.isArray(current) ? current : [];
+                } catch (e) {
+                    existingItems = [];
+                }
+
+                const newItems = result.map((item: any) => {
+                    const key = typeof item === 'string' ? item : (item.unit_info || item.unit_name || item.name || item.key || 'Unit');
+                    const existing = existingItems.find(ex => ex.key === key);
+
+                    return existing ? existing : {
+                        key: key,
+                        value: 'OPEN',
+                        items: []
+                    };
+                });
+
+                updateParameter(path, newItems);
+            } else {
+                // Handle single value results
+                updateParameter(path, String(result));
+            }
+
+            saveChanges();
+            toast.success('Data synchronized successfully', { id: toastId });
         } catch (error: any) {
             console.error('Error running function:', error);
             toast.error(`Failed to run ${binding}: ${error.message}`, { id: toastId });
@@ -290,10 +346,10 @@ const DailyCoordination = () => {
         saveChanges(updatedParams);
     };
 
-    const handleReorder = (newOrder: ParameterItem[]) => {
-        setParameters(newOrder);
-        saveChanges(newOrder);
-    };
+    // const handleReorder = (newOrder: ParameterItem[]) => {
+    //     setParameters(newOrder);
+    //     saveChanges(newOrder);
+    // };
 
     // ... rest of render methods ...
     // Note: I will need to rewrite parts of the rendering logic below to support recursion.
@@ -333,18 +389,18 @@ const DailyCoordination = () => {
     }
 
     const renderMainContent = (isZoomed: boolean) => (
-        <div className={`flex flex-col h-full pb-10 px-6 md:px-10 ${isZoomed ? 'bg-white dark:bg-slate-950 p-6 md:p-16 lg:p-24' : ''}`}>
+        <div className={`flex flex-col h-full pb-4 px-2 md:px-4 bg-slate-100 dark:bg-slate-900/40 rounded-2xl ${isZoomed
+            ? 'p-2 md:p-4 lg:p-6'
+            : 'pt-0 md:pt-0'
+            }`}>
             <Toaster position="top-center" containerStyle={{ zIndex: 1000000000 }} />
             {/* Header Section */}
-            <div className="flex items-center justify-between gap-4 py-4 px-2 border-b border-slate-100 dark:border-slate-800/50 mb-8">
-                <div className="flex flex-col">
-                    <span className="text-xs md:text-sm font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-2">Coordination Date</span>
-                    <span
-                        className="text-xl md:text-4xl lg:text-5xl font-black text-sky-500 uppercase tracking-tighter italic"
-                        style={{ textShadow: '0 0 2px rgba(255,255,255,0.8), 0 0 15px rgba(14,165,233,0.3)' }}
-                    >
+            <div className="flex items-center justify-between gap-4 py-2 px-2 border-b border-slate-100  dark:border-slate-800/50 mb-4">
+                <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Coordination Date</span>
+                    <h2 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-sky-400 dark:from-sky-400 dark:to-sky-200 uppercase italic tracking-tighter">
                         {formatDateToIndonesianShortByDate(new Date(todayStr))}
-                    </span>
+                    </h2>
                 </div>
 
                 <div className="flex items-center gap-4 md:gap-6">
@@ -356,13 +412,13 @@ const DailyCoordination = () => {
                     )}
                     <button
                         onClick={() => setIsFullscreen(!isZoomed)}
-                        className={`p-4 md:p-6 rounded-[2rem] transition-all active:scale-90 shadow-xl ${isZoomed
+                        className={`p-4 rounded-2xl transition-all active:scale-90 shadow-xl ${isZoomed
                             ? 'bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-900/20 shadow-rose-500/10'
                             : 'bg-sky-50 text-sky-600 hover:bg-sky-100 dark:bg-sky-900/20 shadow-sky-500/10'
                             }`}
                         title={isZoomed ? "Close Full Screen" : "Open Full Screen"}
                     >
-                        {isZoomed ? <FaTimes size={28} /> : <FaExpand size={24} />}
+                        {isZoomed ? <FaTimes size={20} /> : <FaExpand size={20} />}
                     </button>
                 </div>
             </div>
@@ -376,28 +432,71 @@ const DailyCoordination = () => {
                             <p className="text-lg font-black uppercase tracking-[0.3em] text-center leading-relaxed">No parameters defined<br />Add your first topic below</p>
                         </div>
                     ) : (
-                        <Reorder.Group
-                            axis="y"
-                            values={parameters}
-                            onReorder={handleReorder}
-                            className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12"
-                        >
-                            {parameters.map((item) => (
-                                <ParameterCard
-                                    key={item.key}
-                                    item={item}
-                                    path={[item.key]}
-                                    isZoomed={isZoomed}
-                                    updateParameter={updateParameter}
-                                    removeParameter={removeParameter}
-                                    addParameter={addParameter}
-                                    saveChanges={saveChanges}
-                                    setParameters={setParameters}
-                                    setShowFunctionPicker={setShowFunctionPicker}
-                                    handleRunFunction={handleRunFunction}
-                                />
-                            ))}
-                        </Reorder.Group>
+                        <>
+                            {/* Metrics Section (Single Parameters) */}
+                            <div className="flex items-center gap-2 mb-4 px-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Headline Metrics</span>
+                                <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
+                            </div>
+                            <Reorder.Group
+                                axis="y"
+                                values={parameters.filter(p => !Array.isArray(p.value))}
+                                onReorder={(newSingles) => {
+                                    const groups = parameters.filter(p => Array.isArray(p.value));
+                                    setParameters([...newSingles, ...groups]);
+                                }}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+                            >
+                                {parameters.filter(p => !Array.isArray(p.value)).map((item) => (
+                                    <ParameterCard
+                                        key={item.key}
+                                        item={item}
+                                        path={[item.key]}
+                                        className="col-span-1"
+                                        isZoomed={isZoomed}
+                                        updateParameter={updateParameter}
+                                        removeParameter={removeParameter}
+                                        addParameter={addParameter}
+                                        saveChanges={saveChanges}
+                                        setParameters={setParameters}
+                                        setShowFunctionPicker={setShowFunctionPicker}
+                                        handleRunFunction={handleRunFunction}
+                                    />
+                                ))}
+                            </Reorder.Group>
+
+                            {/* Operational Boards Section (Array Parameters) */}
+                            <div className="flex items-center gap-2 mb-4 px-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operational Boards</span>
+                                <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
+                            </div>
+                            <Reorder.Group
+                                axis="y"
+                                values={parameters.filter(p => Array.isArray(p.value))}
+                                onReorder={(newGroups) => {
+                                    const singles = parameters.filter(p => !Array.isArray(p.value));
+                                    setParameters([...singles, ...newGroups]);
+                                }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-32"
+                            >
+                                {parameters.filter(p => Array.isArray(p.value)).map((item) => (
+                                    <ParameterCard
+                                        key={item.key}
+                                        item={item}
+                                        path={[item.key]}
+                                        className="col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1"
+                                        isZoomed={isZoomed}
+                                        updateParameter={updateParameter}
+                                        removeParameter={removeParameter}
+                                        addParameter={addParameter}
+                                        saveChanges={saveChanges}
+                                        setParameters={setParameters}
+                                        setShowFunctionPicker={setShowFunctionPicker}
+                                        handleRunFunction={handleRunFunction}
+                                    />
+                                ))}
+                            </Reorder.Group>
+                        </>
                     )}
 
                     {/* Add New Parameter Card at the Bottom */}
@@ -569,7 +668,8 @@ const ParameterCard = ({
     saveChanges,
     setParameters,
     setShowFunctionPicker,
-    handleRunFunction
+    handleRunFunction,
+    className = ''
 }: {
     item: ParameterItem,
     path: string[],
@@ -580,12 +680,13 @@ const ParameterCard = ({
     saveChanges: (p?: any) => void,
     setParameters: React.Dispatch<React.SetStateAction<ParameterItem[]>>,
     setShowFunctionPicker: React.Dispatch<React.SetStateAction<{ path: string[], key: string } | null>>,
-    handleRunFunction: (path: string[], binding: string) => void
+    handleRunFunction: (path: string[], binding: string) => void,
+    className?: string
 }) => {
     const controls = useDragControls();
     const isNested = Array.isArray(item.value);
     const [subParamName, setSubParamName] = useState('');
-    const [activeRemarks, setActiveRemarks] = useState<Record<string, boolean>>({});
+    // const [, setActiveRemarks] = useState<Record<string, boolean>>({});
 
     const [activeSteps, setActiveSteps] = useState<Record<string, boolean>>({});
     const [editingStep, setEditingStep] = useState<{ subKey: string, index: number, value: string } | null>(null);
@@ -650,9 +751,9 @@ const ParameterCard = ({
         setEditingStep(null);
     };
 
-    const toggleRemark = (key: string) => {
-        setActiveRemarks(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+    // const toggleRemark = (key: string) => {
+    //     setActiveRemarks(prev => ({ ...prev, [key]: !prev[key] }));
+    // };
 
     const toggleSteps = (key: string) => {
         setActiveSteps(prev => {
@@ -715,45 +816,45 @@ const ParameterCard = ({
         });
     };
 
-    const handleClearRemark = (subKey: string) => {
-        setParameters(prev => {
-            const updateRecursive = (items: ParameterItem[], currentPath: string[]): ParameterItem[] => {
-                const [current, ...rest] = currentPath;
-                return items.map(item => {
-                    if (item.key === current) {
-                        if (rest.length === 0) {
-                            const noSteps = (item.steps?.length || 0) === 0;
-                            return { ...item, remark: '', value: noSteps ? 'OPEN' : item.value };
-                        }
-                        return { ...item, value: updateRecursive(item.value as ParameterItem[], rest) };
-                    }
-                    return item;
-                });
-            };
-            const updated = updateRecursive(prev, [...path, subKey]);
-            saveChanges(updated);
-            return updated;
-        });
-        setActiveRemarks(prev => ({ ...prev, [subKey]: false }));
-    };
+    // const handleClearRemark = (subKey: string) => {
+    //     setParameters(prev => {
+    //         const updateRecursive = (items: ParameterItem[], currentPath: string[]): ParameterItem[] => {
+    //             const [current, ...rest] = currentPath;
+    //             return items.map(item => {
+    //                 if (item.key === current) {
+    //                     if (rest.length === 0) {
+    //                         const noSteps = (item.steps?.length || 0) === 0;
+    //                         return { ...item, remark: '', value: noSteps ? 'OPEN' : item.value };
+    //                     }
+    //                     return { ...item, value: updateRecursive(item.value as ParameterItem[], rest) };
+    //                 }
+    //                 return item;
+    //             });
+    //         };
+    //         const updated = updateRecursive(prev, [...path, subKey]);
+    //         saveChanges(updated);
+    //         return updated;
+    //     });
+    //     setActiveRemarks(prev => ({ ...prev, [subKey]: false }));
+    // };
 
     return (
         <Reorder.Item
             value={item}
             dragListener={false}
             dragControls={controls}
-            className={`flex flex-col gap-4 group p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm hover:shadow-xl hover:border-sky-500/30 transition-all ${isZoomed ? 'scale-105 hover:scale-110' : ''}`}
+            className={`flex flex-col gap-1.5 group p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm hover:shadow-xl hover:border-sky-500/30 transition-all ${isZoomed ? 'scale-[1.01]' : ''} ${className}`}
         >
             <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-4 overflow-hidden">
+                <div className="flex items-center gap-3 overflow-hidden">
                     <div
-                        className="cursor-grab active:cursor-grabbing p-2 text-slate-300 hover:text-sky-500 transition-colors bg-slate-50 dark:bg-white/5 rounded-xl"
+                        className="cursor-grab active:cursor-grabbing p-1.5 text-slate-300 hover:text-sky-500 transition-colors bg-slate-50 dark:bg-white/5 rounded-xl"
                         onPointerDown={(e) => controls.start(e)}
                     >
-                        <FaGripVertical size={16} />
+                        <FaGripVertical size={14} />
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                        <span className="text-xs md:text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] whitespace-normal break-words" title={item.key}>
+                        <span className="text-[10px] md:text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] whitespace-normal break-words" title={item.key}>
                             {item.key}
                         </span>
                         {item.binding && (
@@ -765,7 +866,16 @@ const ParameterCard = ({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {!isNested && (
+                    <div className="flex items-center gap-1">
+                        {item.binding && (
+                            <button
+                                onClick={() => handleRunFunction(path, item.binding!)}
+                                className="p-2 text-sky-500 hover:text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-xl transition-all active:scale-90"
+                                title="Run Function"
+                            >
+                                <FaPlay size={12} />
+                            </button>
+                        )}
                         <button
                             onClick={() => {
                                 if (item.binding) {
@@ -783,7 +893,7 @@ const ParameterCard = ({
                         >
                             <FaLink size={12} />
                         </button>
-                    )}
+                    </div>
                     {(!isNested || (isNested && item.value.length === 0)) && (
                         <button
                             onClick={() => updateParameter(path, isNested ? 'READY' : [])}
@@ -806,7 +916,7 @@ const ParameterCard = ({
             {isNested ? (
                 <div className="flex flex-col gap-3 pl-2 border-l-2 border-slate-100 dark:border-white/5 ml-4">
                     {item.value.map((sub: ParameterItem, idx: number) => (
-                        <div key={sub.key} className="flex flex-col gap-2 py-4 border-b border-slate-50 dark:border-white/5 last:border-0">
+                        <div key={sub.key} className="flex flex-col gap-2 py-4 border-b-2 border-slate-200/50 dark:border-white/10 last:border-0">
                             <div className="flex items-start justify-between gap-4 group/sub">
                                 <div className="flex-1 flex items-start gap-3 pt-1">
                                     <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 min-w-[14px] mt-0.5">{idx + 1}.</span>
@@ -814,12 +924,6 @@ const ParameterCard = ({
                                         <span className="text-[10px] md:text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest whitespace-normal break-words leading-relaxed" title={sub.key}>
                                             {sub.key}
                                         </span>
-                                        {sub.binding && (
-                                            <div className="flex items-center gap-1.5 text-[8px] font-black text-sky-500/60 uppercase tracking-tighter">
-                                                <FaLink size={8} />
-                                                {sub.binding}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
@@ -830,49 +934,30 @@ const ParameterCard = ({
                                                 updateParameter([...path, sub.key], e.target.value);
                                                 saveChanges();
                                             }}
-                                            className={`w-24 appearance-none pl-2 pr-6 py-1.5 text-left text-[9px] font-black rounded-xl border-2 transition-all cursor-pointer outline-none ${sub.value === 'OPEN'
-                                                ? 'bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-900/20 dark:border-rose-800/30'
-                                                : sub.value === 'PROGRESS'
-                                                    ? 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-900/20 dark:border-amber-800/30'
-                                                    : 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/30'
-                                                }`}
+                                            className={`w-28 appearance-none pl-2 pr-6 py-1.5 text-left text-[9px] font-black rounded-xl border-2 transition-all cursor-pointer outline-none ${getStatusColor(sub.value)}`}
                                         >
                                             <option value="OPEN">OPEN</option>
                                             <option value="PROGRESS">PROGRESS</option>
                                             <option value="CLOSE">CLOSE</option>
+                                            {sub.value !== 'OPEN' && sub.value !== 'PROGRESS' && sub.value !== 'CLOSE' && (
+                                                <option value={sub.value}>{sub.value}</option>
+                                            )}
                                         </select>
                                         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
                                             <FaChevronDown size={8} />
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-0.5">
-                                        {!isNested && (
+                                        <div className="flex items-center gap-1">
                                             <button
-                                                onClick={() => {
-                                                    if (sub.binding) {
-                                                        if (window.confirm("Anda yakin ingin unbind function ini? anda harus bind kembali untuk mengaktifkan fungsi tsb")) {
-                                                            const updated = updateParameter([...path, sub.key], '', 'binding');
-                                                            saveChanges(updated);
-                                                            toast.success('Function unbound');
-                                                        }
-                                                    } else {
-                                                        setShowFunctionPicker({ path, key: sub.key });
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95 ${sub.binding ? 'text-sky-600 bg-sky-50 dark:bg-sky-900/20' : 'text-slate-400 hover:text-sky-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
-                                                title="Bind Function"
+                                                onClick={() => toggleSteps(sub.key)}
+                                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95 ${(sub.steps?.length || 0) > 0 || activeSteps[sub.key] ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20' : 'text-slate-400 hover:text-orange-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                                                title="Steps"
                                             >
-                                                <FaLink size={10} />
+                                                <FaRegPlusSquare size={10} />
+                                                <span className="text-[9px] font-black tracking-tighter">STEPS</span>
                                             </button>
-                                        )}
-                                        <button
-                                            onClick={() => toggleSteps(sub.key)}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all active:scale-95 ${(sub.steps?.length || 0) > 0 || activeSteps[sub.key] ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20' : 'text-slate-400 hover:text-orange-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
-                                            title="Steps"
-                                        >
-                                            <FaRegPlusSquare size={10} />
-                                            <span className="text-[9px] font-black tracking-tighter">STEPS</span>
-                                        </button>
+                                        </div>
                                         <button
                                             onClick={() => removeParameter([...path, sub.key])}
                                             className="p-2 text-slate-300 hover:text-rose-500 transition-all active:scale-90 bg-slate-50 dark:bg-white/5 rounded-xl ml-1"
@@ -885,9 +970,9 @@ const ParameterCard = ({
                             </div>
 
                             {(sub.steps?.length || 0 > 0 || activeSteps[sub.key]) && (
-                                <div className="ml-7 mr-1 py-3 px-4 flex flex-col gap-3 bg-slate-50/50 dark:bg-white/5 rounded-[1.5rem] mt-1 border border-slate-100 dark:border-white/5">
+                                <div className="ml-7 mr-1 py-3 px-4 flex flex-col gap-3 bg-white dark:bg-black/30 rounded-[1.5rem] mt-1 border border-slate-200 dark:border-white/10 shadow-inner">
                                     <div className="flex items-center justify-between px-1">
-                                        <div className="text-[9px] font-black text-orange-600 uppercase tracking-[0.2em]">Action Steps</div>
+                                        <div className="text-xs font-black text-orange-600 uppercase tracking-[0.2em]">Action Steps</div>
                                         {sub.steps && sub.steps.length > 0 && (
                                             <div className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase">
                                                 {sub.steps.filter(s => s.status === 'CLOSED').length}/{sub.steps.length} Done
@@ -918,7 +1003,7 @@ const ParameterCard = ({
                                                                     }
                                                                     setEditingStep(null);
                                                                 }}
-                                                                className="w-full bg-transparent border-b-2 border-sky-500 px-1 py-0.5 pr-6 text-[10px] font-medium outline-none"
+                                                                className="w-full bg-transparent border-b-2 border-sky-500 px-1 py-0.5 pr-6 text-base font-bold outline-none"
                                                             />
                                                             {editingStep.value && (
                                                                 <button
@@ -933,7 +1018,7 @@ const ParameterCard = ({
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <div className={`flex-1 text-[10px] font-bold leading-relaxed pt-1 ${isClosed ? 'text-emerald-600/60 dark:text-emerald-400/50' : 'text-slate-600 dark:text-slate-300'}`}>
+                                                        <div className={`flex-1 text-xs font-bold leading-relaxed pt-1 ${isClosed ? 'text-emerald-600/60 dark:text-emerald-400/50 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                                                             <span className="mr-2 opacity-30 font-black">{sIdx + 1}.</span> {formatNumericString(stepObj.text)}
                                                         </div>
                                                     )}
@@ -982,7 +1067,7 @@ const ParameterCard = ({
                                                             }
                                                         }
                                                     }}
-                                                    className="flex-1 bg-transparent border-b border-orange-200 dark:border-orange-900/30 px-1 py-1 pr-8 text-[10px] font-bold focus:border-orange-400 outline-none transition-all placeholder:text-slate-300 italic"
+                                                    className="flex-1 bg-transparent border-b border-orange-200 dark:border-orange-900/30 px-1 py-1 pr-8 text-base font-bold focus:border-orange-400 outline-none transition-all placeholder:text-slate-300 italic"
                                                 />
                                                 <button
                                                     onClick={(e) => {
@@ -1008,7 +1093,7 @@ const ParameterCard = ({
                                 value={subParamName}
                                 onChange={(e) => setSubParamName(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddSub()}
-                                className="flex-1 bg-transparent border-b border-slate-200 dark:border-white/10 px-1 py-1.5 text-[11px] font-bold focus:border-sky-500 outline-none transition-all"
+                                className="flex-1 bg-transparent border-b border-slate-200 dark:border-white/10 px-1 py-1.5 text-sm font-bold focus:border-sky-500 outline-none transition-all"
                             />
                             <button
                                 onClick={handleAddSub}
@@ -1038,18 +1123,9 @@ const ParameterCard = ({
                                 saveChanges();
                             }}
                             onKeyDown={(e) => e.key === 'Enter' && saveChanges()}
-                            className="w-full bg-slate-50 dark:bg-black/20 border-2 border-transparent rounded-2xl px-6 py-4 text-sm md:text-base font-black focus:border-sky-500 outline-none transition-all shadow-inner pr-24"
+                            className="w-full bg-slate-50 dark:bg-black/20 border-2 border-transparent rounded-2xl px-5 py-3 text-sm md:text-base font-black focus:border-sky-500 outline-none transition-all shadow-inner pr-24"
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                            {item.binding && (
-                                <button
-                                    onClick={() => handleRunFunction(path, item.binding!)}
-                                    className="p-2 text-sky-500 hover:text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-xl transition-all active:scale-90"
-                                    title="Run Function"
-                                >
-                                    <FaPlay size={14} />
-                                </button>
-                            )}
                             {item.value && (
                                 <button
                                     onMouseDown={(e) => {

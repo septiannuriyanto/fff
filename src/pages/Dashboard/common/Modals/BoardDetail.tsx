@@ -43,13 +43,18 @@ interface Order {
     item_count?: number;
 }
 
-const BoardDetail = () => {
+const BoardDetail = ({ initialTab = 'pending' }: { initialTab?: 'pending' | 'orders' | 'coordination' }) => {
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [manpowerList, setManpowerList] = useState<Manpower[]>([]);
   
   // Tab State
-  const [activeTab, setActiveTab] = useState<'pending' | 'orders' | 'coordination'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'orders' | 'coordination'>(initialTab);
+
+  // Sync internal tab state if initialTab changes
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [statusFilter, setStatusFilter] = useState('All'); // New Status Filter
 
   // Modal States
@@ -480,16 +485,6 @@ const BoardDetail = () => {
             {orders.length}
           </span>
         </button>
-        <button
-          className={`py-2 px-4 text-sm font-bold focus:outline-none flex items-center gap-2 transition-all uppercase tracking-wider ${
-            activeTab === 'coordination'
-              ? 'text-purple-600 border-b-2 border-purple-600 dark:text-purple-400 dark:border-purple-400'
-              : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-          }`}
-          onClick={() => setActiveTab('coordination')}
-        >
-          Daily Coordination
-        </button>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -599,13 +594,6 @@ const BoardDetail = () => {
                     }}
                 />
              </div>
-        )}
-
-        {/* Daily Coordination View */}
-        {activeTab === 'coordination' && (
-          <div className="flex flex-col h-[calc(100vh-400px)] min-h-[400px]">
-             <DailyCoordination />
-          </div>
         )}
       </div>
 
