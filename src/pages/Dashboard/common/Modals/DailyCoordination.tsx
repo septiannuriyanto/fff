@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FaPlus, FaHistory, FaCheckCircle, FaTrash, FaSync, FaGripVertical, FaExpand, FaTimes, FaListUl, FaChevronDown, FaRegPlusSquare, FaEdit, FaLink, FaPlay } from 'react-icons/fa';
+import { FaPlus, FaHistory, FaCheckCircle, FaTrash, FaSync, FaGripVertical, FaExpand, FaTimes, FaListUl, FaChevronDown, FaRegPlusSquare, FaEdit, FaLink, FaPlay, FaChevronLeft, FaChevronRight, FaCalendarAlt, FaEllipsisV } from 'react-icons/fa';
 import { supabase } from '../../../../db/SupabaseClient';
+import { DatePicker } from 'rsuite';
+import 'rsuite/dist/rsuite-no-reset.min.css';
 import toast, { Toaster } from 'react-hot-toast';
 import { Reorder, useDragControls, AnimatePresence, motion } from 'framer-motion';
 
@@ -74,7 +76,11 @@ const DailyCoordination = () => {
     const [showFunctionPicker, setShowFunctionPicker] = useState<{ path: string[], key: string } | null>(null);
     const [availableFunctions, setAvailableFunctions] = useState<string[]>([]);
     const [fetchingFunctions, setFetchingFunctions] = useState(false);
+
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [searchQuery, setSearchQuery] = useState('');
+
+    const dateStr = selectedDate.toISOString().split('T')[0];
 
     const fetchFunctions = async () => {
         setFetchingFunctions(true);
@@ -115,7 +121,7 @@ const DailyCoordination = () => {
     const handleRunFunction = async (path: string[], binding: string) => {
         const toastId = toast.loading(`Running ${binding}...`);
         try {
-            const { data: result, error } = await supabase.rpc(binding, { p_date: todayStr });
+            const { data: result, error } = await supabase.rpc(binding, { p_date: dateStr });
             if (error) throw error;
 
             if (Array.isArray(result)) {
@@ -146,13 +152,14 @@ const DailyCoordination = () => {
                     };
                 });
 
-                updateParameter(path, newItems);
+                const updated = updateParameter(path, newItems);
+                saveChanges(updated);
             } else {
                 // Handle single value results
-                updateParameter(path, String(result));
+                const updated = updateParameter(path, String(result));
+                saveChanges(updated);
             }
 
-            saveChanges();
             toast.success('Data synchronized successfully', { id: toastId });
         } catch (error: any) {
             console.error('Error running function:', error);
@@ -160,19 +167,17 @@ const DailyCoordination = () => {
         }
     };
 
-    const todayStr = new Date().toISOString().split('T')[0];
-
     useEffect(() => {
-        fetchTodayData();
-    }, []);
+        fetchData(dateStr);
+    }, [selectedDate]);
 
-    const fetchTodayData = async () => {
+    const fetchData = async (targetDateStr: string) => {
         setLoading(true);
         try {
             const { data: todayData, error } = await supabase
                 .from('daily_coordination')
                 .select('*')
-                .eq('date', todayStr)
+                .eq('date', targetDateStr)
                 .maybeSingle();
 
             if (error) throw error;
@@ -232,7 +237,7 @@ const DailyCoordination = () => {
 
             const { data: inserted, error: insertError } = await supabase
                 .from('daily_coordination')
-                .insert([{ date: todayStr, parameters: initialParams }])
+                .insert([{ date: dateStr, parameters: initialParams }])
                 .select()
                 .single();
 
@@ -247,6 +252,18 @@ const DailyCoordination = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePreviousDay = () => {
+        const prev = new Date(selectedDate);
+        prev.setDate(prev.getDate() - 1);
+        setSelectedDate(prev);
+    };
+
+    const handleNextDay = () => {
+        const next = new Date(selectedDate);
+        next.setDate(next.getDate() + 1);
+        setSelectedDate(next);
     };
 
     const saveChanges = async (paramsToSave = parameters) => {
@@ -365,51 +382,95 @@ const DailyCoordination = () => {
         );
     }
 
-    if (!data) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-6 text-center px-6">
-                <div className="w-24 h-24 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center text-orange-600 dark:text-orange-400">
-                    <FaHistory size={48} />
+    const renderInitializeScreen = () => (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-8 text-center px-6 animate-in fade-in zoom-in duration-500">
+            <div className="relative">
+                <div className="absolute inset-0 bg-orange-400 blur-3xl opacity-20 rounded-full animate-pulse"></div>
+                <div className="relative w-32 h-32 bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/40 dark:to-orange-900/10 rounded-[2.5rem] flex items-center justify-center text-orange-600 dark:text-orange-400 shadow-xl border border-orange-200/50 dark:border-orange-500/20">
+                    <FaHistory size={56} className="drop-shadow-lg" />
                 </div>
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">No Meeting Started Today</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-                        Start today's daily coordination by cloning the parameters from the previous meeting.
-                        Values will be initialized to "READY".
-                    </p>
-                </div>
-                <button
-                    onClick={initializeFromLastData}
-                    className="flex items-center gap-3 px-8 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-1 transition-all active:scale-95"
-                >
-                    <FaSync className="text-sm" /> Initialize Today's Meeting
-                </button>
             </div>
-        );
-    }
+            <div className="space-y-3">
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">No Meeting Started</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm font-medium leading-relaxed">
+                    Start the daily coordination for <span className="text-orange-600 dark:text-orange-400 font-bold">{formatDateToIndonesianShortByDate(selectedDate)}</span> by cloning the parameters from the previous meeting.
+                </p>
+            </div>
+            <button
+                onClick={initializeFromLastData}
+                className="group flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-[0_20px_40px_-15px_rgba(249,115,22,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(249,115,22,0.5)] hover:-translate-y-1.5 transition-all active:scale-95"
+            >
+                <FaSync className="text-sm group-hover:rotate-180 transition-transform duration-700" /> 
+                Initialize Meeting
+            </button>
+        </div>
+    );
 
     const renderMainContent = (isZoomed: boolean) => (
-        <div className={`flex flex-col h-full pb-4 px-2 md:px-4 bg-slate-100 dark:bg-slate-900/40 rounded-2xl ${isZoomed
+        <div className={`flex flex-col h-full pb-2 md:pb-4 px-1.5 md:px-4 bg-slate-100 dark:bg-slate-900/40 rounded-2xl ${isZoomed
             ? 'p-2 md:p-4 lg:p-6'
             : 'pt-0 md:pt-0'
             }`}>
-            <Toaster position="top-center" containerStyle={{ zIndex: 1000000000 }} />
+            {/* Main Container */}
             {/* Header Section */}
-            <div className="flex items-center justify-between gap-4 py-2 px-2 border-b border-slate-100  dark:border-slate-800/50 mb-4">
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] md:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Coordination Date</span>
-                    <h2 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-sky-400 dark:from-sky-400 dark:to-sky-200 uppercase italic tracking-tighter">
-                        {formatDateToIndonesianShortByDate(new Date(todayStr))}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 py-4 px-2 border-b border-slate-100 dark:border-slate-800/50 mb-6">
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                        <div className="w-2 h-8 bg-sky-500 rounded-full shadow-[0_0_15px_rgba(14,165,233,0.5)]"></div>
+                        Coordination Board
                     </h2>
+                    <div className="flex items-center gap-2 text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        Command Center • {formatDateToIndonesianShortByDate(selectedDate)}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-4 md:gap-6">
+                <div className="flex flex-wrap items-center gap-4">
+                    {/* Date Navigation */}
+                    <div className="flex items-center gap-2 p-1.5 rounded-[1.25rem] bg-slate-200/50 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 shadow-inner">
+                        <button
+                            onClick={handlePreviousDay}
+                            className="p-2.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90"
+                            title="Previous Day"
+                        >
+                            <FaChevronLeft size={14} />
+                        </button>
+
+                        <div className="group relative flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/5 shadow-sm hover:border-sky-500/50 transition-all cursor-pointer">
+                            <FaCalendarAlt className="text-sky-500" size={12} />
+                            <div className="min-w-[120px]">
+                                <DatePicker
+                                    format="dd MMM yyyy"
+                                    value={selectedDate}
+                                    onChange={(d) => d && setSelectedDate(d)}
+                                    cleanable={false}
+                                    oneTap
+                                    editable={false}
+                                    appearance="subtle"
+                                    size="xs"
+                                    className="!w-full !bg-transparent custom-date-picker font-black text-slate-700 dark:text-slate-200 cursor-pointer"
+                                    placement="bottomEnd"
+                                    container={() => document.body}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleNextDay}
+                            className="p-2.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90"
+                            title="Next Day"
+                        >
+                            <FaChevronRight size={14} />
+                        </button>
+                    </div>
+
                     {saving && (
                         <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-100 dark:border-emerald-800/50 shadow-lg shadow-emerald-500/10 transition-all animate-in fade-in slide-in-from-right-4">
                             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-xs md:text-sm font-black uppercase tracking-widest">Saving Changes...</span>
+                            <span className="text-xs md:text-sm font-black uppercase tracking-widest">Saving...</span>
                         </div>
                     )}
+                    
                     <button
                         onClick={() => setIsFullscreen(!isZoomed)}
                         className={`p-4 rounded-2xl transition-all active:scale-90 shadow-xl ${isZoomed
@@ -425,8 +486,11 @@ const DailyCoordination = () => {
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 overflow-y-auto pr-2 pl-2 pb-12">
-                    {parameters.length === 0 ? (
+                {!data ? (
+                    renderInitializeScreen()
+                ) : (
+                    <div className="flex-1 overflow-y-auto pr-2 pl-2 pb-12">
+                        {parameters.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-6 opacity-20">
                             <FaPlus size={64} />
                             <p className="text-lg font-black uppercase tracking-[0.3em] text-center leading-relaxed">No parameters defined<br />Add your first topic below</p>
@@ -535,9 +599,10 @@ const DailyCoordination = () => {
                         </div>
                     </div>
 
-                    {/* Bottom Spacer to ensure no clipping */}
-                    <div className="h-20 w-full flex-shrink-0" />
-                </div>
+                        {/* Bottom Spacer to ensure no clipping */}
+                        <div className="h-20 w-full flex-shrink-0" />
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -692,7 +757,21 @@ const ParameterCard = ({
     const [editingStep, setEditingStep] = useState<{ subKey: string, index: number, value: string } | null>(null);
     const [lastValue, setLastValue] = useState<any>(null);
     const [lastStepValue, setLastStepValue] = useState<string>('');
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
     const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        if (menuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [menuOpen]);
 
     const handleAddSub = () => {
         if (!subParamName.trim()) return;
@@ -843,7 +922,7 @@ const ParameterCard = ({
             value={item}
             dragListener={false}
             dragControls={controls}
-            className={`flex flex-col gap-1.5 group p-3 rounded-xl border border-slate-100 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm hover:shadow-xl hover:border-sky-500/30 transition-all ${isZoomed ? 'scale-[1.01]' : ''} ${className}`}
+            className={`flex flex-col gap-1.5 group p-2.5 md:p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm hover:shadow-xl hover:border-sky-500/30 transition-all ${isZoomed ? 'scale-[1.01]' : ''} ${className}`}
         >
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -865,74 +944,107 @@ const ParameterCard = ({
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                        {item.binding && (
-                            <button
-                                onClick={() => handleRunFunction(path, item.binding!)}
-                                className="p-2 text-sky-500 hover:text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-xl transition-all active:scale-90"
-                                title="Run Function"
-                            >
-                                <FaPlay size={12} />
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                if (item.binding) {
-                                    if (window.confirm("Anda yakin ingin unbind function ini? anda harus bind kembali untuk mengaktifkan fungsi tsb")) {
-                                        const updated = updateParameter(path, '', 'binding');
-                                        saveChanges(updated);
-                                        toast.success('Function unbound');
-                                    }
-                                } else {
-                                    setShowFunctionPicker({ path: path.slice(0, -1), key: item.key });
-                                }
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all active:scale-95 ${item.binding ? 'text-sky-600 bg-sky-50 dark:bg-sky-900/20' : 'text-slate-400 hover:text-sky-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
-                            title="Bind Function"
-                        >
-                            <FaLink size={12} />
-                        </button>
-                    </div>
-                    {(!isNested || (isNested && item.value.length === 0)) && (
-                        <button
-                            onClick={() => updateParameter(path, isNested ? 'READY' : [])}
-                            className={`p-2 rounded-xl transition-all active:scale-90 ${isNested ? 'text-orange-500 bg-orange-50' : 'text-slate-300 hover:text-sky-500 bg-slate-50 dark:bg-white/5'}`}
-                            title={isNested ? "Convert to Single Value" : "Convert to Array"}
-                        >
-                            {isNested ? <FaSync size={12} /> : <FaListUl size={12} />}
-                        </button>
-                    )}
+                <div className="flex items-center gap-2 relative" ref={menuRef}>
                     <button
-                        onClick={() => removeParameter(path)}
-                        className="p-2 text-slate-300 hover:text-rose-500 transition-all active:scale-90 bg-slate-50 dark:bg-white/5 rounded-xl"
-                        title="Delete Parameter"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        className={`p-2 rounded-xl transition-all active:scale-90 ${menuOpen ? 'bg-sky-100 text-sky-600 dark:bg-sky-900/30' : 'text-slate-300 hover:text-sky-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                        title="Actions"
                     >
-                        <FaTrash size={12} />
+                        <FaEllipsisV size={14} />
                     </button>
+
+                    <AnimatePresence>
+                        {menuOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                className="absolute right-0 top-full mt-2 z-[100] min-w-[180px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 p-2 flex flex-col gap-1 backdrop-blur-xl"
+                            >
+                                {item.binding && (
+                                    <button
+                                        onClick={() => {
+                                            handleRunFunction(path, item.binding!);
+                                            setMenuOpen(false);
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-all text-left"
+                                    >
+                                        <FaPlay size={12} className="flex-shrink-0" />
+                                        <span className="text-xs font-black uppercase tracking-wider">Run Function</span>
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        if (item.binding) {
+                                            if (window.confirm("Anda yakin ingin unbind function ini? anda harus bind kembali untuk mengaktifkan fungsi tsb")) {
+                                                const updated = updateParameter(path, '', 'binding');
+                                                saveChanges(updated);
+                                                toast.success('Function unbound');
+                                            }
+                                        } else {
+                                            setShowFunctionPicker({ path: path.slice(0, -1), key: item.key });
+                                        }
+                                        setMenuOpen(false);
+                                    }}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left ${item.binding ? 'text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                                >
+                                    <FaLink size={12} className="flex-shrink-0" />
+                                    <span className="text-xs font-black uppercase tracking-wider">{item.binding ? 'Unbind Function' : 'Bind Function'}</span>
+                                </button>
+                                
+                                {(!isNested || (isNested && item.value.length === 0)) && (
+                                    <button
+                                        onClick={() => {
+                                            updateParameter(path, isNested ? 'READY' : []);
+                                            setMenuOpen(false);
+                                        }}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left ${isNested ? 'text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                                    >
+                                        {isNested ? <FaSync size={12} className="flex-shrink-0" /> : <FaListUl size={12} className="flex-shrink-0" />}
+                                        <span className="text-xs font-black uppercase tracking-wider">{isNested ? "Single Value" : "Array/Board"}</span>
+                                    </button>
+                                )}
+
+                                <div className="h-[1px] bg-slate-100 dark:bg-white/5 my-1" />
+
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm("Delete this parameter?")) {
+                                            removeParameter(path);
+                                        }
+                                        setMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all text-left"
+                                >
+                                    <FaTrash size={12} className="flex-shrink-0" />
+                                    <span className="text-xs font-black uppercase tracking-wider">Delete</span>
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
             {isNested ? (
-                <div className="flex flex-col gap-3 pl-2 border-l-2 border-slate-100 dark:border-white/5 ml-4">
+                <div className="flex flex-col gap-2 md:gap-3 pl-1 md:pl-2 border-l-2 border-slate-100 dark:border-white/5 ml-2 md:ml-4">
                     {item.value.map((sub: ParameterItem, idx: number) => (
-                        <div key={sub.key} className="flex flex-col gap-2 py-4 border-b-2 border-slate-200/50 dark:border-white/10 last:border-0">
-                            <div className="flex items-start justify-between gap-4 group/sub">
-                                <div className="flex-1 flex items-start gap-3 pt-1">
-                                    <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 min-w-[14px] mt-0.5">{idx + 1}.</span>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-[10px] md:text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest whitespace-normal break-words leading-relaxed" title={sub.key}>
+                        <div key={sub.key} className="flex flex-col gap-2 py-3 md:py-4 border-b-2 border-slate-200/50 dark:border-white/10 last:border-0">
+                            <div className="flex flex-wrap md:flex-nowrap items-start justify-between gap-2 md:gap-4 group/sub">
+                                <div className="flex items-start gap-2 md:gap-3 pt-1 min-w-0 flex-1">
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-300 dark:text-slate-600 min-w-[12px] md:min-w-[14px] mt-0.5">{idx + 1}.</span>
+                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                        <span className="text-[9px] md:text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest whitespace-normal break-words leading-tight md:leading-relaxed" title={sub.key}>
                                             {sub.key}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                                <div className="flex items-center justify-end gap-1.5 md:gap-2 flex-shrink-0 pt-0.5 w-full md:w-auto border-t border-slate-100 dark:border-white/5 md:border-0 mt-1 md:mt-0 pt-2 md:pt-0.5">
                                     <div className="relative">
                                         <select
                                             value={sub.value}
                                             onChange={(e) => {
-                                                updateParameter([...path, sub.key], e.target.value);
-                                                saveChanges();
+                                                const updated = updateParameter([...path, sub.key], e.target.value);
+                                                saveChanges(updated);
                                             }}
                                             className={`w-28 appearance-none pl-2 pr-6 py-1.5 text-left text-[9px] font-black rounded-xl border-2 transition-all cursor-pointer outline-none ${getStatusColor(sub.value)}`}
                                         >
@@ -970,7 +1082,7 @@ const ParameterCard = ({
                             </div>
 
                             {(sub.steps?.length || 0 > 0 || activeSteps[sub.key]) && (
-                                <div className="ml-7 mr-1 py-3 px-4 flex flex-col gap-3 bg-white dark:bg-black/30 rounded-[1.5rem] mt-1 border border-slate-200 dark:border-white/10 shadow-inner">
+                                <div className="ml-4 md:ml-7 mr-0 md:mr-1 py-2 md:py-3 px-2 md:px-4 flex flex-col gap-2 md:gap-3 bg-white dark:bg-black/30 rounded-2xl md:rounded-[1.5rem] mt-1 border border-slate-200 dark:border-white/10 shadow-inner">
                                     <div className="flex items-center justify-between px-1">
                                         <div className="text-xs font-black text-orange-600 uppercase tracking-[0.2em]">Action Steps</div>
                                         {sub.steps && sub.steps.length > 0 && (
@@ -1116,13 +1228,21 @@ const ParameterCard = ({
                                 const rawValue = e.target.value.replace(/\./g, '').replace(',', '.');
                                 updateParameter(path, rawValue);
                             }}
-                            onBlur={() => {
-                                if (!String(item.value).trim()) {
-                                    updateParameter(path, lastValue);
-                                }
-                                saveChanges();
+                            onBlur={(e) => {
+                                const rawValue = e.target.value.replace(/\./g, '').replace(',', '.');
+                                const finalValue = rawValue.trim() || lastValue;
+                                const updated = updateParameter(path, finalValue);
+                                saveChanges(updated);
                             }}
-                            onKeyDown={(e) => e.key === 'Enter' && saveChanges()}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const rawValue = (e.target as HTMLInputElement).value.replace(/\./g, '').replace(',', '.');
+                                    const finalValue = rawValue.trim() || lastValue;
+                                    const updated = updateParameter(path, finalValue);
+                                    saveChanges(updated);
+                                    (e.target as HTMLInputElement).blur();
+                                }
+                            }}
                             className="w-full bg-slate-50 dark:bg-black/20 border-2 border-transparent rounded-2xl px-5 py-3 text-sm md:text-base font-black focus:border-sky-500 outline-none transition-all shadow-inner pr-24"
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">

@@ -265,50 +265,50 @@ const Dashboard = () => {
           <div className="flex items-center gap-2 p-1 bg-slate-100/50 dark:bg-white/5 rounded-2xl w-fit overflow-x-auto scrollbar-hide max-w-full">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'dashboard'
-                  ? 'bg-white dark:bg-white/10 text-sky-600 shadow-xl shadow-sky-500/10'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'dashboard'
+                ? 'bg-white dark:bg-white/10 text-sky-600 shadow-xl shadow-sky-500/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
-              <FaLayerGroup size={14} />
+              <FaLayerGroup size={12} className="md:w-[14px] md:h-[14px]" />
               Overview
             </button>
             <button
               onClick={() => setActiveTab('coordination')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'coordination'
-                  ? 'bg-white dark:bg-white/10 text-purple-600 shadow-xl shadow-purple-500/10'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'coordination'
+                ? 'bg-white dark:bg-white/10 text-purple-600 shadow-xl shadow-purple-500/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
-              <FaClipboardList size={14} />
+              <FaClipboardList size={12} className="md:w-[14px] md:h-[14px]" />
               Coordination
             </button>
             <button
               onClick={() => setActiveTab('jobs')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'jobs'
-                  ? 'bg-white dark:bg-white/10 text-orange-600 shadow-xl shadow-orange-500/10'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'jobs'
+                ? 'bg-white dark:bg-white/10 text-orange-600 shadow-xl shadow-orange-500/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
-              <FaTools size={14} />
-              Pending Jobs
+              <FaTools size={12} className="md:w-[14px] md:h-[14px]" />
+              Pending
               {pendingCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 text-[10px] font-black border border-orange-200 dark:border-orange-800 animate-pulse">
+                <span className="ml-0.5 md:ml-1 px-1.5 py-0.5 rounded-md bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 text-[9px] md:text-[10px] font-black border border-orange-200 dark:border-orange-800 animate-pulse">
                   {pendingCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'orders'
-                  ? 'bg-white dark:bg-white/10 text-emerald-600 shadow-xl shadow-emerald-500/10'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+              className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'orders'
+                ? 'bg-white dark:bg-white/10 text-emerald-600 shadow-xl shadow-emerald-500/10'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
             >
-              <FaGasPump size={14} />
-              Outstanding Orders
+              <FaGasPump size={12} className="md:w-[14px] md:h-[14px]" />
+              Orders
               {orderCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
+                <span className="ml-0.5 md:ml-1 px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-[9px] md:text-[10px] font-black border border-emerald-200 dark:border-emerald-800">
                   {orderCount}
                 </span>
               )}
@@ -317,9 +317,9 @@ const Dashboard = () => {
 
           {activeTab === 'dashboard' && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                 {/* Manpower Cluster */}
-                <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-500">
+                <div className="backdrop-blur-2xl bg-white/60 dark:bg-boxdark/60 p-4 md:p-6 rounded-2xl shadow-xl border border-white/50 dark:border-white/10 col-span-1 md:col-span-2 xl:col-span-1 relative overflow-hidden group/card hover:bg-white/70 dark:hover:bg-boxdark/70 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-500">
                   {/* Decorative Background Element */}
                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <FaUsers size={120} />
@@ -879,19 +879,19 @@ const Dashboard = () => {
           )}
 
           {activeTab === 'jobs' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
               <BoardDetail initialTab="pending" />
             </div>
           )}
 
           {activeTab === 'orders' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
               <BoardDetail initialTab="orders" />
             </div>
           )}
 
           {activeTab === 'coordination' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 backdrop-blur-2xl overflow-hidden min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 backdrop-blur-2xl overflow-hidden min-h-[800px]">
               <DailyCoordination />
             </div>
           )}

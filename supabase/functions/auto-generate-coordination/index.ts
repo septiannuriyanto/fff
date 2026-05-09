@@ -13,20 +13,41 @@ const updateRecursive = (params: any[], path: string[], newValue: any): any[] =>
             if (Array.isArray(newValue) && Array.isArray(p.value)) {
                 return {
                     ...p,
-                    value: newValue.map((newItemKey: string) => {
-                        const existing = p.value.find((v: any) => v.key === newItemKey);
-                        return existing ?? { key: newItemKey, value: 'OPEN', steps: [], remark: '' };
+                    value: newValue.map((newItem: any) => {
+                        const key = typeof newItem === 'string' ? newItem : (newItem.key || newItem.unit_info || newItem.unit_name || newItem.name || 'Unit');
+                        const existing = p.value.find((v: any) => v.key === key);
+                        return existing ?? { key, value: 'OPEN', steps: [], remark: '' };
                     }),
                 };
             }
             // For scalar values: just overwrite
-            return { ...p, value: newValue };
+            return { ...p, value: String(newValue) };
         }
 
         return {
             ...p,
             value: updateRecursive(Array.isArray(p.value) ? p.value : [], rest, newValue),
         };
+    });
+};
+
+// Carry over logic: preserves manual steps, but filters out sub-parameters if they are marked CLOSED
+const carryOverParams = (params: any[]): any[] => {
+    if (!Array.isArray(params)) return [];
+
+    return params.map(p => {
+        // If it's a category/parent with sub-items in 'value'
+        if (Array.isArray(p.value)) {
+            return {
+                ...p,
+                // Filter out items that are CLOSED/CLOSE
+                value: carryOverParams(p.value).filter((sub: any) =>
+                    !['CLOSED', 'CLOSE'].includes(String(sub.value).toUpperCase())
+                )
+            };
+        }
+        // Scalar values: keep everything else (status/remarks/steps)
+        return p;
     });
 };
 
@@ -41,9 +62,16 @@ const findBindings = (items: any[], path: string[] = []): { path: string[]; bind
     return found;
 };
 
-Deno.serve(async (_req) => {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+Deno.serve(async (req) => {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        return new Response(JSON.stringify({ error: 'Config missing' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -53,116 +81,186 @@ Deno.serve(async (_req) => {
         const gmt8Offset = 8 * 60 * 60 * 1000;
         const nowGmt8 = new Date(nowUtc.getTime() + gmt8Offset);
         const today = nowGmt8.toISOString().split('T')[0];
-        const yesterdayGmt8 = new Date(nowGmt8.getTime() - 86400000);
-        const yesterday = yesterdayGmt8.toISOString().split('T')[0];
 
-        console.log(`[auto-generate-coordination] ${yesterday} -> ${today}`);
+        console.log(`[Automation] Processing board for ${today}...`);
 
-        // 1. Fetch yesterday's board — fallback to most recent board if not found
-        let prevBoard: any = null;
-        let fetchError: any = null;
-
-        // Try yesterday first
-        ({ data: prevBoard, error: fetchError } = await supabase
+        // 1. Fetch current board for today
+        let { data: currentBoard, error: fetchError } = await supabase
             .from('daily_coordination')
             .select('*')
-            .eq('date', yesterday)
-            .maybeSingle());
+            .eq('date', today)
+            .maybeSingle();
 
         if (fetchError) throw fetchError;
 
-        // Fallback: use the most recent board available
-        if (!prevBoard) {
-            console.warn(`No board found for ${yesterday}, falling back to most recent board.`);
-            ({ data: prevBoard, error: fetchError } = await supabase
+        // --- STEP 1: AUTO-INITIALIZATION ---
+        if (!currentBoard) {
+            console.log(`[Step 1] No board found for ${today}. Cloning from latest...`);
+
+            // Get latest board before today
+            const { data: latestBoard, error: latestError } = await supabase
                 .from('daily_coordination')
                 .select('*')
                 .lt('date', today)
                 .order('date', { ascending: false })
                 .limit(1)
-                .maybeSingle());
-            if (fetchError) throw fetchError;
+                .maybeSingle();
+
+            if (latestError) throw latestError;
+
+            if (!latestBoard) {
+                return new Response(JSON.stringify({ error: 'No template/previous board found to clone from.' }), { status: 404 });
+            }
+
+            // Carry over ONLY open items + steps
+            const newParams = carryOverParams(latestBoard.parameters);
+
+            const { data: createdBoard, error: createError } = await supabase
+                .from('daily_coordination')
+                .insert([{
+                    date: today,
+                    parameters: newParams
+                }])
+                .select()
+                .single();
+
+            if (createError) throw createError;
+            currentBoard = createdBoard;
+            console.log(`[Step 1 Success] Board initialized for ${today}.`);
         }
 
-        if (!prevBoard) {
-            const msg = `No source board found at all. Please create the first board manually.`;
-            console.warn(msg);
-            return new Response(JSON.stringify({ message: msg }), { status: 200 });
-        }
+        let updatedParams = currentBoard.parameters;
 
-        console.log(`Using board from ${prevBoard.date} as template.`);
-
-        let currentParams = prevBoard.parameters;
-
-        // 2. Find all bound RPCs
-        const bindings = findBindings(currentParams);
+        // 2. Find all bound RPCs (Step 2)
+        const bindings = findBindings(updatedParams);
         console.log(`Found ${bindings.length} binding(s) to refresh.`);
 
-        // 3. Execute each RPC and merge the result
+        // 3. Execute each RPC and merge the result (Step 3)
+        let successCount = 0;
         for (const b of bindings) {
-            console.log(`Running: ${b.binding}`);
-            const { data: result, error: rpcError } = await supabase.rpc(b.binding, { p_date: today });
+            try {
+                console.log(`Running: ${b.binding}`);
+                const { data: result, error: rpcError } = await supabase.rpc(b.binding, { p_date: today });
 
-            if (rpcError) {
-                console.error(`RPC error [${b.binding}]:`, rpcError.message);
-                continue;
-            }
-            if (result !== null && result !== undefined) {
-                currentParams = updateRecursive(currentParams, b.path, result);
+                if (rpcError) {
+                    console.error(`RPC error [${b.binding}]:`, rpcError.message);
+                    continue;
+                }
+
+                if (result !== null && result !== undefined) {
+                    updatedParams = updateRecursive(updatedParams, b.path, result);
+                    successCount++;
+                }
+            } catch (rpcEx: any) {
+                console.error(`Fatal exception running RPC [${b.binding}]:`, rpcEx.message);
             }
         }
 
-        // 4. Upsert today's board
-        const { error: upsertError } = await supabase
+        // 4. Update the board with refreshed data
+        const { error: updateError } = await supabase
             .from('daily_coordination')
-            .upsert({ date: today, parameters: currentParams }, { onConflict: 'date' });
+            .update({ parameters: updatedParams })
+            .eq('id', currentBoard.id);
 
-        if (upsertError) throw upsertError;
+        if (updateError) throw updateError;
 
-        console.log(`Board for ${today} saved successfully.`);
+        console.log(`[Step 3 Success] Board for ${today} refreshed. ${successCount} functions executed.`);
 
-        // 5. Send Telegram Notification via the existing telegram-notification Edge Function
+        // STEP 4: TELEGRAM NOTIFICATION (Direct for reliability)
         try {
-            const message =
-                `🚀 *Daily Coordination Board Ready!*\n` +
-                `📅 Tanggal: *${today}*\n` +
-                `📊 Metrics Refreshed: *${bindings.length}*\n\n` +
-                `_Board telah berhasil dibuat dan data terbaru telah dimuat._`;
+            const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+            const groupId = Deno.env.get('TELEGRAM_GROUP_ID');
+            const threadIdStr = Deno.env.get('THREAD_ID_DAILY_REPORT');
+            const threadId = threadIdStr ? parseInt(threadIdStr) : null;
 
-            const tgResponse = await fetch(
-                `${supabaseUrl}/functions/v1/telegram-notification`,
-                {
+            if (botToken && groupId) {
+                console.log(`[Notification] Sending direct to Telegram Group: ${groupId}, Thread: ${threadId}`);
+
+                // Helper to format numbers to Indo style (1.000)
+                const formatIndo = (val: any): string => {
+                    const numStr = String(val).trim();
+                    if (!numStr || isNaN(Number(numStr))) return numStr;
+                    // Remove decimals and format with dots
+                    const num = Math.floor(Number(numStr));
+                    return new Intl.NumberFormat('id-ID').format(num);
+                };
+
+                let message = `🚀 *DAILY COORDINATION - ${today}*\n\n`;
+
+                // Helper to extract all key-value pairs (including nested) + steps
+                const extractMetrics = (items: any[], depth = 0): string => {
+                    if (depth > 2 || !Array.isArray(items)) return '';
+                    let text = '';
+                    items.forEach(item => {
+                        const isArray = Array.isArray(item.value);
+                        const emoji = depth === 0 ? '•' : '  └';
+                        
+                        // Status indicator for items (like OPEN/PROGRESS)
+                        const statusVal = String(item.value).toUpperCase();
+                        const statusEmoji = statusVal === 'OPEN' ? '🔴' : (statusVal === 'PROGRESS' ? '🟡' : '');
+
+                        if (!isArray) {
+                            text += `${emoji} ${statusEmoji} *${item.key}*: ${formatIndo(item.value)}\n`;
+                        } else {
+                            text += `\n${depth === 0 ? '📊' : '📁'} *${item.key}*\n`;
+                            text += extractMetrics(item.value, depth + 1);
+                        }
+
+                        // NESTED STEPS: Display right under the item
+                        if (Array.isArray(item.steps) && item.steps.length > 0) {
+                            item.steps.forEach((s: any) => {
+                                const status = String(s.status || '').toUpperCase();
+                                const isDone = ['DONE', 'CLOSED'].includes(status);
+                                const stepStatus = isDone ? '✅' : '⏳';
+                                const indent = depth === 0 ? '     ' : '       ';
+                                text += `${indent}${stepStatus} _${s.text}_\n`;
+                            });
+                        }
+                    });
+                    return text;
+                };
+
+                message += extractMetrics(updatedParams);
+
+                const boardUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '') + '/dashboard/operational/coordination';
+                message += `\n🔗 [Open Coordination Board](${boardUrl})`;
+
+                const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // Required to call another Supabase Edge Function
-                        'Authorization': `Bearer ${serviceRoleKey}`,
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        chat_id: groupId,
+                        message_thread_id: (threadId && threadId > 0) ? threadId : undefined,
                         text: message,
                         parse_mode: 'Markdown',
-                    }),
-                }
-            );
+                        disable_web_page_preview: true
+                    })
+                });
 
-            const tgBody = await tgResponse.json();
-            if (tgResponse.ok) {
-                console.log('Telegram notification sent successfully.');
+                const result = await response.json();
+                if (result.ok) {
+                    console.log("[Notification Success]");
+                } else {
+                    console.error("[Telegram API Error]", result.description);
+                }
             } else {
-                console.error('Telegram notification failed:', tgBody);
+                console.warn("[Notification Skipped] Missing Bot Token or Group ID");
             }
-        } catch (tgErr: any) {
-            // Don't fail the whole job if Telegram is down
-            console.error('Telegram fetch error:', tgErr.message);
+        } catch (teleErr: any) {
+            console.error("Failed to send Telegram notification:", teleErr.message);
         }
 
-        return new Response(
-            JSON.stringify({ message: `Board for ${today} generated successfully.`, refreshed: bindings.length }),
-            { headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({
+            success: true,
+            message: `Board for ${today} refreshed and notified.`,
+            refreshed_count: successCount
+        }), { headers: { 'Content-Type': 'application/json' } });
 
     } catch (err: any) {
-        console.error('Fatal error:', err.message);
-        return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+        console.error('Execution Error:', err.message);
+        return new Response(JSON.stringify({ error: err.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 });

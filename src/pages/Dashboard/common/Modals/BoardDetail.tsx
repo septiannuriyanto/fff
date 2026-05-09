@@ -492,7 +492,7 @@ const BoardDetail = ({ initialTab = 'pending' }: { initialTab?: 'pending' | 'ord
 
         {/* Pending Jobs View */}
         {activeTab === 'pending' && (
-          <div className="flex flex-col h-[calc(100vh-400px)] min-h-[400px]">
+          <div className="flex flex-col h-[500px] md:h-[calc(100vh-400px)] min-h-[400px]">
              <div className="flex items-center justify-end mb-4">
               <button
                 onClick={() => {
@@ -530,7 +530,7 @@ const BoardDetail = ({ initialTab = 'pending' }: { initialTab?: 'pending' | 'ord
 
         {/* Outstanding Order View */}
         {activeTab === 'orders' && (
-             <div className="flex flex-col h-[calc(100vh-400px)] min-h-[400px]">
+             <div className="flex flex-col h-[500px] md:h-[calc(100vh-400px)] min-h-[400px]">
                 <div className="flex items-center justify-end mb-4 gap-2">
                     <div className="relative">
                         <select
