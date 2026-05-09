@@ -243,15 +243,15 @@ const Dashboard = () => {
         title="Dashboard Overview"
         className=""
         actions={
-          <div className="flex flex-row gap-2 w-full sm:w-auto">
-            <div className="flex-1 sm:w-auto">
+          <div className="flex flex-row items-center gap-1 md:gap-2 w-auto">
+            <div className="w-[110px] sm:w-[125px] md:w-[150px]">
               <DatePickerOne
                 enabled={true}
                 handleChange={handleDateChange}
                 setValue={date ? formatDateToString(new Date(date)) : ''}
               />
             </div>
-            <div className="flex-1 sm:w-auto">
+            <div className="w-[110px] sm:w-[125px] md:w-[150px]">
               <ShiftDropdown
                 value={shift}
                 onChange={setShift}
@@ -879,19 +879,19 @@ const Dashboard = () => {
           )}
 
           {activeTab === 'jobs' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
               <BoardDetail initialTab="pending" />
             </div>
           )}
 
           {activeTab === 'orders' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 min-h-[800px]">
               <BoardDetail initialTab="orders" />
             </div>
           )}
 
           {activeTab === 'coordination' && (
-            <div className="bg-white/60 dark:bg-boxdark/60 p-2 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 backdrop-blur-2xl overflow-hidden min-h-[800px]">
+            <div className="bg-white/60 dark:bg-boxdark/60 md:p-6 rounded-3xl shadow-xl border border-white/50 dark:border-white/10 backdrop-blur-2xl overflow-hidden min-h-[800px]">
               <DailyCoordination />
             </div>
           )}

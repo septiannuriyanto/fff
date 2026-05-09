@@ -36,13 +36,11 @@ const Header = (props: {
           ? `${activeTheme.header.borderWidth} ${activeTheme.header.border} ${isHovered ? activeTheme.ui.primaryColor : hexToRgba(activeTheme.header.borderColor, activeTheme.header.borderOpacity)}`
           : 'none',
         boxShadow: isHovered ? `0 0 15px ${hexToRgba(activeTheme.ui.primaryColor, 0.15)}` : undefined,
+        paddingLeft: !isDetached ? '16px' : undefined,
+        paddingRight: !isDetached ? '16px' : undefined,
       }}
     >
-      {/* 3-column flex: [mobile controls] [centered search] [right icons] */}
-      <div className="flex flex-grow items-center px-0 py-3 md:px-2 xl:px-2 gap-4 relative">
-        {/* Invisible spacer to balance the right icons and push center content to true center relative to screen if needed, 
-            but the user said "play with empty space on left", so let's add a dynamic spacer on the left of center content */}
-
+      <div className="flex flex-grow items-center py-3 md:px-6 gap-4 relative">
         {/* LEFT — hamburger + logo (mobile / tablet only) */}
         <div className="flex items-center gap-2 sm:gap-4 lg:hidden flex-shrink-0">
           <button

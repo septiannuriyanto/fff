@@ -390,7 +390,7 @@ const DailyCoordination = () => {
                 onClick={initializeFromLastData}
                 className="group flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-[0_20px_40px_-15px_rgba(249,115,22,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(249,115,22,0.5)] hover:-translate-y-1.5 transition-all active:scale-95"
             >
-                <FaSync className="text-sm group-hover:rotate-180 transition-transform duration-700" />
+                <FaSync className="text-sm group-hover:rotate-180 transition-transform duration-700" /> 
                 Initialize Meeting
             </button>
         </div>
@@ -403,35 +403,42 @@ const DailyCoordination = () => {
             }`}>
             {/* Main Container */}
             {/* Header Section */}
-            <div className="flex flex-col py-4 px-2 border-b border-slate-100 dark:border-slate-800/50 overflow-hidden">
-                <div className="flex items-center justify-between gap-4">
-                    <h2 className="text-xl md:text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2 md:gap-3 truncate min-w-0 flex-1">
+            <div className="flex flex-row items-center justify-between gap-2 md:gap-6 py-4 px-2 border-b border-slate-100 dark:border-slate-800/50 mb-6 overflow-hidden">
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <h2 className="text-xl md:text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2 md:gap-3 truncate">
                         <div className="w-2 h-6 md:h-8 bg-sky-500 rounded-full shadow-[0_0_15px_rgba(14,165,233,0.5)] flex-shrink-0"></div>
                         <span className="truncate">Coordination Board</span>
                     </h2>
+                    <div className="flex items-center gap-2 text-[8px] md:text-xs font-black text-slate-400 uppercase tracking-[0.1em] md:tracking-[0.3em] ml-4 md:ml-5">
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        {formatDateToIndonesianShortByDate(selectedDate)}
+                    </div>
+                </div>
 
-                    <div className="flex items-center gap-1.5 md:gap-4 flex-shrink-0">
-                        {/* Date Navigator - Desktop Only */}
-                        <div className="hidden md:flex items-center gap-2 p-1.5 rounded-[1.25rem] bg-slate-200/50 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 shadow-inner">
-                            <button
-                                onClick={handlePreviousDay}
-                                className="p-2 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 flex-shrink-0"
-                            >
-                                <FaChevronLeft size={10} />
-                            </button>
+                <div className="flex items-center gap-1.5 md:gap-4 flex-shrink-0">
+                    {/* Date Navigation */}
+                    <div className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 rounded-[1.25rem] bg-slate-200/50 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 shadow-inner">
+                        <button
+                            onClick={handlePreviousDay}
+                            className="p-1.5 md:p-2.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90"
+                            title="Previous Day"
+                        >
+                            <FaChevronLeft size={10} md:size={12} />
+                        </button>
 
-                            <div
-                                className="group relative flex items-center justify-center gap-2 px-4 h-[40px] rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/5 shadow-sm hover:border-sky-500/50 transition-all cursor-pointer overflow-hidden"
-                                onClick={(e) => {
-                                    const input = e.currentTarget.querySelector('input') as any;
-                                    if (input) {
-                                        if ('showPicker' in input) {
-                                            try { input.showPicker(); } catch (err) { input.focus(); }
-                                        } else { input.focus(); input.click(); }
-                                    }
-                                }}
-                            >
-                                <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight whitespace-nowrap">
+                        <div 
+                            className="group relative flex items-center gap-2 px-2 md:px-4 h-[32px] md:h-[46px] rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/5 shadow-sm hover:border-sky-500/50 transition-all cursor-pointer overflow-hidden"
+                            onClick={(e) => {
+                                const input = e.currentTarget.querySelector('input');
+                                if (input) {
+                                    if ('showPicker' in input) {
+                                        try { input.showPicker(); } catch (err) { input.focus(); }
+                                    } else { input.focus(); input.click(); }
+                                }
+                            }}
+                        >
+                            <div className="flex items-center gap-1 md:gap-2">
+                                <span className="text-[8px] md:text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight whitespace-nowrap">
                                     {selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}
                                 </span>
                                 <input
@@ -440,67 +447,28 @@ const DailyCoordination = () => {
                                     onChange={(e) => e.target.value && setSelectedDate(new Date(e.target.value))}
                                     className="absolute inset-0 opacity-0 pointer-events-none"
                                 />
-                                <FaCalendarAlt className="text-sky-500" size={12} />
                             </div>
-
-                            <button
-                                onClick={handleNextDay}
-                                className="p-2 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 flex-shrink-0"
-                            >
-                                <FaChevronRight size={10} />
-                            </button>
+                            <FaCalendarAlt className="text-sky-500" size={10} md:size={14} />
                         </div>
 
                         <button
-                            onClick={() => setIsFullscreen(!isZoomed)}
-                            className={`p-2.5 md:p-4 rounded-xl md:rounded-2xl transition-all active:scale-90 shadow-xl ${isZoomed
-                                ? 'bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-900/20 shadow-rose-500/10'
-                                : 'bg-sky-50 text-sky-600 hover:bg-sky-100 dark:bg-sky-900/20 shadow-sky-500/10'
-                                }`}
-                            title={isZoomed ? "Close Full Screen" : "Open Full Screen"}
+                            onClick={handleNextDay}
+                            className="p-1.5 md:p-2.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90"
+                            title="Next Day"
                         >
-                            {isZoomed ? <FaTimes size={14} /> : <FaExpand size={14} />}
+                            <FaChevronRight size={10} md:size={12} />
                         </button>
                     </div>
-                </div>
-
-                {/* Date Navigation - Mobile Only (Below title) */}
-                <div className="flex md:hidden items-center gap-1 p-1 mt-3 rounded-[1.25rem] bg-slate-200/50 dark:bg-white/5 backdrop-blur-md border border-slate-200/50 dark:border-white/10 shadow-inner w-full">
-                    <button
-                        onClick={handlePreviousDay}
-                        className="p-1.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 flex-shrink-0"
-                    >
-                        <FaChevronLeft size={10} />
-                    </button>
-
-                    <div
-                        className="group relative flex-1 flex items-center justify-center gap-2 px-2 h-[32px] rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/5 shadow-sm hover:border-sky-500/50 transition-all cursor-pointer overflow-hidden"
-                        onClick={(e) => {
-                            const input = e.currentTarget.querySelector('input') as any;
-                            if (input) {
-                                if ('showPicker' in input) {
-                                    try { input.showPicker(); } catch (err) { input.focus(); }
-                                } else { input.focus(); input.click(); }
-                            }
-                        }}
-                    >
-                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight whitespace-nowrap">
-                            {selectedDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}
-                        </span>
-                        <input
-                            type="date"
-                            value={selectedDate.toISOString().split('T')[0]}
-                            onChange={(e) => e.target.value && setSelectedDate(new Date(e.target.value))}
-                            className="absolute inset-0 opacity-0 pointer-events-none"
-                        />
-                        <FaCalendarAlt className="text-sky-500" size={10} />
-                    </div>
 
                     <button
-                        onClick={handleNextDay}
-                        className="p-1.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 flex-shrink-0"
+                        onClick={() => setIsFullscreen(!isZoomed)}
+                        className={`p-2.5 md:p-4 rounded-xl md:rounded-2xl transition-all active:scale-90 shadow-xl ${isZoomed
+                            ? 'bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-900/20 shadow-rose-500/10'
+                            : 'bg-sky-50 text-sky-600 hover:bg-sky-100 dark:bg-sky-900/20 shadow-sky-500/10'
+                            }`}
+                        title={isZoomed ? "Close Full Screen" : "Open Full Screen"}
                     >
-                        <FaChevronRight size={10} />
+                        {isZoomed ? <FaTimes size={14} md:size={16} /> : <FaExpand size={14} md:size={16} />}
                     </button>
                 </div>
             </div>
@@ -512,113 +480,113 @@ const DailyCoordination = () => {
                 ) : (
                     <div className="flex-1 overflow-y-auto pr-2 pl-2 pb-12">
                         {parameters.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-6 opacity-20">
-                                <FaPlus size={64} />
-                                <p className="text-lg font-black uppercase tracking-[0.3em] text-center leading-relaxed">No parameters defined<br />Add your first topic below</p>
+                        <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-6 opacity-20">
+                            <FaPlus size={64} />
+                            <p className="text-lg font-black uppercase tracking-[0.3em] text-center leading-relaxed">No parameters defined<br />Add your first topic below</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Metrics Section (Single Parameters) */}
+                            <div className="flex items-center gap-2 mb-4 px-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Headline Metrics</span>
+                                <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
                             </div>
-                        ) : (
-                            <>
-                                {/* Metrics Section (Single Parameters) */}
-                                <div className="flex items-center gap-2 mb-4 px-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Headline Metrics</span>
-                                    <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
-                                </div>
-                                <Reorder.Group
-                                    axis="y"
-                                    values={parameters.filter(p => !Array.isArray(p.value))}
-                                    onReorder={(newSingles) => {
-                                        const groups = parameters.filter(p => Array.isArray(p.value));
-                                        setParameters([...newSingles, ...groups]);
-                                    }}
-                                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-                                >
-                                    {parameters.filter(p => !Array.isArray(p.value)).map((item) => (
-                                        <ParameterCard
-                                            key={item.key}
-                                            item={item}
-                                            path={[item.key]}
-                                            className="col-span-1"
-                                            isZoomed={isZoomed}
-                                            updateParameter={updateParameter}
-                                            removeParameter={removeParameter}
-                                            addParameter={addParameter}
-                                            saveChanges={saveChanges}
-                                            setParameters={setParameters}
-                                            setShowFunctionPicker={setShowFunctionPicker}
-                                            handleRunFunction={handleRunFunction}
-                                        />
-                                    ))}
-                                </Reorder.Group>
+                            <Reorder.Group
+                                axis="y"
+                                values={parameters.filter(p => !Array.isArray(p.value))}
+                                onReorder={(newSingles) => {
+                                    const groups = parameters.filter(p => Array.isArray(p.value));
+                                    setParameters([...newSingles, ...groups]);
+                                }}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+                            >
+                                {parameters.filter(p => !Array.isArray(p.value)).map((item) => (
+                                    <ParameterCard
+                                        key={item.key}
+                                        item={item}
+                                        path={[item.key]}
+                                        className="col-span-1"
+                                        isZoomed={isZoomed}
+                                        updateParameter={updateParameter}
+                                        removeParameter={removeParameter}
+                                        addParameter={addParameter}
+                                        saveChanges={saveChanges}
+                                        setParameters={setParameters}
+                                        setShowFunctionPicker={setShowFunctionPicker}
+                                        handleRunFunction={handleRunFunction}
+                                    />
+                                ))}
+                            </Reorder.Group>
 
-                                {/* Operational Boards Section (Array Parameters) */}
-                                <div className="flex items-center gap-2 mb-4 px-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operational Boards</span>
-                                    <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
-                                </div>
-                                <Reorder.Group
-                                    axis="y"
-                                    values={parameters.filter(p => Array.isArray(p.value))}
-                                    onReorder={(newGroups) => {
-                                        const singles = parameters.filter(p => !Array.isArray(p.value));
-                                        setParameters([...singles, ...newGroups]);
-                                    }}
-                                    className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-32"
-                                >
-                                    {parameters.filter(p => Array.isArray(p.value)).map((item) => (
-                                        <ParameterCard
-                                            key={item.key}
-                                            item={item}
-                                            path={[item.key]}
-                                            className="col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1"
-                                            isZoomed={isZoomed}
-                                            updateParameter={updateParameter}
-                                            removeParameter={removeParameter}
-                                            addParameter={addParameter}
-                                            saveChanges={saveChanges}
-                                            setParameters={setParameters}
-                                            setShowFunctionPicker={setShowFunctionPicker}
-                                            handleRunFunction={handleRunFunction}
-                                        />
-                                    ))}
-                                </Reorder.Group>
-                            </>
-                        )}
+                            {/* Operational Boards Section (Array Parameters) */}
+                            <div className="flex items-center gap-2 mb-4 px-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operational Boards</span>
+                                <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/5" />
+                            </div>
+                            <Reorder.Group
+                                axis="y"
+                                values={parameters.filter(p => Array.isArray(p.value))}
+                                onReorder={(newGroups) => {
+                                    const singles = parameters.filter(p => !Array.isArray(p.value));
+                                    setParameters([...singles, ...newGroups]);
+                                }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-32"
+                            >
+                                {parameters.filter(p => Array.isArray(p.value)).map((item) => (
+                                    <ParameterCard
+                                        key={item.key}
+                                        item={item}
+                                        path={[item.key]}
+                                        className="col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1"
+                                        isZoomed={isZoomed}
+                                        updateParameter={updateParameter}
+                                        removeParameter={removeParameter}
+                                        addParameter={addParameter}
+                                        saveChanges={saveChanges}
+                                        setParameters={setParameters}
+                                        setShowFunctionPicker={setShowFunctionPicker}
+                                        handleRunFunction={handleRunFunction}
+                                    />
+                                ))}
+                            </Reorder.Group>
+                        </>
+                    )}
 
-                        {/* Add New Parameter Card at the Bottom */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-48 px-2">
-                            <div className={`flex flex-col gap-4 p-6 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 hover:border-sky-500/50 transition-all mx-auto w-full max-w-[98%] ${isZoomed ? 'scale-105' : ''}`}>
-                                <div className="flex items-center gap-2 px-1">
-                                    <span className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.3em]">New Parameter</span>
+                    {/* Add New Parameter Card at the Bottom */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-48 px-2">
+                        <div className={`flex flex-col gap-4 p-6 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 hover:border-sky-500/50 transition-all mx-auto w-full max-w-[98%] ${isZoomed ? 'scale-105' : ''}`}>
+                            <div className="flex items-center gap-2 px-1">
+                                <span className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.3em]">New Parameter</span>
+                            </div>
+                            <div className="flex items-center gap-3 relative">
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Type parameter name..."
+                                        value={newKey}
+                                        onChange={(e) => setNewKey(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && addKey()}
+                                        className="w-full bg-white dark:bg-black/20 border-2 border-transparent rounded-2xl px-6 py-4 text-sm md:text-base font-black focus:border-sky-500 outline-none transition-all shadow-sm pr-12"
+                                    />
+                                    {newKey && (
+                                        <button
+                                            onClick={() => setNewKey('')}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 transition-all"
+                                            title="Clear text"
+                                        >
+                                            <FaTimes size={14} />
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-3 relative">
-                                    <div className="flex-1 relative">
-                                        <input
-                                            type="text"
-                                            placeholder="Type parameter name..."
-                                            value={newKey}
-                                            onChange={(e) => setNewKey(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && addKey()}
-                                            className="w-full bg-white dark:bg-black/20 border-2 border-transparent rounded-2xl px-6 py-4 text-sm md:text-base font-black focus:border-sky-500 outline-none transition-all shadow-sm pr-12"
-                                        />
-                                        {newKey && (
-                                            <button
-                                                onClick={() => setNewKey('')}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 transition-all"
-                                                title="Clear text"
-                                            >
-                                                <FaTimes size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={addKey}
-                                        className="p-4 bg-sky-600 text-white rounded-2xl hover:bg-sky-700 transition-all shadow-xl shadow-sky-500/30 active:scale-95"
-                                    >
-                                        <FaPlus size={20} />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={addKey}
+                                    className="p-4 bg-sky-600 text-white rounded-2xl hover:bg-sky-700 transition-all shadow-xl shadow-sky-500/30 active:scale-95"
+                                >
+                                    <FaPlus size={20} />
+                                </button>
                             </div>
                         </div>
+                    </div>
 
                         {/* Bottom Spacer to ensure no clipping */}
                         <div className="h-20 w-full flex-shrink-0" />
@@ -1012,7 +980,7 @@ const ParameterCard = ({
                                     <FaLink size={12} className="flex-shrink-0" />
                                     <span className="text-xs font-black uppercase tracking-wider">{item.binding ? 'Unbind Function' : 'Bind Function'}</span>
                                 </button>
-
+                                
                                 {(!isNested || (isNested && item.value.length === 0)) && (
                                     <button
                                         onClick={() => {
