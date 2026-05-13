@@ -262,7 +262,7 @@ const Dashboard = () => {
       >
         <div className="flex flex-col gap-6">
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 p-1 bg-slate-100/50 dark:bg-white/5 rounded-2xl w-fit overflow-x-auto scrollbar-hide max-w-full">
+          <div className="flex items-center gap-2 p-1 bg-slate-100/50 dark:bg-white/5 rounded-2xl w-fit overflow-x-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-w-full">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === 'dashboard'
